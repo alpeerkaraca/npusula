@@ -33,17 +33,7 @@ from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import FeatureUnion, Pipeline
 
-try:
-    from backend.services.moderation import AdversarialNormalizer, GemmaModerationGuardrail
-
-    MODERATION_AVAILABLE = True
-except ImportError:
-    # backend/services/moderation.py is not shipped in every checkout
-    # (.gitignore "Guardrail (WIP)"); the script still trains and calibrates,
-    # only the real-evaluate battery validation is skipped.
-    AdversarialNormalizer = None
-    GemmaModerationGuardrail = None
-    MODERATION_AVAILABLE = False
+from backend.services.moderation import AdversarialNormalizer, GemmaModerationGuardrail
 
 from backend.services.moderation_data import (
     FALSE_POSITIVE_BATTERY,
@@ -383,11 +373,10 @@ def calibrate_thresholds(pipe: Pipeline, X_hold: list[str], y_hold: list[str]) -
     safe_col = class_idx["safe"]
 
     # FP battery: clean texts, no lexicon hits by construction; assert it
-    if MODERATION_AVAILABLE:
-        normalizer = AdversarialNormalizer()
-        for t in FALSE_POSITIVE_BATTERY:
-            _, obf = normalizer.normalize(t)
-            assert not obf, f"battery string unexpectedly obfuscated: {t!r}"
+    normalizer = AdversarialNormalizer()
+    for t in FALSE_POSITIVE_BATTERY:
+        _, obf = normalizer.normalize(t)
+        assert not obf, f"battery string unexpectedly obfuscated: {t!r}"
 
     hold_safe_idx = np.array([i for i, l in enumerate(y_hold) if l == "safe"])
     hold_unsafe_idx = np.array([i for i, l in enumerate(y_hold) if l != "safe"])
@@ -599,21 +588,16 @@ def train() -> None:
           f"holdout FP={best['fp_safe']}, battery FP={best['battery_fp']}")
 
     # Final validation through the real evaluate() with LLM forced unreachable
-    if MODERATION_AVAILABLE:
-        print("=== final battery validation (real evaluate, LLM unreachable) ===")
-        guard = GemmaModerationGuardrail(api_url="http://127.0.0.1:9", timeout_seconds=0.5)
-        fp_fails = [t for t in FALSE_POSITIVE_BATTERY if not guard.evaluate(t).is_safe]
-        tp_misses = [(t, c) for t, c in UNSAFE_BATTERY if guard.evaluate(t).is_safe]
-        print(f"  FP battery: {len(FALSE_POSITIVE_BATTERY) - len(fp_fails)}/{len(FALSE_POSITIVE_BATTERY)} pass")
-        print(f"  unsafe battery: {len(UNSAFE_BATTERY) - len(tp_misses)}/{len(UNSAFE_BATTERY)} blocked")
-        if fp_fails:
-            print(f"  FP FAILURES: {fp_fails}")
-        if tp_misses:
-            print(f"  TP MISSES: {tp_misses}")
-    else:
-        print("=== moderation module unavailable in this checkout; "
-              "skipping real-evaluate battery validation ===")
-        fp_fails, tp_misses = [], []
+    print("=== final battery validation (real evaluate, LLM unreachable) ===")
+    guard = GemmaModerationGuardrail(api_url="http://127.0.0.1:9", timeout_seconds=0.5)
+    fp_fails = [t for t in FALSE_POSITIVE_BATTERY if not guard.evaluate(t).is_safe]
+    tp_misses = [(t, c) for t, c in UNSAFE_BATTERY if guard.evaluate(t).is_safe]
+    print(f"  FP battery: {len(FALSE_POSITIVE_BATTERY) - len(fp_fails)}/{len(FALSE_POSITIVE_BATTERY)} pass")
+    print(f"  unsafe battery: {len(UNSAFE_BATTERY) - len(tp_misses)}/{len(UNSAFE_BATTERY)} blocked")
+    if fp_fails:
+        print(f"  FP FAILURES: {fp_fails}")
+    if tp_misses:
+        print(f"  TP MISSES: {tp_misses}")
 
     # Corpus hash for provenance
     corpus_hash = hashlib.sha256(
