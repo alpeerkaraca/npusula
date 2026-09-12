@@ -28,7 +28,9 @@ GENERIC_PROMOTIONAL_TAGS: set[str] = {
     "awesome", "cool", "amazing", "love", "happy", "fun", "life", "good",
     "great", "perfect", "best", "moment", "photography", "photo", "photos",
     "photographer", "pic", "pics", "picture", "pictures", "image", "images",
-    "shoot", "shot", "focus", "exposure", "composition", "macro"
+    "shoot", "shot", "focus", "exposure", "composition", "macro",
+    # Turkish discovery/promo noise
+    "keşfet", "takipet", "beğen", "paylaş",
 }
 
 # Hard-filtered NSFW/Adult noise
@@ -43,6 +45,13 @@ NSFW_TAGS: set[str] = {
     "fetish",
     "feet",
     "babe",
+    # Turkish equivalents
+    "seksi",
+    "ciplak",
+    "çıplak",
+    "erotik",
+    "porno",
+    "müstehcen",
 }
 
 # 12 Core Semantic Domains
@@ -68,6 +77,14 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "lash",
         "brows",
         "perfume",
+        # Turkish
+        "makyaj",
+        "güzellik",
+        "bakım",
+        "cilt",
+        "kozmetik",
+        "saç",
+        "tırnak",
     },
     "tech_software": {
         "computer",
@@ -101,6 +118,13 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "algorithm",
         "gadget",
         "electronics",
+        # Turkish
+        "teknoloji",
+        "yazılım",
+        "yapayzeka",
+        "kodlama",
+        "donanım",
+        "yazılım",
     },
     "fashion_apparel": {
         "fashion",
@@ -126,6 +150,14 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "hat",
         "bag",
         "glam",
+        # Turkish
+        "moda",
+        "stil",
+        "kombin",
+        "giyim",
+        "elbise",
+        "çanta",
+        "ayakkabı",
     },
     "food_beverage": {
         "food",
@@ -156,6 +188,18 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "bakery",
         "cocktail",
         "chef",
+        # Turkish
+        "yemek",
+        "kahve",
+        "çay",
+        "tatlı",
+        "tarif",
+        "restoran",
+        "kahvaltı",
+        "mutfak",
+        "ekmek",
+        "çikolata",
+        "meyve",
     },
     "travel_tourism": {
         "travel",
@@ -178,6 +222,14 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "backpacking",
         "sightseeing",
         "wanderlust",
+        # Turkish
+        "seyahat",
+        "gezi",
+        "tatil",
+        "otel",
+        "plaj",
+        "macera",
+        "yolculuk",
     },
     "nature_wildlife": {
         "nature",
@@ -214,6 +266,18 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "autumn",
         "spring",
         "summer",
+        # Turkish
+        "doğa",
+        "manzara",
+        "hayvan",
+        "kedi",
+        "köpek",
+        "çiçek",
+        "orman",
+        "gökyüzü",
+        "deniz",
+        "günbatımı",
+        "dağ",
     },
     "sports_fitness": {
         "sport",
@@ -242,6 +306,19 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "climbing",
         "exercise",
         "crossfit",
+        # Turkish
+        "spor",
+        "antrenman",
+        "koşu",
+        "güreş",
+        "futbol",
+        "basketbol",
+        "voleybol",
+        "boks",
+        "yüzme",
+        "bisiklet",
+        "maç",
+        "şampiyon",
     },
     "business_finance": {
         "business",
@@ -267,6 +344,16 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "trading",
         "b2b",
         "saas",
+        # Turkish
+        "finans",
+        "ekonomi",
+        "yatırım",
+        "borsa",
+        "kripto",
+        "girişim",
+        "girişimcilik",
+        "pazarlama",
+        "para",
     },
     "art_entertainment": {
         "art",
@@ -292,6 +379,17 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "performance",
         "song",
         "guitar",
+        # Turkish
+        "sanat",
+        "müzik",
+        "sinema",
+        "tiyatro",
+        "fotoğraf",
+        "tasarım",
+        "edebiyat",
+        "konser",
+        "kitap",
+        "şiir",
     },
     "urban_architecture": {
         "architecture",
@@ -311,6 +409,14 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "monument",
         "metropolis",
         "downtown",
+        # Turkish
+        "mimari",
+        "şehir",
+        "sokak",
+        "bina",
+        "dekorasyon",
+        "ev",
+        "içmimari",
     },
     "social_events": {
         "people",
@@ -331,6 +437,26 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "baby",
         "children",
         "gathering",
+        # Turkish (generic lifestyle words land here pragmatically)
+        "aile",
+        "ailem",
+        "ailemle",
+        "düğün",
+        "kutlama",
+        "parti",
+        "bebek",
+        "çocuk",
+        "arkadaş",
+        "insanlar",
+        "nişan",
+        "anı",
+        "mutluluk",
+        "yaşam",
+        "hayat",
+        "günlükyaşam",
+        "lifestyle",
+        "ilham",
+        "motivasyon",
     },
     "gaming_esports": {
         "game",
@@ -347,6 +473,11 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "cosplay",
         "twitch",
         "fps",
+        # Turkish
+        "oyun",
+        "oyuncu",
+        "espor",
+        "konsol",
     },
 }
 
