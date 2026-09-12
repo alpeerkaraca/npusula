@@ -101,3 +101,18 @@ def test_advisor_api_family_idea_quality(client):
     assert data["topic"] == "Yaşam"
     assert data["primary_category"] == "social_lifestyle"
     assert data["similar_posts"], "similar posts must not be empty"
+    # Tags must reflect the lifestyle topic, not random English photo tags
+    # from barely-similar posts.
+    assert "#model" not in data["accepted_tags"]
+    assert "#dress" not in data["accepted_tags"]
+    assert any(tag in {"#yaşam", "#lifestyle", "#günlükyaşam"} for tag in data["accepted_tags"])
+
+
+def test_turkish_tags_are_recognized_by_taxonomy():
+    """Turkish hashtags must align to the semantic taxonomy, not be rejected."""
+    from backend.services.tag_taxonomy import align_tags
+
+    for tags in (["#yaşam", "#lifestyle"], ["#spor", "#antrenman"], ["#aile", "#mutluluk"]):
+        result = align_tags(tags, context_category="social_events")
+        assert result["accepted_tags"], f"Turkish tags rejected: {tags}"
+        assert not result["nsfw_filtered_tags"]
