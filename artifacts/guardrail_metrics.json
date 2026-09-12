@@ -1,0 +1,98 @@
+{
+  "corpus_hash": "393b06e09ebd1145",
+  "train_rows": 14537,
+  "holdout_rows": 1575,
+  "class_counts_train": {
+    "gambling": 252,
+    "hate_speech": 7650,
+    "safe": 3825,
+    "sexual_content": 2550,
+    "violence": 260
+  },
+  "class_counts_holdout": {
+    "hate_speech": 675,
+    "safe": 675,
+    "sexual_content": 225
+  },
+  "holdout": {
+    "per_class": {
+      "hate_speech": {
+        "precision": 0.7582,
+        "recall": 0.6874,
+        "f1-score": 0.7211,
+        "support": 675.0
+      },
+      "safe": {
+        "precision": 0.7213,
+        "recall": 0.8089,
+        "f1-score": 0.7626,
+        "support": 675.0
+      },
+      "sexual_content": {
+        "precision": 0.6456,
+        "recall": 0.5911,
+        "f1-score": 0.6172,
+        "support": 225.0
+      }
+    },
+    "macro_f1": 0.7003
+  },
+  "suggested_thresholds": {
+    "DECISIVE_UNSAFE_PROB": 0.85,
+    "DECISIVE_RISK": 0.85,
+    "LLM_CHECK_RISK_FLOOR": 0.4,
+    "OBFUSCATED_UNSAFE_PROB": 0.8
+  },
+  "calibration": {
+    "U": 0.85,
+    "R": 0.85,
+    "F": 0.4,
+    "recall": 0.1278,
+    "fp_safe": 3,
+    "battery_fp": 0,
+    "unsafe_precision": 0.9746,
+    "llm_band_safe_frac": null,
+    "obfuscated": {
+      "0.5": {
+        "obf_safe_blocked": 37,
+        "obf_unsafe_blocked": 142,
+        "obf_unsafe_total": 200
+      },
+      "0.55": {
+        "obf_safe_blocked": 26,
+        "obf_unsafe_blocked": 125,
+        "obf_unsafe_total": 200
+      },
+      "0.6": {
+        "obf_safe_blocked": 20,
+        "obf_unsafe_blocked": 108,
+        "obf_unsafe_total": 200
+      },
+      "0.65": {
+        "obf_safe_blocked": 16,
+        "obf_unsafe_blocked": 91,
+        "obf_unsafe_total": 200
+      },
+      "0.7": {
+        "obf_safe_blocked": 10,
+        "obf_unsafe_blocked": 73,
+        "obf_unsafe_total": 200
+      },
+      "0.75": {
+        "obf_safe_blocked": 5,
+        "obf_unsafe_blocked": 53,
+        "obf_unsafe_total": 200
+      },
+      "0.8": {
+        "obf_safe_blocked": 5,
+        "obf_unsafe_blocked": 31,
+        "obf_unsafe_total": 200
+      }
+    }
+  },
+  "artifact_bytes": 6899124,
+  "fp_battery_failures": [
+    "Python ile yapay zeka"
+  ],
+  "unsafe_battery_misses": []
+}
