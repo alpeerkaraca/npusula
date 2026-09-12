@@ -56,10 +56,16 @@ python scripts/train_guardrail_model.py   # guardrail modelini yeniden eğit
 
 | | Değer |
 |---|---|
-| LightGBM M5 | MAE 0.834, Spearman 0.871 |
+| LightGBM M5 (quantile α=0.55) | MAE 0.847, Spearman 0.870 |
+| Kuyruk — en popüler %20 (viral) | MAE 1.093, sapma −0.75 |
 | Baseline (B1) | MAE 1.147, Spearman 0.803 |
-| Cold start (bilinen zayıf nokta) | MAE 1.92, Spearman 0.36 |
+| Cold start (bilinen zayıf nokta) | MAE 1.93, Spearman 0.36 |
 | Guardrail | holdout macro-F1 0.70; FP bataryası 25/25, unsafe bataryası 14/14 |
+
+> Eğitim hedefi **quantile (α=0.55)**: viral içeriklerde (üst %20) tahmin sapması
+> belirgin azalıyor (kuyruk MAE 1.177 → 1.093, sapma −0.92 → −0.75); karşılığında
+> genel MAE ~%1.5 artıyor (0.834 → 0.847, kabul eşiği içinde) — bilinçli ödünleşim.
+> Ayrıntı: `artifacts/metrics.json` → `objective`, `tail`.
 
 ## Üçüncü taraf veriler
 
