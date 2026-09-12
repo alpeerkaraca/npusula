@@ -2,6 +2,10 @@
   "dataset_rows": 305668,
   "feature_count": 36,
   "target": "popularity_score",
+  "objective": {
+    "name": "quantile",
+    "alpha": 0.55
+  },
   "split": {
     "strategy": "chronological_70_15_15",
     "train_rows": 213967,
@@ -39,272 +43,279 @@
     "M0": {
       "feature_count": 36,
       "target": "ham",
-      "mae": 0.843051,
-      "spearman": 0.870281
+      "mae": 0.857682,
+      "spearman": 0.869046
     },
     "M1": {
       "feature_count": 9,
       "target": "residual",
-      "mae": 1.149722,
-      "spearman": 0.802441
+      "mae": 1.166499,
+      "spearman": 0.802328
     },
     "M2": {
       "feature_count": 15,
       "target": "residual",
-      "mae": 1.145317,
-      "spearman": 0.800827
+      "mae": 1.160683,
+      "spearman": 0.801447
     },
     "M3": {
       "feature_count": 23,
       "target": "residual",
-      "mae": 1.150004,
-      "spearman": 0.800021
+      "mae": 1.170644,
+      "spearman": 0.801242
     },
     "M4": {
       "feature_count": 33,
       "target": "residual",
-      "mae": 1.137473,
-      "spearman": 0.802802
+      "mae": 1.159767,
+      "spearman": 0.80335
     },
     "M5": {
       "feature_count": 36,
       "target": "residual",
-      "mae": 0.834242,
-      "spearman": 0.870906
+      "mae": 0.846612,
+      "spearman": 0.870419
     }
   },
   "baseline_mae": 1.147123,
   "baseline_spearman": 0.802565,
-  "model_mae": 0.834242,
-  "model_spearman": 0.870906,
+  "model_mae": 0.846612,
+  "model_spearman": 0.870419,
   "subgroups": {
     "history_depth:cold_start": {
       "count": 5037,
-      "mae": 1.916732,
-      "spearman": 0.363093
+      "mae": 1.934818,
+      "spearman": 0.367016
     },
     "history_depth:very_low_history": {
       "count": 9337,
-      "mae": 0.944723,
-      "spearman": 0.876198
+      "mae": 0.954293,
+      "spearman": 0.876551
     },
     "history_depth:low_history": {
       "count": 8922,
-      "mae": 0.624142,
-      "spearman": 0.937717
+      "mae": 0.633098,
+      "spearman": 0.937838
     },
     "history_depth:medium_history": {
       "count": 13281,
-      "mae": 0.568048,
-      "spearman": 0.919493
+      "mae": 0.5773,
+      "spearman": 0.919407
     },
     "history_depth:high_history": {
       "count": 9274,
-      "mae": 0.718409,
-      "spearman": 0.906609
+      "mae": 0.738241,
+      "spearman": 0.909303
     },
     "time_basis:local": {
       "count": 30884,
-      "mae": 0.831455,
-      "spearman": 0.867411
+      "mae": 0.843262,
+      "spearman": 0.867751
     },
     "time_basis:utc_fallback": {
       "count": 14967,
-      "mae": 0.839992,
-      "spearman": 0.869622
+      "mae": 0.853523,
+      "spearman": 0.867588
     },
     "primary_cat_code:0": {
       "count": 90,
-      "mae": 0.442214,
-      "spearman": 0.629784
+      "mae": 0.441159,
+      "spearman": 0.625386
     },
     "primary_cat_code:1": {
       "count": 1449,
-      "mae": 0.81433,
-      "spearman": 0.817552
+      "mae": 0.840995,
+      "spearman": 0.814282
     },
     "primary_cat_code:2": {
       "count": 7687,
-      "mae": 0.814158,
-      "spearman": 0.877735
+      "mae": 0.827826,
+      "spearman": 0.877211
     },
     "primary_cat_code:3": {
       "count": 9184,
-      "mae": 0.684474,
-      "spearman": 0.882833
+      "mae": 0.701386,
+      "spearman": 0.879963
     },
     "primary_cat_code:4": {
       "count": 3097,
-      "mae": 0.803943,
-      "spearman": 0.873946
+      "mae": 0.841744,
+      "spearman": 0.870068
     },
     "primary_cat_code:5": {
       "count": 2137,
-      "mae": 0.774839,
-      "spearman": 0.878822
+      "mae": 0.798444,
+      "spearman": 0.876775
     },
     "primary_cat_code:6": {
       "count": 6,
-      "mae": 1.379634,
+      "mae": 1.360259,
       "spearman": 0.314286
     },
     "primary_cat_code:7": {
       "count": 462,
-      "mae": 0.921584,
-      "spearman": 0.781274
+      "mae": 0.893625,
+      "spearman": 0.799572
     },
     "primary_cat_code:8": {
       "count": 258,
-      "mae": 0.611243,
-      "spearman": 0.919677
+      "mae": 0.647963,
+      "spearman": 0.917017
     },
     "primary_cat_code:9": {
       "count": 15,
-      "mae": 0.803203,
-      "spearman": 0.689286
+      "mae": 0.877977,
+      "spearman": 0.732143
     },
     "primary_cat_code:10": {
       "count": 21466,
-      "mae": 0.919452,
-      "spearman": 0.853726
+      "mae": 0.924259,
+      "spearman": 0.85463
     }
+  },
+  "tail": {
+    "percentile": 80.0,
+    "threshold": 8.49,
+    "count": 9172,
+    "top_quintile_mae": 1.092765,
+    "top_quintile_bias": -0.747586
   },
   "feature_importance": [
     {
       "feature": "account_baseline",
-      "importance": 1716
+      "importance": 2258
     },
     {
       "feature": "rejected_tag_count",
-      "importance": 932
+      "importance": 1243
     },
     {
       "feature": "history_x_hour",
-      "importance": 659
+      "importance": 1075
     },
     {
       "feature": "cat_x_hour",
-      "importance": 580
+      "importance": 851
     },
     {
       "feature": "irrelevant_tag_ratio",
-      "importance": 506
-    },
-    {
-      "feature": "semantic_tag_ratio",
-      "importance": 451
-    },
-    {
-      "feature": "month",
-      "importance": 437
+      "importance": 656
     },
     {
       "feature": "text_svd_7",
-      "importance": 437
+      "importance": 615
+    },
+    {
+      "feature": "month",
+      "importance": 599
     },
     {
       "feature": "text_svd_3",
-      "importance": 396
+      "importance": 560
     },
     {
-      "feature": "history_depth_code",
-      "importance": 381
+      "feature": "semantic_tag_ratio",
+      "importance": 553
     },
     {
       "feature": "text_svd_0",
-      "importance": 369
-    },
-    {
-      "feature": "text_svd_6",
-      "importance": 354
-    },
-    {
-      "feature": "hour",
-      "importance": 342
-    },
-    {
-      "feature": "cat_x_weekday",
-      "importance": 322
-    },
-    {
-      "feature": "text_svd_4",
-      "importance": 319
-    },
-    {
-      "feature": "text_svd_2",
-      "importance": 314
+      "importance": 501
     },
     {
       "feature": "text_svd_5",
-      "importance": 310
+      "importance": 470
     },
     {
-      "feature": "text_svd_1",
-      "importance": 276
+      "feature": "text_svd_6",
+      "importance": 467
     },
     {
-      "feature": "tag_category_entropy",
-      "importance": 275
+      "feature": "hour",
+      "importance": 450
+    },
+    {
+      "feature": "text_svd_2",
+      "importance": 444
+    },
+    {
+      "feature": "text_svd_4",
+      "importance": 436
+    },
+    {
+      "feature": "history_depth_code",
+      "importance": 434
+    },
+    {
+      "feature": "cat_x_weekday",
+      "importance": 429
     },
     {
       "feature": "hour_sin",
-      "importance": 271
+      "importance": 418
+    },
+    {
+      "feature": "text_svd_1",
+      "importance": 369
+    },
+    {
+      "feature": "tag_category_entropy",
+      "importance": 363
     },
     {
       "feature": "hour_cos",
-      "importance": 237
-    },
-    {
-      "feature": "generic_tag_count",
-      "importance": 231
-    },
-    {
-      "feature": "accepted_tag_count",
-      "importance": 228
+      "importance": 342
     },
     {
       "feature": "weekday",
-      "importance": 198
+      "importance": 299
+    },
+    {
+      "feature": "generic_tag_count",
+      "importance": 284
+    },
+    {
+      "feature": "accepted_tag_count",
+      "importance": 281
     },
     {
       "feature": "weekday_sin",
-      "importance": 174
+      "importance": 204
     },
     {
       "feature": "weekday_cos",
-      "importance": 120
+      "importance": 167
     },
     {
       "feature": "time_basis_utc_fallback",
-      "importance": 119
+      "importance": 151
     },
     {
       "feature": "tag_alignment_mean",
-      "importance": 68
-    },
-    {
-      "feature": "has_secondary_cat",
-      "importance": 57
+      "importance": 94
     },
     {
       "feature": "primary_cat_code",
-      "importance": 48
+      "importance": 70
     },
     {
       "feature": "context_source_code",
-      "importance": 39
+      "importance": 53
+    },
+    {
+      "feature": "has_secondary_cat",
+      "importance": 46
     },
     {
       "feature": "primary_subcat_code",
-      "importance": 26
+      "importance": 32
     },
     {
       "feature": "media_type_code",
-      "importance": 13
+      "importance": 27
     },
     {
       "feature": "is_weekend",
-      "importance": 7
+      "importance": 3
     },
     {
       "feature": "tag_alignment_min",
@@ -315,5 +326,5 @@
       "importance": 0
     }
   ],
-  "elapsed_seconds": 38.21
+  "elapsed_seconds": 37.78
 }
