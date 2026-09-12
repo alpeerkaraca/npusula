@@ -36,7 +36,12 @@ M1_FEATURES = TIME_FEATURES
 M2_FEATURES = TIME_FEATURES + CATEGORY_FEATURES + ["cat_x_hour", "cat_x_weekday"]
 M3_FEATURES = M2_FEATURES + TAG_FEATURES
 M4_FEATURES = M3_FEATURES + CONTEXT_FEATURES + TEXT_SVD_FEATURES + MEDIA_FEATURES
+# Every variant is trained on the RESIDUAL target (y - account_baseline) so the
+# table isolates incremental feature contributions. M0 is the formulation
+# reference: full feature set on the RAW target, showing what the residual
+# formulation itself buys over the feature engineering.
 ABLATION_FEATURES = {
+    "M0": FEATURE_COLUMNS,
     "M1": M1_FEATURES,
     "M2": M2_FEATURES,
     "M3": M3_FEATURES,
@@ -166,16 +171,22 @@ def train() -> None:
     trained_models: dict[str, lgb.LGBMRegressor] = {}
     for code, columns in ABLATION_FEATURES.items():
         print(f"Training {code} with {len(columns)} features...")
-        residual = code == "M5"
-        train_target = y[:train_end] - X.iloc[:train_end]["account_baseline"].to_numpy() if residual else y[:train_end]
-        val_target = y[train_end:val_end] - X.iloc[train_end:val_end]["account_baseline"].to_numpy() if residual else y[train_end:val_end]
+        residual = code != "M0"
+        baseline = X.iloc[:train_end]["account_baseline"].to_numpy()
+        train_target = y[:train_end] - baseline if residual else y[:train_end]
+        val_baseline = X.iloc[train_end:val_end]["account_baseline"].to_numpy()
+        val_target = y[train_end:val_end] - val_baseline if residual else y[train_end:val_end]
         model = _fit_model(
             X.iloc[:train_end][columns], train_target,
             X.iloc[train_end:val_end][columns], val_target,
         )
         raw_predictions = model.predict(X.iloc[test_slice][columns])
         predictions = X.iloc[test_slice]["account_baseline"].to_numpy() + raw_predictions if residual else raw_predictions
-        results[code] = {"feature_count": len(columns), **_metrics(y_test, predictions)}
+        results[code] = {
+            "feature_count": len(columns),
+            "target": "residual" if residual else "ham",
+            **_metrics(y_test, predictions),
+        }
         trained_models[code] = model
 
     final_model = trained_models["M5"]

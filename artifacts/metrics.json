@@ -36,28 +36,39 @@
       "mae": 1.147319,
       "spearman": 0.804665
     },
+    "M0": {
+      "feature_count": 36,
+      "target": "ham",
+      "mae": 0.8436,
+      "spearman": 0.870244
+    },
     "M1": {
       "feature_count": 9,
-      "mae": 1.965083,
-      "spearman": 0.008338
+      "target": "residual",
+      "mae": 1.150118,
+      "spearman": 0.804137
     },
     "M2": {
       "feature_count": 15,
-      "mae": 1.955692,
-      "spearman": 0.115461
+      "target": "residual",
+      "mae": 1.146578,
+      "spearman": 0.803715
     },
     "M3": {
       "feature_count": 23,
-      "mae": 1.882199,
-      "spearman": 0.331848
+      "target": "residual",
+      "mae": 1.147949,
+      "spearman": 0.799821
     },
     "M4": {
       "feature_count": 33,
-      "mae": 1.858251,
-      "spearman": 0.350536
+      "target": "residual",
+      "mae": 1.14431,
+      "spearman": 0.800819
     },
     "M5": {
       "feature_count": 36,
+      "target": "residual",
       "mae": 0.838115,
       "spearman": 0.870531
     }
@@ -304,5 +315,5 @@
       "importance": 0
     }
   ],
-  "elapsed_seconds": 22.11
+  "elapsed_seconds": 20.05
 }
