@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.pipeline import FeatureUnion
 
 from backend.schemas.profile import (
     BehavioralProfile,
@@ -19,7 +20,7 @@ TOPIC_SEEDS: dict[str, str] = {
     "Oyun": "oyun gaming gamer konsol playstation steam twitch espor ekran kartı grafik oyun geliştirme oyunlar fps rpg gameplay",
     "Eğitim": "eğitim öğrenme kurs üniversite akademi kitap araştırma sınav kariyer gelişim ders öğretmen öğrenci rehberlik",
     "Finans": "finans borsa yatırım kripto bitcoin portföy ekonomi piyasa bütçe hisse fon sermaye para ticaret",
-    "Spor": "spor futbol basketbol antrenman fitness beslenme maraton koşu sağlık egzersiz turnuva lig maç",
+    "Spor": "spor futbol basketbol antrenman fitness beslenme maraton koşu sağlık egzersiz turnuva lig maç güreş boks voleybol tenis yüzme bisiklet dövüş wwe wrestling ring kort basket halter okçuluk atletizm jimnastik pilates yoga kaleci hakem takım şampiyon",
     "Kültür-Sanat": "kültür sanat sergi sinema tiyatro fotoğraf müzik edebiyat festival resim tasarım şiir film yönetmen",
     "Girişimcilik": "girişimcilik startup yatırım fonlama büyüme scaleup mvp müşteri iş modeli networking kurucu ortak melek yatırımcı saas b2b",
     "Yaşam": "yaşam lifestyle seyahat gezi kahve sağlık motivasyon doğa verimlilik çalışma düzeni minimalizm kamp makyaj güzellik bakım kozmetik eyeliner kombin stil moda skincare ootd aile ailem ailemle çocuk bebek ev evde mutlu mutluluk haftasonu hafta sonu tatil pazar arkadaş kutlama doğum günü anı hatıra piknik akşam yemeği sofra huzur keyif beraber birlikte gezi evlilik düğün nişan yıldönümü",
@@ -31,7 +32,13 @@ class ProfileService:
 
     def __init__(self):
         self.topic_names = list(TOPIC_SEEDS.keys())
-        self.vectorizer = TfidfVectorizer(max_features=2000, lowercase=True)
+        # Word tokens plus character n-grams: Turkish is agglutinative, so
+        # inflected forms ("güreşi", "turnuvası") share character n-grams with
+        # their seed roots ("güreş", "turnuva") even without a stemmer.
+        self.vectorizer = FeatureUnion([
+            ("word", TfidfVectorizer(analyzer="word", ngram_range=(1, 1), max_features=2000, lowercase=True)),
+            ("char", TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), max_features=3000, lowercase=True)),
+        ])
         self._fit_vectorizer()
         # Track user decisions: user_id -> True/False
         self._user_decisions: dict[str, bool] = {}
@@ -41,18 +48,38 @@ class ProfileService:
         self.vectorizer.fit(seed_texts)
         self.topic_matrix = self.vectorizer.transform(seed_texts)
 
-    def classify_text_topic(self, text: str, fallback_topic: str = "Teknoloji Trendleri") -> str:
-        """Classifies a short text (e.g. idea) to the closest topic centroid."""
+    # Below this cosine similarity the text shares (almost) no vocabulary
+    # with any topic seed; the classification is a guess and callers may
+    # escalate to a semantic judge (e.g. the Gemma advisor).
+    UNCERTAIN_SIM_THRESHOLD = 0.10
+    # Callers should only trust the ML verdict above this similarity; weaker
+    # matches (e.g. "tenis kortunda hafta sonu" winning via "hafta sonu") are
+    # frequent misclassifications and must be escalated to the LLM judge.
+    CONFIDENT_SIM_THRESHOLD = 0.25
+
+    def classify_text_topic_confident(
+        self, text: str, fallback_topic: str = "Teknoloji Trendleri"
+    ) -> tuple[str, float]:
+        """Classifies a short text to the closest topic centroid.
+
+        Returns (topic, max_similarity). The similarity is 0.0 whenever the
+        fallback was used, which callers can treat as "no confidence".
+        """
         if not text.strip():
-            return fallback_topic
+            return fallback_topic, 0.0
         vec = self.vectorizer.transform([text])
         sims = cosine_similarity(vec, self.topic_matrix)[0]
         max_sim = float(np.max(sims))
-        if max_sim < 0.05:
+        if max_sim < self.UNCERTAIN_SIM_THRESHOLD:
             # Below confidence threshold / zero vocabulary overlap
-            return fallback_topic
+            return fallback_topic, 0.0
         best_idx = int(np.argmax(sims))
-        return self.topic_names[best_idx]
+        return self.topic_names[best_idx], max_sim
+
+    def classify_text_topic(self, text: str, fallback_topic: str = "Teknoloji Trendleri") -> str:
+        """Classifies a short text (e.g. idea) to the closest topic centroid."""
+        topic, _ = self.classify_text_topic_confident(text, fallback_topic=fallback_topic)
+        return topic
 
     def compute_behavioral_profile(
         self,
