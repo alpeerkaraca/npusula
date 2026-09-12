@@ -66,6 +66,16 @@ SMPD_TO_CANONICAL_MAPPING: Dict[str, Tuple[str, str]] = {
     "music": ("entertainment_gaming", "music_concerts"),
     "sports": ("sports_fitness", "team_sports"),
     "spor": ("sports_fitness", "team_sports"),
+    "güreş": ("sports_fitness", "team_sports"),
+    "wrestling": ("sports_fitness", "team_sports"),
+    "boks": ("sports_fitness", "team_sports"),
+    "voleybol": ("sports_fitness", "team_sports"),
+    "tenis": ("sports_fitness", "individual_sports"),
+    "yüzme": ("sports_fitness", "individual_sports"),
+    "bisiklet": ("sports_fitness", "individual_sports"),
+    "atletizm": ("sports_fitness", "individual_sports"),
+    "jimnastik": ("sports_fitness", "individual_sports"),
+    "basketbol": ("sports_fitness", "team_sports"),
     "fitness": ("sports_fitness", "fitness_training"),
     "nature": ("nature_wildlife", "landscapes"),
     "pets": ("nature_wildlife", "domestic_pets"),
@@ -121,11 +131,17 @@ def classify_post_category(
     primary_match = None
     secondary_match = None
     
-    # Word-boundary heuristic matching: a keyword matches only as a whole word,
-    # so "ai" does not match inside "ailemle" and "ev" does not match inside
+    # Heuristic matching: keywords of length >= 4 match as word PREFIXES so
+    # Turkish inflections are covered ("güreş" matches "güreşi", "aile"
+    # matches "ailemle"); shorter keywords must match whole words only, so
+    # "ai" does not match inside "ailemle" and "ev" does not match inside
     # "evlilik". Turkish characters are word characters in Python regexes.
     for keyword, (cat, subcat) in SMPD_TO_CANONICAL_MAPPING.items():
-        if re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", text_to_search):
+        if len(keyword) >= 4:
+            matched = re.search(rf"(?<!\w){re.escape(keyword)}", text_to_search)
+        else:
+            matched = re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", text_to_search)
+        if matched:
             if primary_match is None:
                 primary_match = (cat, subcat)
             elif secondary_match is None and (cat, subcat) != primary_match:
