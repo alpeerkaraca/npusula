@@ -20,11 +20,6 @@ data/**
 !data/**/
 !data/**/.gitkeep
 
-# Guardrail (WIP)
-backend/services/moderation.py
-artifacts/guardrail_classifier.joblib
-tests/test_moderation_guardrail.py
-
 # Secrets & agents
 .env
 .agents/
