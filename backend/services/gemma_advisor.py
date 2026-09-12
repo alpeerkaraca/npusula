@@ -36,7 +36,7 @@ class GemmaAdvisorEngine:
         self,
         model_name: str | None = None,
         api_url: str | None = None,
-        timeout_seconds: float = 2.0,
+        timeout_seconds: float = 15.0,
     ):
         self.model_name = model_name or settings.GEMMA_MODEL_NAME
         self.api_url = api_url or settings.GEMMA_API_URL
@@ -90,6 +90,54 @@ class GemmaAdvisorEngine:
         )
         return prompt
 
+    def classify_topic(self, idea: str, options: list[str]) -> str | None:
+        """Asks Gemma to pick the best topic for an idea.
+
+        Used when the local TF-IDF topic classifier has zero vocabulary
+        overlap and would fall back to an unrelated user profile topic.
+        Returns None when the model is unreachable or its answer cannot be
+        mapped to one of the given options (callers then keep their fallback).
+        """
+        topic_descriptions = {
+            "Yapay Zeka": "yapay zeka, makine öğrenmesi, derin öğrenme, LLM, otomasyon",
+            "Yazılım": "yazılım, programlama, web, mobil uygulama, geliştirme",
+            "Teknoloji Trendleri": "donanım, cihazlar, elektronik, yeni teknolojiler",
+            "Oyun": "video oyunları, konsol, espor, oyun içi içerik",
+            "Eğitim": "ders, öğrenme, kurs, kitap, sınav, okul",
+            "Finans": "borsa, yatırım, kripto, ekonomi, tasarruf",
+            "Spor": "fiziksel aktivite, müsabaka, maç, antrenman, güreş, fitness",
+            "Kültür-Sanat": "sanat, müzik, sinema, fotoğraf, sergi, edebiyat",
+            "Girişimcilik": "startup, iş kurma, büyüme, yatırımcı",
+            "Yaşam": "günlük yaşam, aile, yemek, seyahat, moda, sağlık, eğlence",
+        }
+        opts = "; ".join(f"{name} ({desc})" for name, desc in topic_descriptions.items() if name in options)
+        prompt = (
+            f"<start_of_turn>user\n"
+            f"Sen EnSosyal platformunun içerik konu sınıflandırıcısısın.\n"
+            f"Aşağıdaki içerik fikrini YALNIZCA şu konulardan birine ata:\n{opts}\n\n"
+            f"Fikir: \"{idea}\"\n\n"
+            f"TALİMAT: SADECE listedeki konu adlarından birini yanıtla, başka hiçbir metin ekleme.\n"
+            f"<end_of_turn>\n"
+            f"<start_of_turn>model\n"
+        )
+        try:
+            endpoint = f"{self.api_url.rstrip('/')}/api/generate"
+            with httpx.Client(timeout=self.timeout) as client:
+                res = client.post(
+                    endpoint,
+                    json={"model": self.model_name, "prompt": prompt, "stream": False},
+                )
+                if res.status_code != 200:
+                    return None
+                response_text = (res.json().get("response") or "").strip()
+        except Exception:
+            return None
+
+        for option in options:
+            if option.lower() in response_text.lower():
+                return option
+        return None
+
     def _generate_fallback(
         self,
         idea: str,
@@ -114,7 +162,7 @@ class GemmaAdvisorEngine:
             f"Bu fikir için en güçlü aday {s1} (tahmini skor: {slots[0].predicted_popularity:.2f}). "
             f"Alternatif olarak {s2} ve {s3} değerlendirilebilir. "
             f"Benzer başarılı paylaşımlarda {tags_str} etiketleri öne çıkıyor. "
-            f"Gemma 4 Strateji Önerisi: {tip}"
+            f"Strateji Önerisi: {tip}"
         )
 
     def generate_explanation(
@@ -158,7 +206,9 @@ class GemmaAdvisorEngine:
                 if res.status_code == 200:
                     data = res.json()
                     text = data.get("response", "").strip()
-                    if text and "en güçlü aday" in text:
+                    # Accept any substantive answer instead of requiring one
+                    # exact phrase; local generation often rephrases.
+                    if text and len(text) >= 50:
                         return text
         except Exception:
             pass

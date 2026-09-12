@@ -140,8 +140,19 @@ class AdvisorService:
         else:
             fallback_topic = "Teknoloji Trendleri"
 
-        # 2. Infer topic with confidence threshold & profile fallback
-        inferred_topic = self.profile_service.classify_text_topic(request.idea, fallback_topic=fallback_topic)
+        # 2. Infer topic. The TF-IDF classifier is only a fast confident path;
+        # weak or zero matches are escalated to the Gemma topic judge, because
+        # the profile-topic fallback alone produces embarrassing mismatches
+        # (e.g. "amerikan güreşi izledik" -> Yazılım).
+        inferred_topic, topic_sim = self.profile_service.classify_text_topic_confident(
+            request.idea, fallback_topic=fallback_topic
+        )
+        if topic_sim < self.profile_service.CONFIDENT_SIM_THRESHOLD:
+            llm_topic = self.gemma_advisor.classify_topic(
+                request.idea, self.profile_service.topic_names
+            )
+            if llm_topic:
+                inferred_topic = llm_topic
         category_result = classify_post_category(request.idea, None, None, None)
         primary_category = str(category_result["primary_category"])
 
