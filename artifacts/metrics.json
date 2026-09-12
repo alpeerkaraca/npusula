@@ -1,0 +1,308 @@
+{
+  "dataset_rows": 305737,
+  "feature_count": 36,
+  "target": "popularity_score",
+  "split": {
+    "strategy": "chronological_70_15_15",
+    "train_rows": 214015,
+    "validation_rows": 45861,
+    "test_rows": 45861,
+    "train_end_utc": "2015-12-27T06:03:15+00:00",
+    "validation_end_utc": "2016-01-31T07:18:31+00:00"
+  },
+  "global_train_mean": 6.4185544471181935,
+  "global_train_median": 6.25,
+  "category_train_medians": {
+    "0": 6.43,
+    "1": 5.98,
+    "2": 7.38,
+    "3": 6.23,
+    "4": 6.11,
+    "5": 4.25,
+    "6": 10.91,
+    "7": 4.81,
+    "8": 6.3,
+    "9": 6.050000000000001,
+    "10": 5.91
+  },
+  "ablations": {
+    "B0": {
+      "feature_count": 0,
+      "mae": 1.975438,
+      "spearman": 0.0
+    },
+    "B1": {
+      "feature_count": 1,
+      "mae": 1.154851,
+      "spearman": 0.804563
+    },
+    "M1": {
+      "feature_count": 9,
+      "mae": 1.97488,
+      "spearman": -0.021254
+    },
+    "M2": {
+      "feature_count": 15,
+      "mae": 1.969916,
+      "spearman": 0.086524
+    },
+    "M3": {
+      "feature_count": 23,
+      "mae": 1.890814,
+      "spearman": 0.318619
+    },
+    "M4": {
+      "feature_count": 33,
+      "mae": 1.874447,
+      "spearman": 0.34934
+    },
+    "M5": {
+      "feature_count": 36,
+      "mae": 0.841246,
+      "spearman": 0.870077
+    }
+  },
+  "baseline_mae": 1.154851,
+  "baseline_spearman": 0.804563,
+  "model_mae": 0.841246,
+  "model_spearman": 0.870077,
+  "subgroups": {
+    "history_depth:cold_start": {
+      "count": 5045,
+      "mae": 1.93789,
+      "spearman": 0.350842
+    },
+    "history_depth:very_low_history": {
+      "count": 9370,
+      "mae": 0.956047,
+      "spearman": 0.877365
+    },
+    "history_depth:low_history": {
+      "count": 8930,
+      "mae": 0.627142,
+      "spearman": 0.937742
+    },
+    "history_depth:medium_history": {
+      "count": 13277,
+      "mae": 0.568911,
+      "spearman": 0.918884
+    },
+    "history_depth:high_history": {
+      "count": 9239,
+      "mae": 0.724294,
+      "spearman": 0.907172
+    },
+    "time_basis:local": {
+      "count": 69,
+      "mae": 3.611378,
+      "spearman": 0.068183
+    },
+    "time_basis:utc_fallback": {
+      "count": 45792,
+      "mae": 0.837072,
+      "spearman": 0.870005
+    },
+    "primary_cat_code:0": {
+      "count": 10144,
+      "mae": 0.859165,
+      "spearman": 0.875684
+    },
+    "primary_cat_code:1": {
+      "count": 2468,
+      "mae": 0.796849,
+      "spearman": 0.851393
+    },
+    "primary_cat_code:2": {
+      "count": 5717,
+      "mae": 0.796087,
+      "spearman": 0.88086
+    },
+    "primary_cat_code:3": {
+      "count": 8074,
+      "mae": 0.693132,
+      "spearman": 0.886874
+    },
+    "primary_cat_code:4": {
+      "count": 2740,
+      "mae": 0.799769,
+      "spearman": 0.873112
+    },
+    "primary_cat_code:5": {
+      "count": 18,
+      "mae": 2.516371,
+      "spearman": 0.587507
+    },
+    "primary_cat_code:6": {
+      "count": 17,
+      "mae": 1.904866,
+      "spearman": 0.796569
+    },
+    "primary_cat_code:7": {
+      "count": 410,
+      "mae": 0.960372,
+      "spearman": 0.755097
+    },
+    "primary_cat_code:8": {
+      "count": 2297,
+      "mae": 0.709663,
+      "spearman": 0.855575
+    },
+    "primary_cat_code:9": {
+      "count": 21,
+      "mae": 2.337772,
+      "spearman": 0.532468
+    },
+    "primary_cat_code:10": {
+      "count": 13955,
+      "mae": 0.960861,
+      "spearman": 0.845902
+    }
+  },
+  "feature_importance": [
+    {
+      "feature": "account_baseline",
+      "importance": 2481
+    },
+    {
+      "feature": "history_x_hour",
+      "importance": 1540
+    },
+    {
+      "feature": "rejected_tag_count",
+      "importance": 1294
+    },
+    {
+      "feature": "cat_x_hour",
+      "importance": 976
+    },
+    {
+      "feature": "irrelevant_tag_ratio",
+      "importance": 700
+    },
+    {
+      "feature": "history_depth_code",
+      "importance": 690
+    },
+    {
+      "feature": "semantic_tag_ratio",
+      "importance": 632
+    },
+    {
+      "feature": "month",
+      "importance": 622
+    },
+    {
+      "feature": "text_svd_0",
+      "importance": 596
+    },
+    {
+      "feature": "text_svd_2",
+      "importance": 596
+    },
+    {
+      "feature": "text_svd_3",
+      "importance": 586
+    },
+    {
+      "feature": "text_svd_7",
+      "importance": 584
+    },
+    {
+      "feature": "text_svd_4",
+      "importance": 555
+    },
+    {
+      "feature": "cat_x_weekday",
+      "importance": 528
+    },
+    {
+      "feature": "text_svd_6",
+      "importance": 502
+    },
+    {
+      "feature": "hour",
+      "importance": 488
+    },
+    {
+      "feature": "text_svd_1",
+      "importance": 459
+    },
+    {
+      "feature": "text_svd_5",
+      "importance": 447
+    },
+    {
+      "feature": "hour_cos",
+      "importance": 426
+    },
+    {
+      "feature": "hour_sin",
+      "importance": 394
+    },
+    {
+      "feature": "tag_category_entropy",
+      "importance": 387
+    },
+    {
+      "feature": "generic_tag_count",
+      "importance": 344
+    },
+    {
+      "feature": "weekday",
+      "importance": 338
+    },
+    {
+      "feature": "accepted_tag_count",
+      "importance": 315
+    },
+    {
+      "feature": "weekday_sin",
+      "importance": 293
+    },
+    {
+      "feature": "weekday_cos",
+      "importance": 189
+    },
+    {
+      "feature": "tag_alignment_mean",
+      "importance": 105
+    },
+    {
+      "feature": "context_source_code",
+      "importance": 65
+    },
+    {
+      "feature": "primary_subcat_code",
+      "importance": 62
+    },
+    {
+      "feature": "has_secondary_cat",
+      "importance": 62
+    },
+    {
+      "feature": "primary_cat_code",
+      "importance": 61
+    },
+    {
+      "feature": "media_type_code",
+      "importance": 35
+    },
+    {
+      "feature": "is_weekend",
+      "importance": 4
+    },
+    {
+      "feature": "tag_alignment_min",
+      "importance": 4
+    },
+    {
+      "feature": "time_basis_utc_fallback",
+      "importance": 0
+    },
+    {
+      "feature": "primary_cat_confidence",
+      "importance": 0
+    }
+  ],
+  "elapsed_seconds": 20.7
+}
