@@ -124,7 +124,9 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "yapayzeka",
         "kodlama",
         "donanım",
-        "yazılım",
+        "derinogrenme",
+        "techtrends",
+        "inovasyon",
     },
     "fashion_apparel": {
         "fashion",
@@ -354,6 +356,7 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "girişimcilik",
         "pazarlama",
         "para",
+        "işdünyası",
     },
     "art_entertainment": {
         "art",
@@ -390,6 +393,17 @@ TAXONOMY_MAP: dict[str, set[str]] = {
         "konser",
         "kitap",
         "şiir",
+        "kültür",
+        # Turkish education/learning cluster (no dedicated domain in the 12)
+        "eğitim",
+        "öğrenme",
+        "kişiselgelişim",
+        "bilgi",
+        "ders",
+        "okul",
+        "üniversite",
+        "sınav",
+        "kurs",
     },
     "urban_architecture": {
         "architecture",
