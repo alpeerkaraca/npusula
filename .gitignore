@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Pytest
+.pytest_cache/
+
+# Logs
+*.log
+artifacts/*.log
+
+# Data directory - ignore data files, preserve folder structure via .gitkeep
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# Guardrail (WIP)
+backend/services/moderation.py
+artifacts/guardrail_classifier.joblib
+tests/test_moderation_guardrail.py
+
+# Secrets & agents
+.env
+.agents/
+graphify-out/
