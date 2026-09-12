@@ -272,11 +272,37 @@ class RecommendationService:
 
         return X[self.feature_names]
 
+    @staticmethod
+    def _load_booster_crlf_safe(model_path: Path) -> lgb.Booster:
+        """Loads a booster tolerating CRLF line endings in the model text file.
+
+        Checkouts with core.autocrlf can convert the model text to CRLF,
+        which LightGBM's parser cannot read. Retry through a sanitized
+        LF copy when the direct load fails.
+        """
+        try:
+            return lgb.Booster(model_file=str(model_path))
+        except Exception:
+            text = model_path.read_text(encoding="utf-8")
+            if "\r" not in text:
+                raise
+            import tempfile
+
+            with tempfile.NamedTemporaryFile(
+                "w", suffix=".txt", delete=False, encoding="utf-8"
+            ) as tmp:
+                tmp.write(text.replace("\r\n", "\n").replace("\r", "\n"))
+                tmp_path = Path(tmp.name)
+            try:
+                return lgb.Booster(model_file=str(tmp_path))
+            finally:
+                tmp_path.unlink(missing_ok=True)
+
     def train_or_load(self, df: pd.DataFrame) -> None:
         """Loads saved model artifact if available, otherwise trains on historical posts."""
         if self.model_path.exists():
             try:
-                loaded = lgb.Booster(model_file=str(self.model_path))
+                loaded = self._load_booster_crlf_safe(self.model_path)
                 if loaded.num_feature() != len(self.feature_names):
                     print(
                         f"Ignoring incompatible model with {loaded.num_feature()} features; "
@@ -307,11 +333,13 @@ class RecommendationService:
         model = lgb.LGBMRegressor(
             objective="regression_l1",
             n_estimators=500,
-            learning_rate=0.04,
-            num_leaves=63,
-            min_child_samples=50,
+            learning_rate=0.05,
+            num_leaves=127,
+            min_child_samples=20,
             subsample=0.85,
             colsample_bytree=0.8,
+            reg_alpha=0.0,
+            reg_lambda=5.0,
             random_state=42,
             n_jobs=-1,
             verbosity=-1,
