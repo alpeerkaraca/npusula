@@ -39,275 +39,275 @@
     "M0": {
       "feature_count": 36,
       "target": "ham",
-      "mae": 0.8436,
-      "spearman": 0.870244
+      "mae": 0.848545,
+      "spearman": 0.86987
     },
     "M1": {
       "feature_count": 9,
       "target": "residual",
-      "mae": 1.150118,
-      "spearman": 0.804137
+      "mae": 1.148971,
+      "spearman": 0.80457
     },
     "M2": {
       "feature_count": 15,
       "target": "residual",
-      "mae": 1.146578,
-      "spearman": 0.803715
+      "mae": 1.146823,
+      "spearman": 0.803796
     },
     "M3": {
       "feature_count": 23,
       "target": "residual",
-      "mae": 1.147949,
-      "spearman": 0.799821
+      "mae": 1.143317,
+      "spearman": 0.801597
     },
     "M4": {
       "feature_count": 33,
       "target": "residual",
-      "mae": 1.14431,
-      "spearman": 0.800819
+      "mae": 1.14432,
+      "spearman": 0.802258
     },
     "M5": {
       "feature_count": 36,
       "target": "residual",
-      "mae": 0.838115,
-      "spearman": 0.870531
+      "mae": 0.833006,
+      "spearman": 0.871076
     }
   },
   "baseline_mae": 1.147319,
   "baseline_spearman": 0.804665,
-  "model_mae": 0.838115,
-  "model_spearman": 0.870531,
+  "model_mae": 0.833006,
+  "model_spearman": 0.871076,
   "subgroups": {
     "history_depth:cold_start": {
       "count": 5037,
-      "mae": 1.919376,
-      "spearman": 0.364082
+      "mae": 1.918404,
+      "spearman": 0.364057
     },
     "history_depth:very_low_history": {
       "count": 9337,
-      "mae": 0.946684,
-      "spearman": 0.876027
+      "mae": 0.947029,
+      "spearman": 0.875974
     },
     "history_depth:low_history": {
       "count": 8922,
-      "mae": 0.624178,
-      "spearman": 0.93766
+      "mae": 0.623838,
+      "spearman": 0.937657
     },
     "history_depth:medium_history": {
       "count": 13281,
-      "mae": 0.572053,
-      "spearman": 0.918811
+      "mae": 0.569846,
+      "spearman": 0.919132
     },
     "history_depth:high_history": {
       "count": 9274,
-      "mae": 0.728378,
-      "spearman": 0.905619
+      "mae": 0.706786,
+      "spearman": 0.908518
     },
     "time_basis:local": {
       "count": 30884,
-      "mae": 0.83661,
-      "spearman": 0.86713
+      "mae": 0.82983,
+      "spearman": 0.867804
     },
     "time_basis:utc_fallback": {
       "count": 14967,
-      "mae": 0.84122,
-      "spearman": 0.869016
+      "mae": 0.839558,
+      "spearman": 0.869428
     },
     "primary_cat_code:0": {
       "count": 10132,
-      "mae": 0.857192,
-      "spearman": 0.873672
+      "mae": 0.852056,
+      "spearman": 0.874232
     },
     "primary_cat_code:1": {
       "count": 2468,
-      "mae": 0.802836,
-      "spearman": 0.852313
+      "mae": 0.799646,
+      "spearman": 0.853588
     },
     "primary_cat_code:2": {
       "count": 5723,
-      "mae": 0.797503,
-      "spearman": 0.880018
+      "mae": 0.798289,
+      "spearman": 0.880719
     },
     "primary_cat_code:3": {
       "count": 8077,
-      "mae": 0.697621,
-      "spearman": 0.885972
+      "mae": 0.697936,
+      "spearman": 0.885971
     },
     "primary_cat_code:4": {
       "count": 2740,
-      "mae": 0.808,
-      "spearman": 0.87474
+      "mae": 0.769811,
+      "spearman": 0.876439
     },
     "primary_cat_code:5": {
       "count": 13,
-      "mae": 1.715435,
-      "spearman": 0.674003
+      "mae": 1.825845,
+      "spearman": 0.577717
     },
     "primary_cat_code:6": {
       "count": 12,
-      "mae": 1.40892,
+      "mae": 1.414963,
       "spearman": 0.678322
     },
     "primary_cat_code:7": {
       "count": 410,
-      "mae": 0.924792,
-      "spearman": 0.781874
+      "mae": 0.942367,
+      "spearman": 0.774181
     },
     "primary_cat_code:8": {
       "count": 2296,
-      "mae": 0.70477,
-      "spearman": 0.860211
+      "mae": 0.66645,
+      "spearman": 0.870769
     },
     "primary_cat_code:9": {
       "count": 12,
-      "mae": 0.908309,
-      "spearman": 0.58042
+      "mae": 0.948541,
+      "spearman": 0.559441
     },
     "primary_cat_code:10": {
       "count": 13968,
-      "mae": 0.952305,
-      "spearman": 0.848138
+      "mae": 0.95245,
+      "spearman": 0.847777
     }
   },
   "feature_importance": [
     {
       "feature": "account_baseline",
-      "importance": 2558
-    },
-    {
-      "feature": "history_x_hour",
-      "importance": 1519
+      "importance": 1740
     },
     {
       "feature": "rejected_tag_count",
-      "importance": 1157
+      "importance": 953
+    },
+    {
+      "feature": "history_x_hour",
+      "importance": 750
     },
     {
       "feature": "cat_x_hour",
-      "importance": 901
+      "importance": 729
     },
     {
       "feature": "irrelevant_tag_ratio",
-      "importance": 725
-    },
-    {
-      "feature": "semantic_tag_ratio",
-      "importance": 614
-    },
-    {
-      "feature": "history_depth_code",
-      "importance": 582
+      "importance": 510
     },
     {
       "feature": "month",
-      "importance": 581
-    },
-    {
-      "feature": "text_svd_2",
-      "importance": 578
-    },
-    {
-      "feature": "text_svd_7",
-      "importance": 569
-    },
-    {
-      "feature": "text_svd_4",
-      "importance": 557
-    },
-    {
-      "feature": "text_svd_3",
-      "importance": 517
-    },
-    {
-      "feature": "text_svd_5",
-      "importance": 513
-    },
-    {
-      "feature": "hour",
-      "importance": 503
-    },
-    {
-      "feature": "text_svd_0",
-      "importance": 496
-    },
-    {
-      "feature": "text_svd_6",
-      "importance": 463
-    },
-    {
-      "feature": "cat_x_weekday",
       "importance": 460
     },
     {
-      "feature": "text_svd_1",
-      "importance": 434
+      "feature": "semantic_tag_ratio",
+      "importance": 445
+    },
+    {
+      "feature": "text_svd_7",
+      "importance": 437
+    },
+    {
+      "feature": "text_svd_0",
+      "importance": 412
+    },
+    {
+      "feature": "text_svd_3",
+      "importance": 407
+    },
+    {
+      "feature": "hour",
+      "importance": 394
+    },
+    {
+      "feature": "history_depth_code",
+      "importance": 394
+    },
+    {
+      "feature": "text_svd_6",
+      "importance": 390
+    },
+    {
+      "feature": "text_svd_2",
+      "importance": 378
+    },
+    {
+      "feature": "cat_x_weekday",
+      "importance": 376
+    },
+    {
+      "feature": "text_svd_4",
+      "importance": 368
+    },
+    {
+      "feature": "text_svd_5",
+      "importance": 353
     },
     {
       "feature": "hour_sin",
-      "importance": 385
+      "importance": 288
     },
     {
-      "feature": "hour_cos",
-      "importance": 379
+      "feature": "text_svd_1",
+      "importance": 287
     },
     {
       "feature": "tag_category_entropy",
-      "importance": 370
+      "importance": 263
     },
     {
       "feature": "generic_tag_count",
-      "importance": 340
+      "importance": 244
     },
     {
-      "feature": "accepted_tag_count",
-      "importance": 286
+      "feature": "hour_cos",
+      "importance": 217
     },
     {
       "feature": "weekday",
-      "importance": 267
+      "importance": 212
+    },
+    {
+      "feature": "accepted_tag_count",
+      "importance": 187
     },
     {
       "feature": "weekday_sin",
-      "importance": 255
+      "importance": 178
     },
     {
       "feature": "weekday_cos",
-      "importance": 167
+      "importance": 119
     },
     {
       "feature": "time_basis_utc_fallback",
-      "importance": 147
+      "importance": 119
     },
     {
       "feature": "tag_alignment_mean",
-      "importance": 92
-    },
-    {
-      "feature": "primary_cat_code",
-      "importance": 63
-    },
-    {
-      "feature": "primary_subcat_code",
-      "importance": 58
+      "importance": 56
     },
     {
       "feature": "has_secondary_cat",
-      "importance": 55
+      "importance": 50
+    },
+    {
+      "feature": "primary_cat_code",
+      "importance": 41
     },
     {
       "feature": "context_source_code",
-      "importance": 47
+      "importance": 36
+    },
+    {
+      "feature": "primary_subcat_code",
+      "importance": 30
     },
     {
       "feature": "media_type_code",
-      "importance": 33
-    },
-    {
-      "feature": "tag_alignment_min",
-      "importance": 4
+      "importance": 14
     },
     {
       "feature": "is_weekend",
+      "importance": 4
+    },
+    {
+      "feature": "tag_alignment_min",
       "importance": 3
     },
     {
@@ -315,5 +315,5 @@
       "importance": 0
     }
   ],
-  "elapsed_seconds": 20.05
+  "elapsed_seconds": 20.32
 }
