@@ -39,7 +39,7 @@ TOPIC_DEFAULT_TAGS: dict[str, list[str]] = {
     "Spor": ["#spor", "#fitness", "#antrenman", "#sağlık", "#motivasyon"],
     "Kültür-Sanat": ["#sanat", "#kültür", "#tasarım", "#fotoğrafçılık", "#sinema"],
     "Girişimcilik": ["#girişimcilik", "#startup", "#işdünyası", "#liderlik", "#motivasyon"],
-    "Yaşam": ["#yaşam", "#lifestyle", "#güzellik", "#moda", "#bakım", "#sağlık"],
+    "Yaşam": ["#yaşam", "#lifestyle", "#günlükyaşam", "#aile", "#mutluluk", "#ilham"],
 }
 
 
@@ -53,6 +53,13 @@ def is_clean_tag(tag: str) -> bool:
 
 class RetrievalService:
     """Retrieves top-performing similar posts and aggregates high-impact hashtags."""
+
+    # Cosine similarity floors. Queries with little or no vocabulary overlap
+    # (typical for Turkish ideas against the English-titled corpus) return
+    # degenerate matches (0.0 or near-constant noise); surface them to users
+    # and never derive hashtag advice from them.
+    MIN_SIMILAR_POST_SIMILARITY = 0.15  # drop from the similar-posts list
+    MIN_TAG_SIMILARITY = 0.30           # tags only from genuinely similar posts
 
     def __init__(self, store: SimilarPostStore | None = None, context_engine_path: Path | None = None):
         self.context_engine = ContextEngine(svd_dim=settings.VECTOR_DIM)
@@ -150,7 +157,8 @@ class RetrievalService:
         category_filter: str | None = None,
     ) -> list[SimilarPost]:
         query_vec = self.generate_text_vector(topic, dim=settings.VECTOR_DIM)
-        return self.store.search(query_vec, limit=limit, category=category_filter)
+        results = self.store.search(query_vec, limit=limit, category=category_filter)
+        return [p for p in results if p.similarity >= self.MIN_SIMILAR_POST_SIMILARITY]
 
     def extract_top_tags(
         self,
@@ -162,6 +170,8 @@ class RetrievalService:
         tag_scores: Counter[str] = Counter()
 
         for post in similar_posts:
+            if post.similarity < self.MIN_TAG_SIMILARITY:
+                continue
             weight = post.popularity_score
             for tag in post.tags:
                 clean_tag = tag.strip()
