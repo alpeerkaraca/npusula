@@ -121,7 +121,13 @@ class AdvisorService:
         req_id = f"req-{uuid.uuid4().hex[:8]}"
 
         # 0. Content safety & policy guardrail (Gemma 4 Shield Guardrail)
-        # mod_result = self.moderation.evaluate(request.idea)
+        # Confidence-gated: only decisive model confidence, obfuscated evasion,
+        # or an LLM verdict can block; uncertain cases fail open to avoid
+        # false positives on legitimate content.
+        if self.moderation is not None:
+            mod_result = self.moderation.evaluate(request.idea)
+            if not mod_result.is_safe:
+                raise HTTPException(status_code=400, detail=mod_result.reason)
 
         # 1. Get user context
         user_posts = self.post_repo.get_user_history(request.user_id)
