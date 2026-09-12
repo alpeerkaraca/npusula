@@ -2,6 +2,8 @@
 from collections import Counter
 from pathlib import Path
 
+import pandas as pd
+
 from backend.adapters.storage import InMemoryPostStore, QdrantPostStore, SimilarPostStore
 from backend.config import settings
 from backend.schemas.recommendation import SimilarPost
@@ -58,7 +60,7 @@ class RetrievalService:
         if engine_path.exists():
             self.context_engine.load(engine_path)
         else:
-            self._fit_fallback_context_engine()
+            self._fit_fallback_context_engine(engine_path)
 
         if store is not None:
             self.store = store
@@ -76,8 +78,27 @@ class RetrievalService:
         if isinstance(self.store, InMemoryPostStore) and not self.store.vectors:
             self._seed_fallback_store()
 
-    def _fit_fallback_context_engine(self) -> None:
-        """Fits a deterministic local encoder for offline/dev operation."""
+    def _fit_fallback_context_engine(self, engine_path: Path) -> None:
+        """Restores a missing context encoder.
+
+        The Qdrant index vectors were produced by the data-fitted engine, so a
+        freshly fitted tiny fallback encoder would live in a different subspace
+        and every cosine similarity would collapse to ~0. Prefer refitting on
+        the real processed titles and persist the artifact; the tiny topical
+        corpus remains only as a last resort when the parquet is unavailable.
+        """
+        try:
+            df = pd.read_parquet(settings.PROCESSED_DATA_PATH)
+            titles = df["title"].fillna("").astype(str).tolist()
+            if len(titles) >= 100:
+                self.context_engine.fit(titles)
+                engine_path.parent.mkdir(parents=True, exist_ok=True)
+                self.context_engine.save(engine_path)
+                print(f"Refitted context engine on {len(titles):,} real titles -> {engine_path}")
+                return
+        except Exception as e:
+            print(f"Warning: could not refit context engine from processed posts: {e}")
+
         corpus = [
             "Yapay zeka makine öğrenmesi derin öğrenme model optimizasyonu",
             "Yazılım geliştirme Python backend kodlama",
