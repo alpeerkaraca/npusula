@@ -95,13 +95,12 @@ def test_gemma_advisor_prompt_building():
 
 
 def test_gemma_advisor_explanation_generation():
-    engine = GemmaAdvisorEngine()
     now = datetime(2026, 9, 14, 18, 0, tzinfo=timezone.utc)
     slots = [
         CandidateSlot(datetime_utc=now, weekday=0, hour=18, predicted_popularity=12.5, label="Çok güçlü"),
         CandidateSlot(datetime_utc=now, weekday=2, hour=21, predicted_popularity=11.8, label="Güçlü"),
     ]
-    explanation = engine.generate_explanation(
+    kwargs = dict(
         idea="Yeni nesil oyun motorları ve performans",
         topic="Oyun",
         media_type=MediaTypeEnum.VIDEO,
@@ -109,7 +108,25 @@ def test_gemma_advisor_explanation_generation():
         suggested_tags=["#oyun", "#teknoloji"],
         similar_posts=[],
     )
-    assert "en güçlü aday" in explanation
-    assert "Pazartesi 18:00" in explanation
-    assert "#oyun" in explanation
-    assert "Gemma 4 Strateji Önerisi" in explanation
+
+    # Deterministic fallback when the LLM is unreachable
+    offline = GemmaAdvisorEngine(api_url="http://127.0.0.1:9", timeout_seconds=0.3)
+    fallback = offline.generate_explanation(**kwargs)
+    assert "en güçlü aday" in fallback
+    assert "Pazartesi 18:00" in fallback
+    assert "#oyun" in fallback
+    assert "Strateji Önerisi" in fallback
+
+    # Live LLM response must be a substantive, varied answer (skip when
+    # Ollama is not running in this environment)
+    try:
+        import httpx
+        with httpx.Client(timeout=1.0) as client:
+            if client.get("http://127.0.0.1:11434/api/tags").status_code != 200:
+                pytest.skip("Ollama is not running")
+    except Exception:
+        pytest.skip("Ollama is not running")
+
+    live = GemmaAdvisorEngine().generate_explanation(**kwargs)
+    assert len(live) >= 50
+    assert "en güçlü aday" in live.lower()

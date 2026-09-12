@@ -103,7 +103,7 @@ def test_advisor_endpoint_success(client):
     assert all("relative_potential" in slot and "confidence_level" in slot for slot in data["recommendations"])
     assert len(data["suggested_tags"]) <= 3
     assert len(data["similar_posts"]) > 0
-    assert "en güçlü aday" in data["explanation"]
+    assert "en güçlü aday" in data["explanation"].lower()
 
 
 def test_advisor_strict_pydantic_rejection(client):

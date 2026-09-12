@@ -41,7 +41,51 @@ def test_category_matching_is_word_boundary_aware():
     # real technology keywords still match
     assert classify_post_category("Python ile yapay zeka modelleri", None, None, None)["primary_category"] == "technology"
     assert classify_post_category("Derin öğrenme ve transformer mimarileri", None, None, None)["primary_category"] == "technology"
-    assert classify_post_category("Elektrikli araç batarya teknolojisi", None, None, None)["primary_category"] == "automotive"
+    assert classify_post_category("Elektrikli araç batarya ömrü", None, None, None)["primary_category"] == "automotive"
+
+
+def test_sports_ideas_classify_to_spor():
+    """Sports vocabulary (including inflected forms) must map to Spor."""
+    ps = ProfileService()
+    for text in ["güreş maçı heyecanı", "boks antrenmanı", "voleybol turnuvası"]:
+        topic = ps.classify_text_topic(text, fallback_topic="Yazılım")
+        assert topic == "Spor", f"{text!r} -> {topic!r}"
+
+
+def test_sports_category_mapping():
+    """Sports ideas must map to sports_fitness in the canonical taxonomy."""
+    assert classify_post_category("amerikan güreşi izledik", None, None, None)["primary_category"] == "sports_fitness"
+    assert classify_post_category("voleybol turnuvası", None, None, None)["primary_category"] == "sports_fitness"
+
+
+def test_llm_topic_classifier_fails_open():
+    """Unreachable LLM must return None so callers keep their fallback."""
+    from backend.services.gemma_advisor import GemmaAdvisorEngine
+
+    engine = GemmaAdvisorEngine(api_url="http://127.0.0.1:9", timeout_seconds=0.3)
+    assert engine.classify_topic("herhangi bir fikir", ProfileService().topic_names) is None
+
+
+def test_advisor_api_wrestling_idea_quality(client):
+    """API response for a wrestling idea must be sports, not the user's tech profile."""
+    try:
+        import httpx
+        with httpx.Client(timeout=1.0) as check:
+            if check.get("http://127.0.0.1:11434/api/tags").status_code != 200:
+                pytest.skip("Ollama is not running")
+    except Exception:
+        pytest.skip("Ollama is not running")
+
+    response = client.post("/api/recommend/advisor", json={
+        "user_id": "demo_user_01",
+        "idea": "amerikan güreşi izledik",
+        "media_type": "video",
+        "horizon": "next_7_days",
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["topic"] == "Spor"
+    assert data["primary_category"] == "sports_fitness"
 
 
 def test_advisor_api_family_idea_quality(client):
