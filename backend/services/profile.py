@@ -22,7 +22,7 @@ TOPIC_SEEDS: dict[str, str] = {
     "Spor": "spor futbol basketbol antrenman fitness beslenme maraton koşu sağlık egzersiz turnuva lig maç",
     "Kültür-Sanat": "kültür sanat sergi sinema tiyatro fotoğraf müzik edebiyat festival resim tasarım şiir film yönetmen",
     "Girişimcilik": "girişimcilik startup yatırım fonlama büyüme scaleup mvp müşteri iş modeli networking kurucu ortak melek yatırımcı saas b2b",
-    "Yaşam": "yaşam lifestyle seyahat gezi kahve sağlık motivasyon doğa verimlilik çalışma düzeni minimalizm kamp makyaj güzellik bakım kozmetik eyeliner kombin stil moda skincare ootd",
+    "Yaşam": "yaşam lifestyle seyahat gezi kahve sağlık motivasyon doğa verimlilik çalışma düzeni minimalizm kamp makyaj güzellik bakım kozmetik eyeliner kombin stil moda skincare ootd aile ailem ailemle çocuk bebek ev evde mutlu mutluluk haftasonu hafta sonu tatil pazar arkadaş kutlama doğum günü anı hatıra piknik akşam yemeği sofra huzur keyif beraber birlikte gezi evlilik düğün nişan yıldönümü",
 }
 
 

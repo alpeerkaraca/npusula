@@ -3,6 +3,7 @@ Canonical Taxonomy Service (G2)
 Provides a versioned canonical taxonomy mapping SMPD categories to 11 platform-independent canonical categories.
 """
 
+import re
 from typing import Dict, List, Optional, Any, Tuple
 
 # 1. Versioned dict mapping category -> list of subcategories
@@ -39,6 +40,7 @@ for cat, subcats in CANONICAL_TAXONOMY_V1.items():
 SMPD_TO_CANONICAL_MAPPING: Dict[str, Tuple[str, str]] = {
     "yapay zeka": ("technology", "artificial_intelligence"),
     "yapayzeka": ("technology", "artificial_intelligence"),
+    "derin öğrenme": ("technology", "artificial_intelligence"),
     "üretken": ("technology", "artificial_intelligence"),
     "teknoloji": ("technology", "consumer_electronics"),
     "yazılım": ("technology", "software"),
@@ -48,7 +50,9 @@ SMPD_TO_CANONICAL_MAPPING: Dict[str, Tuple[str, str]] = {
     "hardware": ("technology", "hardware"),
     "cars": ("automotive", "cars"),
     "auto": ("automotive", "cars"),
-    "ev": ("automotive", "electric_vehicles"),
+    # NOTE: plain "ev" must NOT map to electric_vehicles - Turkish "ev" (home)
+    # collides with English "EV"; electric vehicle content is matched below.
+    "elektrikli": ("automotive", "electric_vehicles"),
     "fashion": ("fashion_beauty", "apparel"),
     "beauty": ("fashion_beauty", "cosmetics_skincare"),
     "travel": ("travel_tourism", "destinations"),
@@ -74,6 +78,12 @@ SMPD_TO_CANONICAL_MAPPING: Dict[str, Tuple[str, str]] = {
     "economy": ("business_economy", "markets"),
     "lifestyle": ("social_lifestyle", "daily_life"),
     "family": ("social_lifestyle", "family_parenting"),
+    "aile": ("social_lifestyle", "family_parenting"),
+    "çocuk": ("social_lifestyle", "family_parenting"),
+    "ev": ("social_lifestyle", "daily_life"),
+    "hafta sonu": ("social_lifestyle", "daily_life"),
+    "haftasonu": ("social_lifestyle", "daily_life"),
+    "tatil": ("social_lifestyle", "daily_life"),
 }
 
 # 6. classify_post_category function
@@ -111,14 +121,16 @@ def classify_post_category(
     primary_match = None
     secondary_match = None
     
-    # Very basic heuristic matching for demonstration
+    # Word-boundary heuristic matching: a keyword matches only as a whole word,
+    # so "ai" does not match inside "ailemle" and "ev" does not match inside
+    # "evlilik". Turkish characters are word characters in Python regexes.
     for keyword, (cat, subcat) in SMPD_TO_CANONICAL_MAPPING.items():
-        if keyword in text_to_search:
+        if re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", text_to_search):
             if primary_match is None:
                 primary_match = (cat, subcat)
             elif secondary_match is None and (cat, subcat) != primary_match:
                 secondary_match = (cat, subcat)
-                
+
             if primary_match and secondary_match:
                 break
                 
