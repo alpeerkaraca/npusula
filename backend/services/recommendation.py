@@ -1,6 +1,7 @@
 """Popularity prediction model and recommendation service with Semantic Content Features."""
 from datetime import datetime, timezone
 import json
+import logging
 from pathlib import Path
 from typing import Any
 import joblib
@@ -23,6 +24,8 @@ from backend.services.candidate_generator import (
 )
 from backend.services.canonical_taxonomy import classify_post_category
 from backend.services.tag_taxonomy import align_tags
+
+logger = logging.getLogger(__name__)
 
 TIME_FEATURES = [
     "hour",
@@ -144,7 +147,7 @@ class RecommendationService:
             try:
                 self.svd_pipeline = joblib.load(TEXT_SVD_PATH)
             except Exception as e:
-                print(f"Warning: Failed to load SVD pipeline: {e}")
+                logger.warning("failed to load SVD pipeline from %s: %s; text features degraded to zeros", TEXT_SVD_PATH, e)
 
     def _prepare_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Builds all tabular, tag taxonomy, and text semantic features."""
@@ -304,16 +307,16 @@ class RecommendationService:
             try:
                 loaded = self._load_booster_crlf_safe(self.model_path)
                 if loaded.num_feature() != len(self.feature_names):
-                    print(
-                        f"Ignoring incompatible model with {loaded.num_feature()} features; "
-                        f"expected {len(self.feature_names)}."
+                    logger.warning(
+                        "ignoring incompatible model: %d features, expected %d",
+                        loaded.num_feature(), len(self.feature_names),
                     )
                     return
                 self.model = loaded
-                print(f"Loaded existing model from {self.model_path}")
+                logger.info("loaded existing model from %s", self.model_path)
                 return
             except Exception as e:
-                print(f"Failed to load model from {self.model_path}: {e}")
+                logger.warning("failed to load model from %s: %s", self.model_path, e)
 
         if df.empty or len(df) < 10:
             return
@@ -354,6 +357,7 @@ class RecommendationService:
         self.model = model.booster_
         self.model_path.parent.mkdir(parents=True, exist_ok=True)
         self.model.save_model(str(self.model_path))
+        logger.info("trained and saved fallback model to %s (rows=%d)", self.model_path, len(df_sorted))
 
     def get_metrics(self) -> ModelMetricsResponse:
         """Returns offline test metrics and feature importance from artifacts/metrics.json."""
@@ -389,7 +393,7 @@ class RecommendationService:
         top_k: int = 3,
         model_mode: str = "auto",
     ) -> list[CandidateSlot]:
-        """Scores 28 candidate slots (next 7 days x 4 slots) with semantic taxonomy and SVD embedding."""
+        """Scores 7x24 candidate slots (next 7 days x every hour) with semantic taxonomy and SVD embedding."""
         now = datetime.now(timezone.utc)
         candidates = build_candidate_slots(start_time=now, days_ahead=days_ahead)
 

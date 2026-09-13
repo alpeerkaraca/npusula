@@ -1,11 +1,14 @@
 """FastAPI application providing EnPusula backend services and API contracts."""
 from contextlib import asynccontextmanager
+import logging
+import time
 from typing import Any
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.adapters.repository import PostRepository, UserRepository
 from backend.adapters.storage import QdrantPostStore
+from backend.logging_setup import setup_logging
 from backend.schemas.profile import ProfileDecisionRequest, ProfileStatus
 from backend.schemas.recommendation import (
     AdvisorRequest,
@@ -18,6 +21,9 @@ from backend.services.device import device_manager
 from backend.services.profile import ProfileService
 from backend.services.recommendation import RecommendationService
 from backend.services.retrieval import RetrievalService
+
+setup_logging()
+logger = logging.getLogger("backend.app")
 
 # Initialize repositories and services
 post_repo = PostRepository()
@@ -41,8 +47,11 @@ async def lifespan(app: FastAPI):
     df = post_repo.get_df()
     if not df.empty:
         recommendation_service.train_or_load(df)
-        print("RecommendationService initialized and trained.")
+        logger.info("startup complete: recommendation service ready (rows=%d)", len(df))
+    else:
+        logger.warning("startup: processed dataset is empty; model is unavailable")
     yield
+    logger.info("shutdown complete")
 
 
 app = FastAPI(
@@ -60,6 +69,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """One INFO line per request with status and duration."""
+    started = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - started) * 1000.0
+    logger.info(
+        "%s %s %d %.0fms",
+        request.method, request.url.path, response.status_code, duration_ms,
+    )
+    return response
 
 
 @app.get("/api/health")

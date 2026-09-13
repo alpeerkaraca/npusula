@@ -5,12 +5,15 @@ Generates actionable, strategic Turkish recommendations combining:
 - Deep Tabular Neural Network / LightGBM slot predictions
 - Qdrant retrieved high-popularity exemplars
 """
+import logging
 from typing import Any
 import httpx
 
 from backend.config import settings
 from backend.schemas.post import MediaTypeEnum
 from backend.schemas.recommendation import CandidateSlot, SimilarPost
+
+logger = logging.getLogger(__name__)
 
 TR_WEEKDAYS = [
     "Pazartesi",
@@ -128,9 +131,11 @@ class GemmaAdvisorEngine:
                     json={"model": self.model_name, "prompt": prompt, "stream": False},
                 )
                 if res.status_code != 200:
+                    logger.debug("gemma topic classification returned status %d", res.status_code)
                     return None
                 response_text = (res.json().get("response") or "").strip()
-        except Exception:
+        except Exception as e:
+            logger.debug("gemma topic classification call failed: %s", e)
             return None
 
         for option in options:
@@ -210,7 +215,8 @@ class GemmaAdvisorEngine:
                     # exact phrase; local generation often rephrases.
                     if text and len(text) >= 50:
                         return text
-        except Exception:
-            pass
+                    logger.debug("gemma explanation too short (%d chars); using fallback", len(text))
+        except Exception as e:
+            logger.debug("gemma explanation call failed: %s; using fallback", e)
 
         return fallback

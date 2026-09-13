@@ -14,6 +14,7 @@ trained by scripts/train_guardrail_model.py.
 """
 from dataclasses import dataclass, field
 import json
+import logging
 from pathlib import Path
 import re
 from typing import Any
@@ -30,6 +31,8 @@ from backend.services.moderation_data import (
     UNSAFE_LEXICON,
     strip_phrase_exceptions,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -152,8 +155,8 @@ class GuardrailClassifierModel:
         settings.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
         try:
             joblib.dump(self.pipeline, self.MODEL_FILE)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("failed to persist guardrail artifact to %s: %s", self.MODEL_FILE, e)
 
     def _load_or_train(self) -> None:
         if self.MODEL_FILE.exists():
@@ -161,8 +164,8 @@ class GuardrailClassifierModel:
                 self.pipeline = joblib.load(self.MODEL_FILE)
                 self.classes = list(self.pipeline.named_steps["clf"].classes_)
                 return
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("failed to load guardrail artifact (%s); retraining in-process", e)
         self._train()
 
     def predict_scores(self, text: str) -> dict[str, float]:
@@ -315,8 +318,8 @@ class GemmaModerationGuardrail:
                         llm_conf = None
                     return True, llm_cat if llm_cat in self.CATEGORY_LABELS else None, llm_conf, True
                 return False, None, None, True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("llm arbitration failed (%s); failing open", e)
         return False, None, None, False
 
     def evaluate(self, idea: str) -> ModerationVerdict:

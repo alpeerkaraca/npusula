@@ -1,5 +1,6 @@
 """Retrieval service managing vector search and hashtag aggregation."""
 from collections import Counter
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -9,6 +10,8 @@ from backend.config import settings
 from backend.schemas.recommendation import SimilarPost
 from backend.services.context_engine import ContextEngine
 from backend.services.tag_taxonomy import NSFW_TAGS
+
+logger = logging.getLogger(__name__)
 
 # Seed topic index mapping for topic-aligned embedding projection
 TOPIC_ORDER = [
@@ -78,9 +81,12 @@ class RetrievalService:
                 if qdrant_store.is_healthy():
                     self.store = qdrant_store
                 else:
+                    logger.warning("qdrant is not healthy; falling back to the in-memory store")
                     self.store = InMemoryPostStore()
-            except Exception:
+            except Exception as e:
+                logger.warning("qdrant connection failed (%s); falling back to the in-memory store", e)
                 self.store = InMemoryPostStore()
+        logger.info("retrieval store ready: %s", type(self.store).__name__)
 
         if isinstance(self.store, InMemoryPostStore) and not self.store.vectors:
             self._seed_fallback_store()
@@ -101,10 +107,10 @@ class RetrievalService:
                 self.context_engine.fit(titles)
                 engine_path.parent.mkdir(parents=True, exist_ok=True)
                 self.context_engine.save(engine_path)
-                print(f"Refitted context engine on {len(titles):,} real titles -> {engine_path}")
+                logger.info("refitted context engine on %d real titles -> %s", len(titles), engine_path)
                 return
         except Exception as e:
-            print(f"Warning: could not refit context engine from processed posts: {e}")
+            logger.warning("could not refit context engine from processed posts: %s", e)
 
         corpus = [
             "Yapay zeka makine öğrenmesi derin öğrenme model optimizasyonu",

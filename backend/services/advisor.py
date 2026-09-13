@@ -1,5 +1,6 @@
 """Danisman (Advisor) orchestrator combining recommendations, retrieval, and explanations."""
 from datetime import datetime
+import logging
 import uuid
 
 from fastapi import HTTPException
@@ -22,6 +23,8 @@ from backend.services.recommendation import RecommendationService
 from backend.services.retrieval import RetrievalService
 from backend.services.canonical_taxonomy import classify_post_category
 from backend.services.tag_taxonomy import align_tags
+
+logger = logging.getLogger(__name__)
 
 
 HISTORY_DEPTH_NAMES = {
@@ -127,6 +130,10 @@ class AdvisorService:
         if self.moderation is not None:
             mod_result = self.moderation.evaluate(request.idea)
             if not mod_result.is_safe:
+                logger.warning(
+                    "guardrail blocked request: request_id=%s user=%s category=%s risk=%.2f",
+                    req_id, request.user_id, mod_result.category, mod_result.risk_score,
+                )
                 raise HTTPException(status_code=400, detail=mod_result.reason)
 
         # 1. Get user context
@@ -203,6 +210,12 @@ class AdvisorService:
             similar_posts=similar_posts,
         )
 
+        history_depth = history_depth_name(behavioral.evidence_post_count)
+        logger.info(
+            "advisor completed: request_id=%s user=%s topic=%s category=%s slots=%d similar=%d history_depth=%s",
+            req_id, request.user_id, inferred_topic, primary_category,
+            len(slots), len(similar_posts), history_depth,
+        )
         return AdvisorResponse(
             request_id=req_id,
             topic=inferred_topic,
@@ -213,7 +226,7 @@ class AdvisorService:
             suggested_tags=suggested_tags,
             explanation=explanation,
             similar_posts=similar_posts,
-            history_depth=history_depth_name(behavioral.evidence_post_count),
+            history_depth=history_depth,
             confidence_level=slots[0].confidence_level if slots else "Düşük",
             model_version="lgbm-m5-residual + google/gemma-4-E4B-it",
             data_source="SMPD benchmark & EnSosyal demo",

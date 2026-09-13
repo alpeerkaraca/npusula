@@ -1,4 +1,5 @@
 """Hardware device management for GPU acceleration on Windows (DirectML / AMD Radeon)."""
+import logging
 from typing import Any
 import torch
 
@@ -8,6 +9,8 @@ try:
     DIRECTML_AVAILABLE = torch_directml.is_available()
 except ImportError:
     DIRECTML_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 class DeviceManager:
@@ -25,7 +28,7 @@ class DeviceManager:
                 raw_name = torch_directml.device_name(0)
                 self.device_name = raw_name.replace("\x00", "").strip()
             except Exception as e:
-                print(f"Warning: Failed to initialize DirectML device: {e}")
+                logger.warning("failed to initialize DirectML device: %s; using CPU", e)
         elif torch.cuda.is_available():
             self.device = torch.device("cuda:0")
             self.device_type = "cuda"

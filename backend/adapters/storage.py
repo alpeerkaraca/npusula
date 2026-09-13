@@ -1,4 +1,5 @@
 """Vector storage adapters for post retrieval."""
+import logging
 from typing import Any, Protocol
 import uuid
 import numpy as np
@@ -7,6 +8,8 @@ from qdrant_client.http import models as qmodels
 
 from backend.config import settings
 from backend.schemas.recommendation import SimilarPost
+
+logger = logging.getLogger(__name__)
 
 
 class SimilarPostStore(Protocol):
@@ -53,7 +56,7 @@ class QdrantPostStore:
                     ),
                 )
         except Exception as e:
-            print(f"Warning: Failed to ensure Qdrant collection: {e}")
+            logger.warning("failed to ensure qdrant collection '%s': %s", self.collection_name, e)
 
     def is_healthy(self) -> bool:
         try:
