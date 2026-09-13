@@ -1,0 +1,15 @@
+# Keep the build context small: data and artifacts are bind-mounted at
+# runtime, never baked into the image.
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/
+artifacts/
+tests/
+.git/
+.agents/
+graphify-out/
+*.log
+*.md
+!NOTICE.md

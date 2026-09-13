@@ -1,0 +1,99 @@
+# EnPusula production stack: vector store, LLM runtime, and the API.
+#
+#   docker compose up -d --build          # qdrant + ollama (+ model pull) + api
+#   docker compose --profile tools run --rm trainer   # one-time data/model build
+#
+# The processed dataset (./data) and model artifacts (./artifacts) are
+# bind-mounted into the containers; build them on the host or via the
+# `trainer` profile before serving traffic.
+name: enpusula
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST + dashboard
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    healthcheck:
+      # The image ships bash but no curl; TCP probe on the REST port.
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # Pulls the configured Gemma model once the LLM runtime is healthy.
+  # Until it finishes, LLM-assisted paths degrade to their deterministic
+  # fallbacks (topic judge, explanations) without blocking the API.
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull ${GEMMA_MODEL_NAME:-google/gemma-4-E4B-it}"]
+    restart: "no"
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    environment:
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6333"
+      GEMMA_API_URL: ${GEMMA_API_URL:-http://ollama:11434}
+      GEMMA_MODEL_NAME: ${GEMMA_MODEL_NAME:-google/gemma-4-E4B-it}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # One-time pipeline: normalize raw dataset -> rebuild Qdrant index -> train
+  # the popularity model. Runs inside the same image (torch included).
+  trainer:
+    build: .
+    profiles: ["tools"]
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    environment:
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6333"
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["python scripts/02_normalize_smp.py && python scripts/07_index_qdrant.py && python scripts/05_train_lgbm.py"]
+
+volumes:
+  qdrant_storage:
+  ollama_models:
