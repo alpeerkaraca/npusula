@@ -91,6 +91,47 @@ Opsiyonel ama yüksek değerli:
 - **Küçük gruplara kesin sıralama yok.** Support altındaki gruplar hiyerarşide
   yukarı taşınır ve `evidence_level` bunu açıkça söyler.
 
+## Sözleşme analizi: `nsosyal_features.json.shema` (keşfet akışı)
+
+EnSosyal'in paylaştığı şema Mastodon uyumlu bir status objesi. Adapter artık bu
+sözleşmeye göre yazıldı ve testler bu şemaya birebir uyan sentetik fixture'la
+koşuyor (`tests/fixtures/ensosyal/explore_feed_sample.json`).
+
+| Sözleşme | Adapter davranışı |
+|---|---|
+| `{success, message, data:{items, total}}` | `unwrap_envelope` zarfı açar; `success:false` → açık hata (sessiz boş ingest yok) |
+| `id`, `created_at`, `text`, `visibility`, `media_attachments[]`, `tags[{name}]` | kanonik kolonlara maplenir |
+| `account.account_id` | `user_id` (tuzlu pseudonim) — hesabın diğer alanları satıra **girmez** |
+| `favourites_count`, `replies_count`, `reblogs_count`, `quote_count`, `bookmarks_count` | like / comment / share (+quote) / save ağırlıkları |
+| `views_count` | hedefin erişim metriği: `log1p(views_count)` |
+| `detail_views_count`, `profile_views_count` | **kullanılmaz**: sayfa görüntülemesi, post dağıtımı değil |
+| `visibility: private/direct` | varsayılan olarak **atlanır** ve sayılır (`allowed_visibility`) |
+| `sensitive: true` | varsayılan olarak **atlanır** ve sayılır (`include_sensitive`) |
+| `media_attachments[].type` | `image→photo`, `video/gifv→video`, `audio→unknown` (fotoğrafa çevrilmez) |
+| `mentions`, `card`, `account.{username,display_name,bio,fields,avatar,header}`, `spoiler_text` | kişisel veri: satıra girmez, ingest raporunda "görüldü ve düşürüldü" olarak sayılır |
+
+### ⚠️ Tek kritik eksik: zaman dilimi
+
+Şemada **hiçbir yerde** timezone alanı yok — ne `Post` ne `Account` içinde.
+Tek sinyal `created_at`:
+
+| `created_at` | Sonuç |
+|---|---|
+| `"2026-09-12T21:30:00+03:00"` | gerçek yerel saat, `timezone_basis="source_offset"` |
+| `"2026-09-12T18:30:00Z"` veya offsetsiz | yerel saat **bilinmiyor**, `timezone_basis="utc_fallback"` |
+
+Fallback satırlar Katman A'yı eğitir ama **Katman B (pencere katmanı) onlar için
+yerel saat iddiası kuramaz** — boru hattı bunu zaten zorunlu kılıyor. Yani
+EnSosyal `created_at`'i UTC gönderiyorsa, pencere önerisi tüm satırlarda
+"belirsiz" kalır. EnSosyal'den istenmesi gereken tek şey:
+
+```text
+Kullanıcının zaman dilimi (IANA adı veya UTC offset), post başına.
+```
+
+Bu alan gelmeden timing özelliği ölçülebilir hale gelemez; alan geldiğinde
+`FIELD_CANDIDATES`'e iki satır eklenir ve zincir yeniden koşar.
+
 ## Adapter hazır: `backend/adapters/ensosyal.py`
 
 EnSosyal ekibinin entegrasyon için ihtiyaç duyacağı katman yazıldı. Adapter bir

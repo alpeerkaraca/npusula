@@ -1,0 +1,433 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/response.json",
+  "title": "Response",
+  "type": "object",
+  "required": ["success", "message", "data"],
+  "properties": {
+    "success": {
+      "type": "boolean"
+    },
+    "message": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "required": ["items", "total"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Post"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "Post": {
+      "type": "object",
+      "required": [
+        "id",
+        "account",
+        "text",
+        "created_at",
+        "edited",
+        "emojis",
+        "reblogs_count",
+        "favourites_count",
+        "replies_count",
+        "quote_count",
+        "bookmarks_count",
+        "views_count",
+        "shares_count",
+        "detail_views_count",
+        "profile_views_count",
+        "reblogged",
+        "favourited",
+        "muted",
+        "sensitive",
+        "spoiler_text",
+        "visibility",
+        "media_attachments",
+        "mentions",
+        "tags",
+        "card",
+        "language",
+        "pinned",
+        "bookmarked",
+        "allow_reply",
+        "has_flood"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "account": { "$ref": "#/$defs/Account" },
+        "text": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "edited": { "type": "boolean" },
+        "emojis": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Emoji" }
+        },
+        "reblogs_count": { "type": "integer", "minimum": 0 },
+        "favourites_count": { "type": "integer", "minimum": 0 },
+        "replies_count": { "type": "integer", "minimum": 0 },
+        "quote_count": { "type": "integer", "minimum": 0 },
+        "bookmarks_count": { "type": "integer", "minimum": 0 },
+        "views_count": { "type": "integer", "minimum": 0 },
+        "shares_count": { "type": "integer", "minimum": 0 },
+        "detail_views_count": { "type": "integer", "minimum": 0 },
+        "profile_views_count": { "type": "integer", "minimum": 0 },
+        "reblogged": { "type": "boolean" },
+        "favourited": { "type": "boolean" },
+        "muted": { "type": "boolean" },
+        "sensitive": { "type": "boolean" },
+        "spoiler_text": { "type": "string" },
+        "visibility": {
+          "type": "string",
+          "enum": ["public", "unlisted", "private", "direct"]
+        },
+        "media_attachments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/MediaAttachment" }
+        },
+        "mentions": {
+          "type": ["array", "null"],
+          "items": { "$ref": "#/$defs/Mention" }
+        },
+        "tags": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Tag" }
+        },
+        "card": {
+          "type": ["array", "null"],
+          "items": { "$ref": "#/$defs/Card" }
+        },
+        "language": { "type": ["string", "null"] },
+        "pinned": { "type": "boolean" },
+        "bookmarked": { "type": "boolean" },
+        "allow_reply": { "type": "boolean" },
+        "has_flood": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+
+    "Account": {
+      "type": "object",
+      "required": [
+        "account_id",
+        "username",
+        "display_name",
+        "locked",
+        "verified",
+        "show_followers_and_following",
+        "created_at",
+        "bio",
+        "avatar",
+        "header",
+        "followers_count",
+        "following_count",
+        "posts_count",
+        "last_post_at",
+        "emojis",
+        "fields",
+        "badges",
+        "relationship",
+        "moment_status"
+      ],
+      "properties": {
+        "account_id": { "type": "string" },
+        "username": { "type": "string" },
+        "display_name": { "type": "string" },
+        "locked": { "type": "boolean" },
+        "verified": { "type": "boolean" },
+        "show_followers_and_following": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "bio": { "type": "string" },
+        "avatar": { "$ref": "#/$defs/Avatar" },
+        "header": { "type": "string", "format": "uri" },
+        "followers_count": { "type": "integer", "minimum": 0 },
+        "following_count": { "type": "integer", "minimum": 0 },
+        "posts_count": { "type": "integer", "minimum": 0 },
+        "last_post_at": { "type": "string", "format": "date-time" },
+        "emojis": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Emoji" }
+        },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Field" }
+        },
+        "badges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Badge" }
+        },
+        "relationship": { "$ref": "#/$defs/Relationship" },
+        "moment_status": {
+          "type": "string",
+          "enum": ["empty", "active", "expired"]
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "Avatar": {
+      "type": "object",
+      "required": ["url", "media_id"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "media_id": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "Field": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "value": { "type": "string" },
+        "verified_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": true
+    },
+
+    "Badge": {
+      "type": "object",
+      "required": ["id", "name", "icon", "priority", "order", "active", "assigned_at"],
+      "properties": {
+        "id": { "type": "integer" },
+        "name": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "icon": { "$ref": "#/$defs/BadgeIcon" },
+        "priority": { "type": "string" },
+        "order": { "type": "integer" },
+        "active": { "type": "boolean" },
+        "assigned_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": true
+    },
+
+    "BadgeIcon": {
+      "type": "object",
+      "required": ["svg", "png", "jpg"],
+      "properties": {
+        "svg": { "type": "string", "format": "uri" },
+        "png": { "type": "string", "format": "uri" },
+        "jpg": { "type": "string", "format": "uri" }
+      },
+      "additionalProperties": true
+    },
+
+    "Relationship": {
+      "type": "object",
+      "required": [
+        "id",
+        "following",
+        "followed_by",
+        "requested",
+        "requested_by",
+        "muting",
+        "muting_notifications",
+        "blocking",
+        "blocked_by",
+        "notifying",
+        "moment_hiding",
+        "moment_hidden_by"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "following": { "type": "boolean" },
+        "followed_by": { "type": "boolean" },
+        "requested": { "type": "boolean" },
+        "requested_by": { "type": "boolean" },
+        "muting": { "type": "boolean" },
+        "muting_notifications": { "type": "boolean" },
+        "blocking": { "type": "boolean" },
+        "blocked_by": { "type": "boolean" },
+        "notifying": { "type": "boolean" },
+        "moment_hiding": { "type": "boolean" },
+        "moment_hidden_by": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+
+    "Emoji": {
+      "type": "object",
+      "properties": {
+        "shortcode": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "static_url": { "type": "string", "format": "uri" },
+        "visible_in_picker": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+
+    "Mention": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "acct": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "Tag": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      },
+      "additionalProperties": true
+    },
+
+    "Card": {
+      "type": "object",
+      "required": ["url", "title", "description", "provider_name", "site_name", "mime_type"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "image_url": { "type": ["string", "null"], "format": "uri" },
+        "blurhash": { "type": ["string", "null"] },
+        "provider_name": { "type": "string" },
+        "site_name": { "type": "string" },
+        "mime_type": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "MediaAttachment": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "url",
+        "preview_url",
+        "remote_url",
+        "preview_remote_url",
+        "text_url",
+        "meta",
+        "description",
+        "blurhash"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["image", "video", "gifv", "audio", "unknown"]
+        },
+        "url": { "type": "string", "format": "uri" },
+        "preview_url": { "type": "string", "format": "uri" },
+        "remote_url": { "type": "string" },
+        "preview_remote_url": { "type": "string" },
+        "text_url": { "type": "string" },
+        "meta": { "$ref": "#/$defs/MediaMeta" },
+        "description": { "type": "string" },
+        "blurhash": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+
+    "MediaMeta": {
+      "type": "object",
+      "properties": {
+        "adaptive_hls": { "$ref": "#/$defs/AdaptiveHls" },
+        "original": { "$ref": "#/$defs/OriginalMedia" },
+        "thumbnail": { "$ref": "#/$defs/Thumbnail" },
+        "small": { "$ref": "#/$defs/ImageSize" },
+        "focus": { "$ref": "#/$defs/Focus" }
+      },
+      "additionalProperties": true
+    },
+
+    "AdaptiveHls": {
+      "type": "object",
+      "required": ["duration", "format", "frame_rate", "mime_type", "url", "variants"],
+      "properties": {
+        "duration": { "type": "number" },
+        "format": { "type": "string" },
+        "frame_rate": { "type": "string" },
+        "mime_type": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "variants": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/HlsVariant" }
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "HlsVariant": {
+      "type": "object",
+      "required": ["bitrate", "height", "name", "width"],
+      "properties": {
+        "bitrate": { "type": "string" },
+        "height": { "type": "integer" },
+        "name": { "type": "string" },
+        "width": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+
+    "OriginalMedia": {
+      "type": "object",
+      "required": ["bitrate", "duration", "frame_rate", "height", "mime_type", "url", "width"],
+      "properties": {
+        "bitrate": { "type": "integer" },
+        "duration": { "type": "number" },
+        "frame_rate": { "type": "string" },
+        "height": { "type": "integer" },
+        "mime_type": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "width": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+
+    "Thumbnail": {
+      "type": "object",
+      "required": ["aspect", "blurhash", "height", "mime_type", "size", "url", "width"],
+      "properties": {
+        "aspect": { "type": "number" },
+        "blurhash": { "type": "string" },
+        "height": { "type": "integer" },
+        "mime_type": { "type": "string" },
+        "size": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "width": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+
+    "ImageSize": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "integer" },
+        "height": { "type": "integer" },
+        "size": { "type": "string" },
+        "aspect": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+
+    "Focus": {
+      "type": "object",
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

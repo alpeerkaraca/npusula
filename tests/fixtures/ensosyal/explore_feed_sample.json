@@ -1,0 +1,310 @@
+{
+  "_comment": [
+    "Synthetic fixture shaped exactly like nsosyal_features.json.shema (the",
+    "EnSosyal 'keşfet' feed response): {success, message, data:{items, total}}.",
+    "Every value is invented — ids, texts, counts and URLs. No EnSosyal user data",
+    "is reproduced here. The cases are deliberate: offset timestamp (real local",
+    "time), Z timestamp (fallback), private and sensitive posts (filtered), an",
+    "audio attachment (unknown media), a media-only post with empty text, quotes",
+    "folded into shares, and counters whose page-view fields must be ignored."
+  ],
+  "success": true,
+  "message": "ok",
+  "data": {
+    "total": 5,
+    "items": [
+      {
+        "id": "5550001",
+        "account": {
+          "account_id": "900001",
+          "username": "kahve_kutusu",
+          "display_name": "Kahve Kutusu",
+          "locked": false,
+          "verified": false,
+          "show_followers_and_following": true,
+          "created_at": "2024-03-02T10:00:00Z",
+          "bio": "günlük kahve notları — iletişim: kahve@example.invalid",
+          "avatar": {
+            "url": "https://cdn.example.invalid/a/900001.jpg",
+            "media_id": "m-900001"
+          },
+          "header": "https://cdn.example.invalid/h/900001.jpg",
+          "followers_count": 12450,
+          "following_count": 311,
+          "posts_count": 842,
+          "last_post_at": "2026-09-12T18:40:00Z",
+          "emojis": [],
+          "fields": [
+            {
+              "name": "şehir",
+              "value": "Kadıköy",
+              "verified_at": null
+            }
+          ],
+          "badges": [],
+          "relationship": {
+            "id": "900001",
+            "following": false,
+            "followed_by": false,
+            "requested": false,
+            "requested_by": false,
+            "muting": false,
+            "muting_notifications": false,
+            "blocking": false,
+            "blocked_by": false,
+            "notifying": false,
+            "moment_hiding": false,
+            "moment_hidden_by": false
+          },
+          "moment_status": "empty"
+        },
+        "text": "Sabah kahvesi ve kitap keyfi #kahve #kitap http://example.invalid/promo @kahveci",
+        "created_at": "2026-09-12T21:30:00+03:00",
+        "edited": false,
+        "emojis": [],
+        "reblogs_count": 12,
+        "favourites_count": 340,
+        "replies_count": 28,
+        "quote_count": 3,
+        "bookmarks_count": 44,
+        "views_count": 15200,
+        "shares_count": 5,
+        "detail_views_count": 2100,
+        "profile_views_count": 130,
+        "reblogged": false,
+        "favourited": true,
+        "muted": false,
+        "sensitive": false,
+        "spoiler_text": "",
+        "visibility": "public",
+        "media_attachments": [
+          {
+            "id": "att-1",
+            "type": "image",
+            "url": "https://cdn.example.invalid/media/1.jpg",
+            "preview_url": "https://cdn.example.invalid/media/1_small.jpg",
+            "remote_url": "",
+            "preview_remote_url": "",
+            "text_url": "",
+            "meta": {
+              "original": {
+                "bitrate": 0,
+                "duration": 0,
+                "frame_rate": "",
+                "height": 1200,
+                "mime_type": "image/jpeg",
+                "url": "https://cdn.example.invalid/media/1.jpg",
+                "width": 1600
+              }
+            },
+            "description": "kahve fincanı",
+            "blurhash": "L6PZfSi_.AyE_3t7t7R**0o#DgR4"
+          }
+        ],
+        "mentions": [
+          {
+            "id": "900002",
+            "username": "kitapkurdu",
+            "url": "https://ensosyal.example/@kitapkurdu",
+            "acct": "kitapkurdu"
+          }
+        ],
+        "tags": [
+          {
+            "name": "kahve",
+            "url": "https://ensosyal.example/tags/kahve"
+          },
+          {
+            "name": "kitap",
+            "url": "https://ensosyal.example/tags/kitap"
+          }
+        ],
+        "card": null,
+        "language": "tr",
+        "pinned": false,
+        "bookmarked": false,
+        "allow_reply": true,
+        "has_flood": false
+      },
+      {
+        "id": "5550002",
+        "account": {
+          "account_id": "900002",
+          "username": "veri_gunlugu",
+          "display_name": "Veri Günlüğü"
+        },
+        "text": "Derin öğrenme ile görüntü işleme notları <p>uzun bir yazı</p>",
+        "created_at": "2026-09-12T05:15:00Z",
+        "edited": false,
+        "emojis": [],
+        "reblogs_count": 61,
+        "favourites_count": 540,
+        "replies_count": 33,
+        "quote_count": 4,
+        "bookmarks_count": 88,
+        "views_count": 15000,
+        "shares_count": 2,
+        "detail_views_count": 900,
+        "profile_views_count": 40,
+        "reblogged": false,
+        "favourited": false,
+        "muted": false,
+        "sensitive": false,
+        "spoiler_text": "",
+        "visibility": "public",
+        "media_attachments": [
+          {
+            "id": "att-2",
+            "type": "video",
+            "url": "https://cdn.example.invalid/media/2.mp4",
+            "preview_url": "https://cdn.example.invalid/media/2.jpg",
+            "meta": {
+              "original": {
+                "bitrate": 1200,
+                "duration": 32.4,
+                "frame_rate": "30/1",
+                "height": 1080,
+                "mime_type": "video/mp4",
+                "url": "https://cdn.example.invalid/media/2.mp4",
+                "width": 1920
+              }
+            },
+            "description": "",
+            "blurhash": ""
+          }
+        ],
+        "mentions": [],
+        "tags": [
+          {
+            "name": "yapayzeka",
+            "url": "https://ensosyal.example/tags/yapayzeka"
+          }
+        ],
+        "card": null,
+        "language": "tr",
+        "pinned": false,
+        "bookmarked": false,
+        "allow_reply": true,
+        "has_flood": false
+      },
+      {
+        "id": "5550003",
+        "account": {
+          "account_id": "900003",
+          "username": "ozel_hesap",
+          "display_name": "Özel"
+        },
+        "text": "sadece arkadaşlarıma",
+        "created_at": "2026-09-11T22:05:00+03:00",
+        "edited": false,
+        "emojis": [],
+        "reblogs_count": 0,
+        "favourites_count": 3,
+        "replies_count": 1,
+        "quote_count": 0,
+        "bookmarks_count": 0,
+        "views_count": 42,
+        "shares_count": 0,
+        "detail_views_count": 5,
+        "profile_views_count": 2,
+        "reblogged": false,
+        "favourited": false,
+        "muted": false,
+        "sensitive": false,
+        "spoiler_text": "",
+        "visibility": "private",
+        "media_attachments": [],
+        "mentions": [],
+        "tags": [],
+        "card": null,
+        "language": "tr",
+        "pinned": false,
+        "bookmarked": false,
+        "allow_reply": true,
+        "has_flood": false
+      },
+      {
+        "id": "5550004",
+        "account": {
+          "account_id": "900004",
+          "username": "gece_kusu",
+          "display_name": "Gece Kuşu"
+        },
+        "text": "hassas içerik",
+        "created_at": "2026-09-11T20:05:00+03:00",
+        "edited": false,
+        "emojis": [],
+        "reblogs_count": 1,
+        "favourites_count": 7,
+        "replies_count": 0,
+        "quote_count": 0,
+        "bookmarks_count": 0,
+        "views_count": 300,
+        "shares_count": 0,
+        "detail_views_count": 20,
+        "profile_views_count": 1,
+        "reblogged": false,
+        "favourited": false,
+        "muted": false,
+        "sensitive": true,
+        "spoiler_text": "içerik uyarısı",
+        "visibility": "public",
+        "media_attachments": [],
+        "mentions": [],
+        "tags": [],
+        "card": null,
+        "language": "tr",
+        "pinned": false,
+        "bookmarked": false,
+        "allow_reply": true,
+        "has_flood": false
+      },
+      {
+        "id": "5550005",
+        "account": {
+          "account_id": "900005",
+          "username": "sessiz_foto",
+          "display_name": "Sessiz"
+        },
+        "text": "",
+        "created_at": "2026-09-10T09:00:00+03:00",
+        "edited": false,
+        "emojis": [],
+        "reblogs_count": 0,
+        "favourites_count": 9,
+        "replies_count": 0,
+        "quote_count": 0,
+        "bookmarks_count": 1,
+        "views_count": 0,
+        "shares_count": 0,
+        "detail_views_count": 0,
+        "profile_views_count": 0,
+        "reblogged": false,
+        "favourited": false,
+        "muted": false,
+        "sensitive": false,
+        "spoiler_text": "",
+        "visibility": "public",
+        "media_attachments": [
+          {
+            "id": "att-3",
+            "type": "audio",
+            "url": "https://cdn.example.invalid/media/3.mp3",
+            "preview_url": "",
+            "meta": {},
+            "description": "",
+            "blurhash": ""
+          }
+        ],
+        "mentions": [],
+        "tags": [],
+        "card": null,
+        "language": "tr",
+        "pinned": false,
+        "bookmarked": false,
+        "allow_reply": true,
+        "has_flood": false
+      }
+    ]
+  }
+}
