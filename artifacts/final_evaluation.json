@@ -737,13 +737,14 @@
       "selection_rule": "Stage 1: min validation pinball loss. Stage 2: max mean lift of the recommended window measured against the supported-window baseline (both scale-free across bucket geometries and immune to winner's-curse regression), tie-broken by top-1 positive-lift rate, NDCG@3, lower no-claim rate, then support. The no-claim cap of 0.9 filters candidates when any candidate satisfies it; if none does, the miss is recorded instead of aborting.",
       "bucket_size_comparison_note": "NDCG@3 is not comparable between 3h (8 candidates) and 4h (6 candidates) geome-tries, which is why the geometry decision rides on the observed lift of the recommended window instead."
     },
-    "checked_at": "2026-09-13T11:04:38.743797+00:00"
+    "checked_at": "2026-09-13T11:32:31.476608+00:00"
   },
-  "elapsed_seconds": 67.36,
+  "elapsed_seconds": 66.43,
   "provenance": {
-    "git_commit": "e1c0e68d2e433a82a202db83c09492efa366d7ab",
-    "git_dirty": true,
-    "evaluated_at_utc": "2026-09-13T11:05:46.149827+00:00",
+    "git_commit": "8791e8fdec32a18b47676ae7f6c889fc13e1a62c",
+    "git_dirty": false,
+    "git_worktree_dirty": true,
+    "evaluated_at_utc": "2026-09-13T11:33:37.965703+00:00",
     "dataset_sha256": "ed5b7fc3bbe188a88dc6a1e2beada3491af681adca615a6884ceeaa49b4d6aec",
     "model_path": "C:\\Users\\alpeerkaraca\\Desktop\\Projects\\npusula\\artifacts\\base_potential_lgbm.txt",
     "time_lift_path": "artifacts\\time_lift_table.json",

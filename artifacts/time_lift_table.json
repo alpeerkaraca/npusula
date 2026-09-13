@@ -9038,8 +9038,10 @@
     }
   },
   "provenance": {
-    "git_commit": "e1c0e68d2e433a82a202db83c09492efa366d7ab",
-    "built_at_utc": "2026-09-13T11:01:26.818126+00:00",
+    "git_commit": "8791e8fdec32a18b47676ae7f6c889fc13e1a62c",
+    "git_dirty": false,
+    "git_worktree_dirty": true,
+    "built_at_utc": "2026-09-13T11:32:26.866252+00:00",
     "dataset_parquet": "data\\processed\\posts.parquet",
     "dataset_sha256": "ed5b7fc3bbe188a88dc6a1e2beada3491af681adca615a6884ceeaa49b4d6aec",
     "tuning_source": "artifacts\\tuning_results.json",
