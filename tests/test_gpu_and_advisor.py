@@ -1,72 +1,120 @@
-"""Tests for residual recommendations, device reporting, and the advisor engine."""
-from datetime import datetime, timezone
-import pytest
-import torch
+"""Tests for the two-layer recommendation service, device reporting, and the advisor engine."""
+from datetime import datetime, timedelta, timezone
 
-from backend.config import settings
-from backend.models.tabular_nn import PopularityTabularNN
+import pytest
+
 from backend.schemas.post import MediaTypeEnum
-from backend.schemas.recommendation import AdvisorRequest, CandidateSlot, SimilarPost
+from backend.schemas.recommendation import (
+    AdvisorRequest,
+    RecommendedWindow,
+    SimilarPost,
+    WindowRecommendation,
+)
 from backend.services.device import device_manager
-from backend.services.gemma_advisor import GemmaAdvisorEngine, format_slot_turkish
+from backend.services.gemma_advisor import GemmaAdvisorEngine, format_window_turkish
 from backend.services.recommendation import RecommendationService
 
 
-def test_device_manager_gpu_detection():
+def test_device_manager_reports_hardware_without_claiming_a_model():
+    """The device manager describes hardware; it no longer implies a GPU model exists."""
     info = device_manager.get_info()
     assert "device_type" in info
     assert "device_name" in info
-    # On this machine, DirectML with AMD Radeon RX 9070 XT should be active
-    assert info["gpu_available"] is True
-    assert "AMD Radeon RX 9070 XT" in info["device_name"]
+    assert "gpu_available" in info
 
 
-def test_gpu_tabular_nn_forward():
-    device = device_manager.get_device()
-    model = PopularityTabularNN(num_categories=14, num_continuous=31).to(device)
-    model.eval()
+def _window(
+    weekday: int,
+    bucket: int,
+    label: str,
+    lift: float,
+    confidence: str = "high",
+    tie: bool = False,
+    support: int = 1240,
+) -> RecommendedWindow:
+    base = datetime(2026, 9, 15, bucket * 3, 0, tzinfo=timezone.utc)
+    return RecommendedWindow(
+        window_start_local=base,
+        window_end_local=base + timedelta(hours=3),
+        window_start_utc=base,
+        window_end_utc=base + timedelta(hours=3),
+        weekday=label,
+        weekday_index=weekday,
+        bucket=bucket,
+        time_range_local=f"{bucket * 3:02d}.00–{bucket * 3 + 3:02d}.00",
+        base_potential=7.1,
+        observational_time_lift=lift,
+        confidence=confidence,
+        confidence_label={"high": "Yüksek", "medium": "Orta", "low": "Düşük"}[confidence],
+        support_post_count=support,
+        support_user_count=210,
+        evidence_level="category_weekday_bucket",
+        is_tie_or_broad_window=tie,
+        timezone_basis="user_timezone",
+    )
 
-    batch_size = 4
-    cat_ids = torch.zeros(batch_size, dtype=torch.long, device=device)
-    media_ids = torch.zeros(batch_size, dtype=torch.long, device=device)
-    weekend_ids = torch.zeros(batch_size, dtype=torch.long, device=device)
-    continuous = torch.ones((batch_size, 31), dtype=torch.float32, device=device)
 
-    with torch.no_grad():
-        preds = model(cat_ids, media_ids, weekend_ids, continuous)
+def _recommendation(windows: list[RecommendedWindow], tie: bool = False, fallback: bool = False) -> WindowRecommendation:
+    return WindowRecommendation(
+        base_potential=7.1,
+        primary_category_code=0,
+        confidence=windows[0].confidence,
+        confidence_label=windows[0].confidence_label,
+        is_tie_or_broad_window=tie,
+        timezone_basis="utc_fallback" if fallback else "user_timezone",
+        timezone_label="UTC" if fallback else "Europe/Istanbul",
+        timezone_fallback=fallback,
+        history_depth=3,
+        windows=windows,
+    )
 
-    assert preds.shape == (batch_size,)
-    assert not torch.isnan(preds).any()
 
-
-def test_recommendation_service_residual_contract():
+def test_recommendation_service_has_no_gpu_model():
     service = RecommendationService()
     assert not hasattr(service, "gpu_model")
 
-    slots = service.recommend_slots(
+
+def test_recommendation_service_window_contract():
+    service = RecommendationService()
+    result = service.recommend_windows(
         user_prior_mean=6.5,
         user_post_count=15,
-        title="PyTorch GPU Test",
+        title="Yapay zeka ile kod üretimi",
         tags=["#yapayzeka"],
         media_type=MediaTypeEnum.PHOTO,
         topic="Yapay Zeka",
-        top_k=3,
+        max_windows=3,
+        timezone_name="Europe/Istanbul",
     )
-    assert len(slots) == 3
-    for s in slots:
-        assert 0 <= s.weekday <= 6
-        assert 0 <= s.hour <= 23
-        assert 0.0 <= s.predicted_popularity <= 20.0
+
+    assert len(result.windows) == 3
+    for window in result.windows:
+        assert 0 <= window.weekday_index <= 6
+        assert 0 <= window.bucket <= 7
+        assert window.window_end_local - window.window_start_local == timedelta(hours=3)
+        assert window.confidence in {"high", "medium", "low"}
+        assert window.evidence_level in {
+            "category_weekday_bucket", "category_bucket", "global_weekday_bucket",
+            "global_bucket", "neutral",
+        }
+        # No window may present itself as a strict winner without evidence.
+        if window.confidence == "high":
+            assert window.is_tie_or_broad_window is False
+            assert window.support_post_count > 0
+
+
+def test_format_window_turkish():
+    window = _window(1, 6, "Salı", 0.12)
+    assert format_window_turkish(window) == "Salı 18.00–21.00"
 
 
 def test_gemma_advisor_prompt_building():
     engine = GemmaAdvisorEngine()
-    now = datetime(2026, 9, 15, 21, 0, tzinfo=timezone.utc)
-    slots = [
-        CandidateSlot(datetime_utc=now, weekday=1, hour=21, predicted_popularity=14.2, label="Çok güçlü"),
-        CandidateSlot(datetime_utc=now, weekday=3, hour=18, predicted_popularity=13.8, label="Güçlü"),
-        CandidateSlot(datetime_utc=now, weekday=6, hour=12, predicted_popularity=13.1, label="Orta"),
-    ]
+    recommendation = _recommendation([
+        _window(1, 6, "Salı", 0.22),
+        _window(3, 6, "Perşembe", 0.11),
+        _window(6, 4, "Pazar", 0.02),
+    ])
     posts = [
         SimilarPost(
             post_id="p1",
@@ -78,55 +126,111 @@ def test_gemma_advisor_prompt_building():
             tags=["#yapayzeka", "#derinogrenme"],
         )
     ]
+
     prompt = engine.build_prompt(
         idea="Yapay zeka ile kod üretimi",
         topic="Yapay Zeka",
         media_type=MediaTypeEnum.PHOTO,
-        slots=slots,
+        window_recommendation=recommendation,
         suggested_tags=["#yapayzeka", "#kodlama"],
         similar_posts=posts,
     )
+
     assert "<start_of_turn>user" in prompt
     assert "<end_of_turn>" in prompt
     assert "<start_of_turn>model" in prompt
     assert "Yapay zeka ile kod üretimi" in prompt
-    assert "Salı 21:00" in prompt
-    assert "en güçlü aday" in prompt
+    assert "Salı 18.00–21.00" in prompt
+    # Mandatory wording rules
+    assert "Kesin nedensel iddia kurma" in prompt
+    assert "Geçmiş gözlemlerde desteklenen pencere" in prompt
+    assert "doğrulanmış etiketlerden üret" in prompt
 
 
-def test_gemma_advisor_explanation_generation():
-    now = datetime(2026, 9, 14, 18, 0, tzinfo=timezone.utc)
-    slots = [
-        CandidateSlot(datetime_utc=now, weekday=0, hour=18, predicted_popularity=12.5, label="Çok güçlü"),
-        CandidateSlot(datetime_utc=now, weekday=2, hour=21, predicted_popularity=11.8, label="Güçlü"),
-    ]
-    kwargs = dict(
+def test_gemma_advisor_prompt_discloses_utc_fallback():
+    engine = GemmaAdvisorEngine()
+    recommendation = _recommendation([_window(1, 6, "Salı", 0.05)], tie=True, fallback=True)
+
+    prompt = engine.build_prompt(
+        idea="Kahve",
+        topic="Yaşam",
+        media_type=MediaTypeEnum.PHOTO,
+        window_recommendation=recommendation,
+        suggested_tags=[],
+        similar_posts=[],
+    )
+
+    assert "saat dilimi bilinmiyor" in prompt.lower()
+    assert "Doğrulanmış etiket yok" in prompt
+
+
+def test_gemma_advisor_explanation_fallback_uses_window_language():
+    recommendation = _recommendation([
+        _window(0, 6, "Pazartesi", 0.18),
+        _window(2, 7, "Çarşamba", 0.04),
+    ])
+    offline = GemmaAdvisorEngine(api_url="http://127.0.0.1:9", timeout_seconds=0.3)
+
+    explanation = offline.generate_explanation(
         idea="Yeni nesil oyun motorları ve performans",
         topic="Oyun",
         media_type=MediaTypeEnum.VIDEO,
-        slots=slots,
+        window_recommendation=recommendation,
         suggested_tags=["#oyun", "#teknoloji"],
         similar_posts=[],
     )
 
-    # Deterministic fallback when the LLM is unreachable
-    offline = GemmaAdvisorEngine(api_url="http://127.0.0.1:9", timeout_seconds=0.3)
-    fallback = offline.generate_explanation(**kwargs)
-    assert "en güçlü aday" in fallback
-    assert "Pazartesi 18:00" in fallback
-    assert "#oyun" in fallback
-    assert "Strateji Önerisi" in fallback
+    assert "Pazartesi 18.00–21.00" in explanation
+    assert "gözlemsel" in explanation.lower()
+    assert "nedensellik iddiası değil" in explanation
+    assert "#oyun" in explanation
+    assert "Strateji Önerisi" in explanation
 
-    # Live LLM response must be a substantive, varied answer (skip when
-    # Ollama is not running in this environment)
+
+def test_gemma_advisor_fallback_offers_a_choice_for_broad_windows():
+    recommendation = _recommendation([
+        _window(0, 6, "Pazartesi", 0.02, confidence="low", tie=True),
+        _window(2, 7, "Çarşamba", 0.01, confidence="low", tie=True),
+    ], tie=True)
+    offline = GemmaAdvisorEngine(api_url="http://127.0.0.1:9", timeout_seconds=0.3)
+
+    explanation = offline.generate_explanation(
+        idea="Aile yürüyüşü",
+        topic="Yaşam",
+        media_type=MediaTypeEnum.PHOTO,
+        window_recommendation=recommendation,
+        suggested_tags=[],
+        similar_posts=[],
+    )
+
+    assert "belirgin değil" in explanation
+    assert "veya" in explanation
+    assert "Düşük" in explanation
+
+
+def test_gemma_advisor_live_explanation_is_substantive():
+    """Live LLM answer must be substantive; skipped when Ollama is not running."""
     try:
         import httpx
+
         with httpx.Client(timeout=1.0) as client:
             if client.get("http://127.0.0.1:11434/api/tags").status_code != 200:
                 pytest.skip("Ollama is not running")
     except Exception:
         pytest.skip("Ollama is not running")
 
-    live = GemmaAdvisorEngine().generate_explanation(**kwargs)
+    recommendation = _recommendation([_window(0, 6, "Pazartesi", 0.18)])
+    live = GemmaAdvisorEngine().generate_explanation(
+        idea="Yeni nesil oyun motorları ve performans",
+        topic="Oyun",
+        media_type=MediaTypeEnum.VIDEO,
+        window_recommendation=recommendation,
+        suggested_tags=["#oyun"],
+        similar_posts=[],
+    )
     assert len(live) >= 50
-    assert "en güçlü aday" in live.lower()
+
+
+def test_advisor_request_rejects_out_of_range_offset():
+    with pytest.raises(Exception):
+        AdvisorRequest(user_id="u", idea="fikir", utc_offset_minutes=9999)
