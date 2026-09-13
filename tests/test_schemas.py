@@ -69,16 +69,16 @@ def test_topic_weight_bounds():
 
 def test_advisor_request_strict_validation():
     req = AdvisorRequest(
-        user_id="demo_user_01",
+        user_id="test_user",
         idea="Bugün yapay zeka ile ilgili bir gönderi paylaşıyoruz",
         media_type=MediaTypeEnum.VIDEO,
     )
-    assert req.user_id == "demo_user_01"
+    assert req.user_id == "test_user"
     assert req.media_type == MediaTypeEnum.VIDEO
 
     # Reject string coercion for enum or invalid length
     with pytest.raises(ValidationError):
         AdvisorRequest(
-            user_id="demo_user_01",
+            user_id="test_user",
             idea="",  # Empty string rejected by min_length=1
         )

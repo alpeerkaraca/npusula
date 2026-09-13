@@ -289,7 +289,7 @@ def test_guardrail_real_dataset_safe_examples():
 def test_advisor_api_rejects_turkish_explicit_terms(client):
     """API should reject Turkish explicit content with HTTP 400."""
     payload = {
-        "user_id": "demo_user_03",
+        "user_id": "test_user",
         "idea": "eşcinsel seks",
         "media_type": "video",
         "horizon": "next_7_days",
@@ -302,7 +302,7 @@ def test_advisor_api_rejects_turkish_explicit_terms(client):
 def test_advisor_api_rejects_english_nsfw(client):
     """API should reject English NSFW content with HTTP 400."""
     payload = {
-        "user_id": "demo_user_03",
+        "user_id": "test_user",
         "idea": "naked girls",
         "media_type": "video",
         "horizon": "next_7_days",
@@ -328,7 +328,7 @@ def test_guardrail_blocks_plain_unsafe_content():
 def test_advisor_api_allows_safe_content(client):
     """API must accept legitimate content that previously triggered false positives."""
     payload = {
-        "user_id": "demo_user_03",
+        "user_id": "test_user",
         "idea": "Patlıcan kebabı tarifi",
         "media_type": "video",
         "horizon": "next_7_days",
@@ -340,7 +340,7 @@ def test_advisor_api_allows_safe_content(client):
 def test_advisor_api_rejects_adult_content(client):
     """API endpoint should reject NSFW/adult test case with HTTP 400 and clear explanation."""
     payload = {
-        "user_id": "demo_user_03",
+        "user_id": "test_user",
         "idea": "Cinsel görsel ayak resmi",
         "media_type": "video",
         "horizon": "next_7_days",
@@ -356,7 +356,7 @@ def test_advisor_api_rejects_adult_content(client):
 def test_advisor_api_rejects_leetspeak_adult_content(client):
     """API endpoint should catch leetspeak adult evasion and report obfuscation detection."""
     payload = {
-        "user_id": "demo_user_03",
+        "user_id": "test_user",
         "idea": "c1pl4q ve c!ns3l video",
         "media_type": "video",
         "horizon": "next_7_days",

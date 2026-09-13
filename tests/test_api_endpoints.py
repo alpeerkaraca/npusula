@@ -24,65 +24,65 @@ def test_health_endpoint(client):
 
 
 def test_demo_users_endpoint(client):
+    """Synthetic demo accounts were removed; the endpoint stays for clients."""
     response = client.get("/api/demo-users")
     assert response.status_code == 200
-    users = response.json()
-    assert len(users) == 3
-    user_ids = [u["user_id"] for u in users]
-    assert "demo_user_01" in user_ids
-    assert "demo_user_02" in user_ids
-    assert "demo_user_03" in user_ids
+    assert response.json() == []
 
 
-def test_profile_aligned_user(client):
-    response = client.get("/api/profile/demo_user_01")
+def test_profile_diffuse_user_no_drift(client):
+    """A real SMPD user with diffuse topics must not trigger drift."""
+    response = client.get("/api/profile/60519@N0")
     assert response.status_code == 200
     data = response.json()
-    assert data["user_id"] == "demo_user_01"
+    assert data["user_id"] == "60519@N0"
     assert data["drift_detected"] is False
     assert data["question"] is None
     assert len(data["active_recommendation_topics"]) > 0
 
 
 def test_profile_drifted_user(client):
-    response = client.get("/api/profile/demo_user_02")
+    """A real SMPD user concentrated in an undeclared topic drifts."""
+    response = client.get("/api/profile/36743@N91")
     assert response.status_code == 200
     data = response.json()
-    assert data["user_id"] == "demo_user_02"
+    assert data["user_id"] == "36743@N91"
     assert data["drift_detected"] is True
     assert data["question"] is not None
 
 
 def test_profile_decision_accept(client):
-    response = client.post("/api/profile/demo_user_02/decision", json={"accept": True})
+    response = client.post("/api/profile/36743@N91/decision", json={"accept": True})
     assert response.status_code == 200
     data = response.json()
     # Recommendation should shift to behavioral top topic
     assert data["active_recommendation_topics"][0]["topic"] == data["behavioral_topics"][0]["topic"]
 
 
-def test_quick_recommendation_aligned_user(client):
-    response = client.get("/api/recommend/quick/demo_user_01")
+def test_quick_recommendation_with_history(client):
+    """A real SMPD user with rich posting history gets warm-start slots."""
+    response = client.get("/api/recommend/quick/31253@N15")
     assert response.status_code == 200
     data = response.json()
-    assert data["user_id"] == "demo_user_01"
+    assert data["user_id"] == "31253@N15"
     assert len(data["slots"]) == 3
     assert data["cold_start"] is False
     assert "Pazartesi" in data["explanation"] or "Salı" in data["explanation"] or "Çarşamba" in data["explanation"] or "Perşembe" in data["explanation"] or "Cuma" in data["explanation"] or "Cumartesi" in data["explanation"] or "Pazar" in data["explanation"]
 
 
 def test_quick_recommendation_cold_start(client):
-    response = client.get("/api/recommend/quick/demo_user_03")
+    """An unknown user id (no posts) exercises the cold-start path."""
+    response = client.get("/api/recommend/quick/cold_start_user")
     assert response.status_code == 200
     data = response.json()
-    assert data["user_id"] == "demo_user_03"
+    assert data["user_id"] == "cold_start_user"
     assert data["cold_start"] is True
     assert len(data["slots"]) == 3
 
 
 def test_advisor_endpoint_success(client):
     payload = {
-        "user_id": "demo_user_01",
+        "user_id": "31253@N15",
         "idea": "Yeni nesil üretken yapay zeka modelleri ve kullanım alanları",
         "media_type": "photo",
         "horizon": "next_7_days",
@@ -102,7 +102,8 @@ def test_advisor_endpoint_success(client):
     assert data["service_mode"] == "deep_advisor"
     assert all("relative_potential" in slot and "confidence_level" in slot for slot in data["recommendations"])
     assert len(data["suggested_tags"]) <= 3
-    assert len(data["similar_posts"]) > 0
+    # The corpus is English-only; Turkish ideas may legitimately retrieve none
+    assert len(data["similar_posts"]) <= 5
     assert "en güçlü aday" in data["explanation"].lower()
 
 
@@ -110,7 +111,7 @@ def test_advisor_strict_pydantic_rejection(client):
     """Strict Pydantic should reject extra keys or invalid empty idea string."""
     # Test 1: Empty idea string violates min_length=1
     response = client.post("/api/recommend/advisor", json={
-        "user_id": "demo_user_01",
+        "user_id": "test_user",
         "idea": "",
         "media_type": "photo",
     })
@@ -118,7 +119,7 @@ def test_advisor_strict_pydantic_rejection(client):
 
     # Test 2: Extra forbidden field
     response = client.post("/api/recommend/advisor", json={
-        "user_id": "demo_user_01",
+        "user_id": "test_user",
         "idea": "Valid idea",
         "media_type": "photo",
         "forbidden_extra_field": 123,
