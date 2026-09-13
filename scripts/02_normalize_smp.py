@@ -93,16 +93,6 @@ def normalize_dataset():
     print(f"Read {len(records):,} valid records (skipped {skipped:,}).")
     df = pd.DataFrame(records)
 
-    # Add demo accounts posts to ensure end-to-end demo consistency
-    demo_path = Path("artifacts/demo_accounts.json")
-    if OUTPUT_PARQUET.exists():
-        existing_df = pd.read_parquet(OUTPUT_PARQUET)
-        demo_posts = existing_df[existing_df["user_id"].isin(["demo_user_01", "demo_user_02", "demo_user_03"])]
-        if not demo_posts.empty:
-            print(f"Merging {len(demo_posts)} demo fixture posts...")
-            demo_posts = demo_posts[[c for c in demo_posts.columns if c in df.columns]]
-            df = pd.concat([df, demo_posts], ignore_index=True)
-
     print("Computing leakage-free chronological user history priors...")
     df = compute_leakage_free_history(df, default_popularity_mean=5.5)
 
