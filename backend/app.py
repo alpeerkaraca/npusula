@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.adapters.repository import PostRepository, UserRepository
 from backend.adapters.storage import QdrantPostStore
+from backend.config import settings
 from backend.logging_setup import setup_logging
 from backend.schemas.media import MediaAnalysisResponse
 from backend.schemas.profile import ProfileDecisionRequest, ProfileStatus
@@ -115,7 +116,7 @@ def get_health() -> dict[str, Any]:
         "model_ready": recommendation_service.model is not None,
         "media_analyzer_ready": media_analyzer.is_ready,
         "gpu": gpu_info,
-        "advisor_model": "google/gemma-4-E4B-it",
+        "advisor_model": settings.GEMMA_MODEL_NAME,
     }
 
 
