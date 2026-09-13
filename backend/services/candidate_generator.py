@@ -6,11 +6,13 @@ from typing import Any
 from backend.schemas.recommendation import CandidateSlot
 
 
-SLOT_HOURS = [9, 12, 18, 21]
+# Every full hour: the model learns hour effects across the whole day, so the
+# recommendation phase must be able to select any hour (not only prime times).
+SLOT_HOURS = list(range(24))
 
 
 def build_candidate_slots(start_time: datetime | None = None, days_ahead: int = 7) -> list[datetime]:
-    """Generates 28 candidate timestamps: next 7 days at 09:00, 12:00, 18:00, 21:00 UTC."""
+    """Generates 7 x 24 candidate timestamps: next 7 days at every full hour UTC."""
     if start_time is None:
         start_time = datetime.now(timezone.utc)
     elif start_time.tzinfo is None:

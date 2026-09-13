@@ -37,15 +37,15 @@ def test_leakage_free_history_calculation():
 
 
 def test_build_candidate_slots_count_and_hours():
-    """Verify candidate generator produces 28 slots at [9, 12, 18, 21]."""
+    """Verify candidate generator covers every hour across the 7-day horizon."""
     now = datetime(2026, 9, 12, 10, 0, 0, tzinfo=timezone.utc)
     slots = build_candidate_slots(start_time=now, days_ahead=7)
-    assert len(slots) == 28
+    assert len(slots) == 7 * 24
 
-    # All slots should be at either 9, 12, 18, or 21
-    valid_hours = {9, 12, 18, 21}
+    # All 24 hours of the day must be reachable on each full day
+    hours = {slot.hour for slot in slots}
+    assert hours == set(range(24))
     for slot in slots:
-        assert slot.hour in valid_hours
         assert slot.minute == 0
 
 
