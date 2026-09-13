@@ -2,8 +2,23 @@ import joblib
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS, TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
+
+# Function words must not drive retrieval. Without this, a Turkish query whose
+# only in-vocabulary token is a stray function word ("bir") retrieves
+# unrelated posts at high similarity.
+CONTEXT_STOP_WORDS: list[str] = sorted(
+    set(ENGLISH_STOP_WORDS)
+    | {
+        "bir", "ile", "ve", "bu", "da", "de", "için", "çok", "daha", "en",
+        "gibi", "kadar", "sonra", "önce", "ama", "ancak", "her", "ne", "ki",
+        "mi", "var", "yok", "ise", "oldu", "olan", "olarak", "üzere", "şey",
+        "ben", "sen", "biz", "siz", "onlar", "benim", "senin", "onun",
+        "bizim", "sizin", "şu", "ya", "hem", "veya", "yani", "eğer", "göre",
+        "başka", "tüm", "bütün", "az",
+    }
+)
 
 
 class ContextEngine:
@@ -20,7 +35,9 @@ class ContextEngine:
             svd_dim (int): Dimension of the output context embedding. Default is 64.
         """
         self.svd_dim = svd_dim
-        self.vectorizer = TfidfVectorizer(max_features=10000, lowercase=True)
+        self.vectorizer = TfidfVectorizer(
+            max_features=10000, lowercase=True, stop_words=CONTEXT_STOP_WORDS
+        )
         self.svd = TruncatedSVD(n_components=self.svd_dim, random_state=42)
         self.effective_dim = self.svd_dim
         self.is_fitted = False
