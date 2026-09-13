@@ -1,4 +1,4 @@
-"""FastAPI application providing EnPusula backend services and API contracts."""
+"""FastAPI application providing NPusula backend services and API contracts."""
 from contextlib import asynccontextmanager
 import logging
 import time
@@ -74,8 +74,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="EnPusula API",
-    description="Intelligent Posting Time Recommendation & Profile Drift Advisor for EnSosyal",
+    title="NPusula API",
+    description="Intelligent Posting Time Recommendation & Profile Drift Advisor for NSosyal",
     version="0.1.0",
     lifespan=lifespan,
 )

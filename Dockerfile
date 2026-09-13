@@ -1,4 +1,4 @@
-# Production image for the EnPusula API.
+# Production image for the NPusula API.
 # Dependencies are installed from the uv lockfile. torch resolves from the
 # CPU wheel index declared in pyproject.toml (the default PyPI wheel is the
 # CUDA build), and the Windows DirectML plugin is excluded by its platform

@@ -300,7 +300,7 @@ def test_media_api_analyzes_upload_and_feeds_the_advisor():
 
 # --- graceful degradation -------------------------------------------------
 def test_analyzer_degrades_when_weights_are_unavailable(tmp_path: Path):
-    analyzer = MediaAnalyzer(model_name="enpusula/does-not-exist", cache_dir=tmp_path)
+    analyzer = MediaAnalyzer(model_name="npusula/does-not-exist", cache_dir=tmp_path)
     assert analyzer.warm_up() is False
     assert analyzer.is_ready is False
     with pytest.raises(MediaUnavailableError):

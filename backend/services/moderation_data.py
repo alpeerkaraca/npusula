@@ -1,4 +1,4 @@
-"""Curated data for the EnPusula moderation guardrail.
+"""Curated data for the NPusula moderation guardrail.
 
 This module is intentionally dependency-free (no sklearn/pandas) so the runtime
 import stays cheap. Data provenance:

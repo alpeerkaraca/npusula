@@ -366,7 +366,7 @@ class AdvisorService:
             timezone_basis=recommendation.timezone_basis,
             timezone_fallback=recommendation.timezone_fallback,
             model_version="base-potential-lgbm + time-lift-table + google/gemma-4-E4B-it",
-            data_source="SMPD benchmark (observational) & EnSosyal demo",
+            data_source="SMPD benchmark (observational) & NSosyal demo",
             service_mode="deep_advisor",
             media_analysis=media,
         )

@@ -1,8 +1,8 @@
 {
   "_comment": [
     "Synthetic fixture shaped exactly like nsosyal_features.json.shema (the",
-    "EnSosyal 'keşfet' feed response): {success, message, data:{items, total}}.",
-    "Every value is invented — ids, texts, counts and URLs. No EnSosyal user data",
+    "NSosyal 'keşfet' feed response): {success, message, data:{items, total}}.",
+    "Every value is invented — ids, texts, counts and URLs. No NSosyal user data",
     "is reproduced here. The cases are deliberate: offset timestamp (real local",
     "time), Z timestamp (fallback), private and sensitive posts (filtered), an",
     "audio attachment (unknown media), a media-only post with empty text, quotes",
@@ -105,18 +105,18 @@
           {
             "id": "900002",
             "username": "kitapkurdu",
-            "url": "https://ensosyal.example/@kitapkurdu",
+            "url": "https://nsosyal.example/@kitapkurdu",
             "acct": "kitapkurdu"
           }
         ],
         "tags": [
           {
             "name": "kahve",
-            "url": "https://ensosyal.example/tags/kahve"
+            "url": "https://nsosyal.example/tags/kahve"
           },
           {
             "name": "kitap",
-            "url": "https://ensosyal.example/tags/kitap"
+            "url": "https://nsosyal.example/tags/kitap"
           }
         ],
         "card": null,
@@ -177,7 +177,7 @@
         "tags": [
           {
             "name": "yapayzeka",
-            "url": "https://ensosyal.example/tags/yapayzeka"
+            "url": "https://nsosyal.example/tags/yapayzeka"
           }
         ],
         "card": null,

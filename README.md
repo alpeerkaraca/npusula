@@ -1,13 +1,13 @@
-# N-Pusula (EnPusula)
+# N-Pusula (NPusula)
 
-EnSosyal için akıllı paylaşım zamanı danışmanı: bir içerik fikri verildiğinde
+NSosyal için akıllı paylaşım zamanı danışmanı: bir içerik fikri verildiğinde
 **önerilen paylaşım pencerelerini**, tarihsel gözlemsel liftini, güven seviyesini
 ve önerilen etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 
 > **Dil sözleşmesi.** Sistem "kesin en iyi saat" iddia etmez. Çıktı, kanıt
 > seviyesiyle birlikte bir **zaman penceresidir** ("Teknoloji içeriği için Salı
 > 18.00–21.00 aralığı, geçmiş gözlemlerde desteklenen bir pencere"). Saat
-> etkisi nedensel değil **gözlemseldir**; nedensellik iddiası ancak EnSosyal
+> etkisi nedensel değil **gözlemseldir**; nedensellik iddiası ancak NSosyal
 > A/B veya kontrollü keşif verisiyle kurulabilir.
 
 ## İki katmanlı model
@@ -96,9 +96,9 @@ deneyi `artifacts/legacy/` altına alındı; `backend/models/tabular_nn.py` ve
 - **Medya dosyaları pakette yoktur:** `media_available` yalnız dosya gerçekten
   okunabiliyorsa `True` olur (bugün tüm satırlar `False`); kaynak statüsü
   alanı tek başına yeterli sayılmaz.
-- **EnSosyal veri API'si talep edildi; sağlanması belirsiz.** Bu nedenle model ve
+- **NSosyal veri API'si talep edildi; sağlanması belirsiz.** Bu nedenle model ve
   demo SMPD benchmark'ı ile devam etmektedir; adaptasyon planı için
-  `docs/ENSOSYAL_ADAPTATION.md`.
+  `docs/NSOSYAL_ADAPTATION.md`.
 - Türkçe fikirler için telafiler: Gemma konu yargıcı, retrieval benzerlik
   eşikleri ve doğrulanmış etiket fallback'leri. SMPD korpusunda Türkçe post
   bulunmadığından benzer-post listesi birçok Türkçe fikirde boş döner.
@@ -274,7 +274,7 @@ seçmesi HIKAYE.md Bölüm 9'da kayıtlı bir hataydı.
 
 **Model feature sözleşmesi:** SMPD paketi medya dosyası dağıtmadığı için
 (`flickr_smpd_dataset.md`) görsel embedding eğitim korpusuna **eklenmemiştir**;
-görsel popularity feature'ı ancak dosyaları olan lisanslı/EnSosyal bir korpusla
+görsel popularity feature'ı ancak dosyaları olan lisanslı/NSosyal bir korpusla
 ayrı bir veri sözleşmesi ve yeniden eğitimle eklenebilir. Bugün görsel analiz
 mevcut girdileri besler: kategori kolonları (doğrudan uygulanır) ve etiketler.
 
@@ -346,21 +346,46 @@ Yeni ağırlık yayınlamak için (bakım):
 python scripts/sync_artifacts.py upload     # güncel artifacts/ + parquet yüklenir
 ```
 
-**Ortam değişkenleri** (compose'da varsayılanlarıyla hazır):
+**Ortam değişkenleri**
+
+Ayarların tek kaynağı kök dizindeki `.env` dosyasıdır: `backend/env_loader.py`
+dosyayı süreç ortamına yükler, `backend/config.py`, `backend/logging_setup.py`
+ve script'ler değerleri oradan okur. Şablon: `.env.example` (`cp .env.example .env`).
+
+İki kural:
+
+- **Süreç ortamı `.env`'i geçersiz kılar.** `docker compose`, CI ve
+  `LOG_LEVEL=DEBUG uv run uvicorn backend.app:app` gibi tek seferlik
+  özelleştirmeler aynen çalışmaya devam eder.
+- **Her anahtarın kod içinde bir varsayılanı vardır.** `.env` olmadan da
+  uygulama ayağa kalkar; dosya yalnızca varsayılanı değiştirmek için gereklidir.
 
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
-| `API_PORT` | 8000 | API'nin host portu |
-| `GEMMA_API_URL` | `http://ollama:11434` | LLM uç noktası |
+| `API_PORT` | 8000 | API'nin host portu (yalnızca compose) |
+| `GEMMA_API_URL` | `http://127.0.0.1:11434` | LLM uç noktası (compose içinde `ollama` servisi) |
 | `GEMMA_MODEL_NAME` | `google/gemma-4-E4B-it` | Ollama model adı |
+| `QDRANT_HOST` | otomatik keşif | Boşsa localhost → podman VM adresi denenir |
+| `QDRANT_PORT` | 6333 | Qdrant REST portu |
 | `LOG_LEVEL` | INFO | Uygulama log seviyesi |
 | `CLIP_MODEL_NAME` | `openai/clip-vit-base-patch32` | Medya analizi modeli |
-| `MEDIA_CACHE_DIR` | `./models/hf` | Ağırlık önbelleği (bind-mount edilir) |
+| `MEDIA_CACHE_DIR` | `<repo>/models/hf` | Ağırlık önbelleği (bind-mount edilir) |
 | `MEDIA_DEVICE` | `cpu` | `cpu` \| `auto` \| `cuda` \| `directml` |
 | `MAX_IMAGE_MB` / `MAX_VIDEO_MB` | 10 / 50 | Yükleme boyut sınırları |
 | `MAX_VIDEO_SECONDS` | 60 | Video süre sınırı |
+| `VIDEO_FRAME_COUNT` | 8 | Video başına örneklenen kare |
+| `MEDIA_ANALYSIS_TTL_SECONDS` | 1800 | Medya analizi önbellek ömrü |
+| `MEDIA_TOP_TAGS` | 3 | Gönderi başına etiket sayısı |
+| `MEDIA_MIN_PROB` / `MEDIA_MIN_MARGIN` / `MEDIA_TAG_MIN_PROB` | 0.35 / 0.10 / 0.10 | CLIP güven eşikleri |
 | `HF_HUB_OFFLINE` | `0` | Çevrimdışı demo için `1` |
 | `SMPD_MEDIA_ROOT` | `data/raw/media` | `media_available` doğrulamasının kök dizini |
+| `WEBDAV_URL` / `WEBDAV_USER` / `WEBDAV_PASSWORD` | — | Veri kümesi + ağırlık senkronu |
+| `NSOSYAL_API_BASE_URL` / `NSOSYAL_API_TOKEN` / `NSOSYAL_PSEUDONYM_SALT` | — | Gerçek NSosyal ingest'i (yoksa adaptör hata verir) |
+
+`docker compose` yalnızca container'a anlamlı olan anahtarları geçirir
+(`GEMMA_MODEL_NAME`, `LOG_LEVEL`, `HF_HUB_OFFLINE`, `API_PORT`) ve ağ adreslerini
+(`QDRANT_HOST=qdrant`, `GEMMA_API_URL=http://ollama:11434`) kendisi sabitler —
+host'a göre yazılmış `.env` değerleri container içine sızmaz.
 
 **Notlar**
 

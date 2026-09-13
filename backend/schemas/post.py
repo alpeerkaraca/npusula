@@ -33,10 +33,10 @@ TimezoneBasis = Literal["source_offset", "utc_fallback", "user_timezone", "user_
 
 
 class PostRecord(StrictSchema):
-    """Canonical data standard for SMPD and EnSosyal posts."""
+    """Canonical data standard for SMPD and NSosyal posts."""
 
     schema_version: StrictStr = "1.0"
-    source: StrictStr = Field(default="smpd_real", description="Data source identifier (e.g. smpd_real, ensosyal)")
+    source: StrictStr = Field(default="smpd_real", description="Data source identifier (e.g. smpd_real, nsosyal)")
     post_id: StrictStr = Field(..., description="Unique post identifier")
     user_id: StrictStr = Field(..., description="Author user identifier")
     published_at_utc: datetime = Field(..., description="UTC publication timestamp")

@@ -659,7 +659,7 @@ class MediaAnalyzer:
 
     def _decode_video(self, data: bytes) -> tuple[list[Any], float, int, int]:
         """Writes the upload to a temp file (ffmpeg needs a path) and samples frames."""
-        with tempfile.TemporaryDirectory(prefix="enpusula-media-") as tmpdir:
+        with tempfile.TemporaryDirectory(prefix="npusula-media-") as tmpdir:
             path = Path(tmpdir) / "upload.bin"
             path.write_bytes(data)
             meta = probe_video(path)

@@ -1,4 +1,4 @@
-"""Smoke test verifying all core EnPusula workflows end-to-end."""
+"""Smoke test verifying all core NPusula workflows end-to-end."""
 import json
 from fastapi.testclient import TestClient
 
@@ -7,7 +7,7 @@ from backend.app import app
 
 def run_smoke_test():
     print("=" * 60)
-    print("EnPusula MVP - End-to-End Smoke Test")
+    print("NPusula MVP - End-to-End Smoke Test")
     print("=" * 60)
 
     with TestClient(app) as client:

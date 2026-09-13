@@ -1,7 +1,7 @@
-"""EnSosyal ingestion adapter: field mapping, KVKK filter, feed envelope, transport.
+"""NSosyal ingestion adapter: field mapping, KVKK filter, feed envelope, transport.
 
-The fixtures are synthetic and shaped exactly like the contract EnSosyal shared
-(`nsosyal_features.json.shema`); no real EnSosyal user data is in this repository.
+The fixtures are synthetic and shaped exactly like the contract NSosyal shared
+(`nsosyal_features.json.shema`); no real NSosyal user data is in this repository.
 """
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ from pathlib import Path
 import httpx
 import pytest
 
-from backend.adapters.ensosyal import (
-    EnSosyalAdapterConfig,
-    EnSosyalClient,
-    EnSosyalResponseError,
-    EnSosyalTransportNotConfigured,
+from backend.adapters.nsosyal import (
+    NSosyalAdapterConfig,
+    NSosyalClient,
+    NSosyalResponseError,
+    NSosyalTransportNotConfigured,
     EngagementWeights,
     declared_offset,
     engagement_counters,
@@ -36,13 +36,13 @@ from backend.adapters.ensosyal import (
 from backend.services.canonical_taxonomy import CANONICAL_CATEGORIES
 from backend.services.post_contract import (
     DERIVED_PRIOR_COLUMNS,
-    ENSOSYAL_SOURCE_ID,
+    NSOSYAL_SOURCE_ID,
     INGESTED_COLUMNS,
     OUTPUT_COLUMNS,
 )
 from backend.services.recommendation import RecommendationService
 
-FIXTURES = Path(__file__).parent / "fixtures" / "ensosyal"
+FIXTURES = Path(__file__).parent / "fixtures" / "nsosyal"
 FEED_FIXTURE = FIXTURES / "explore_feed_sample.json"
 CONTRACT_SCHEMA = Path(__file__).resolve().parents[1] / "nsosyal_features.json.shema"
 SALT = "test-salt-not-a-secret"
@@ -59,11 +59,11 @@ def posts(feed) -> list[dict]:
 
 
 @pytest.fixture
-def config() -> EnSosyalAdapterConfig:
-    return EnSosyalAdapterConfig(salt=SALT)
+def config() -> NSosyalAdapterConfig:
+    return NSosyalAdapterConfig(salt=SALT)
 
 
-def _record(payload: dict, config: EnSosyalAdapterConfig) -> dict:
+def _record(payload: dict, config: NSosyalAdapterConfig) -> dict:
     row = to_post_record(payload, config=config)
     assert row is not None, f"payload unexpectedly skipped: {skip_reason(payload, config)}"
     return row
@@ -71,7 +71,7 @@ def _record(payload: dict, config: EnSosyalAdapterConfig) -> dict:
 
 # --- the shared contract -----------------------------------------------------
 def test_fixture_matches_the_published_json_schema(posts):
-    """The fixture must satisfy EnSosyal's own schema, so the adapter is tested
+    """The fixture must satisfy NSosyal's own schema, so the adapter is tested
     against their contract and not against an invented one."""
     try:
         import jsonschema
@@ -113,9 +113,9 @@ def test_envelope_unwrapping(feed, posts):
 
 
 def test_envelope_reports_platform_failures():
-    with pytest.raises(EnSosyalResponseError, match="failure"):
+    with pytest.raises(NSosyalResponseError, match="failure"):
         unwrap_envelope({"success": False, "message": "rate limited", "data": {}})
-    with pytest.raises(EnSosyalResponseError):
+    with pytest.raises(NSosyalResponseError):
         unwrap_envelope("not an envelope")
 
 
@@ -123,7 +123,7 @@ def test_envelope_reports_platform_failures():
 def test_first_post_maps_onto_the_canonical_row(posts, config):
     row = _record(posts[0], config)
 
-    assert row["source"] == ENSOSYAL_SOURCE_ID
+    assert row["source"] == NSOSYAL_SOURCE_ID
     assert row["post_id"] == "5550001"
     assert set(row) == set(INGESTED_COLUMNS)
     assert set(DERIVED_PRIOR_COLUMNS).isdisjoint(row)
@@ -256,7 +256,7 @@ def test_private_posts_are_filtered_and_counted(posts, config):
     assert frame.attrs["skipped_by_reason"]["visibility_filtered"] == 1
 
     # Opting in is possible but explicit.
-    permissive = EnSosyalAdapterConfig(salt=SALT, allowed_visibility=frozenset({"public", "unlisted", "private"}))
+    permissive = NSosyalAdapterConfig(salt=SALT, allowed_visibility=frozenset({"public", "unlisted", "private"}))
     assert skip_reason(posts[2], permissive) is None
 
 
@@ -266,7 +266,7 @@ def test_sensitive_posts_are_filtered_unless_opted_in(posts, config):
     frame = ingest_payloads(posts, config=config)
     assert "5550004" not in frame["post_id"].tolist()
 
-    permissive = EnSosyalAdapterConfig(salt=SALT, include_sensitive=True)
+    permissive = NSosyalAdapterConfig(salt=SALT, include_sensitive=True)
     assert skip_reason(posts[3], permissive) is None
 
 
@@ -292,13 +292,13 @@ def test_user_ids_are_pseudonymised_with_a_stable_salt(posts, config):
     assert first["user_id"].startswith("ensy_")
     assert "900001" not in first["user_id"]
 
-    assert _record(posts[0], EnSosyalAdapterConfig(salt="another"))["user_id"] != first["user_id"]
-    assert _record(posts[0], EnSosyalAdapterConfig(salt=SALT, pseudonymize_users=False))["user_id"] == "900001"
+    assert _record(posts[0], NSosyalAdapterConfig(salt="another"))["user_id"] != first["user_id"]
+    assert _record(posts[0], NSosyalAdapterConfig(salt=SALT, pseudonymize_users=False))["user_id"] == "900001"
 
 
 def test_missing_salt_refuses_to_pseudonymise(posts):
-    with pytest.raises(EnSosyalTransportNotConfigured, match="PSEUDONYM_SALT"):
-        to_post_record(posts[0], config=EnSosyalAdapterConfig(salt=None))
+    with pytest.raises(NSosyalTransportNotConfigured, match="PSEUDONYM_SALT"):
+        to_post_record(posts[0], config=NSosyalAdapterConfig(salt=None))
 
 
 def test_account_and_post_personal_data_never_reach_the_row(posts, config):
@@ -326,7 +326,7 @@ def test_location_is_dropped_unless_explicitly_opted_in(posts, config):
     with_location = {**posts[0], "location": {"latitude": 40.99, "longitude": 29.02}}
     assert _record(with_location, config)["latitude"] is None
 
-    permissive = EnSosyalAdapterConfig(salt=SALT, drop_personal_fields=False)
+    permissive = NSosyalAdapterConfig(salt=SALT, drop_personal_fields=False)
     row = _record(with_location, permissive)
     assert row["latitude"] == pytest.approx(40.99)
     assert row["longitude"] == pytest.approx(29.02)
@@ -340,7 +340,7 @@ def test_batch_is_contract_checked_and_auditable(posts, config):
     # 5 items: 1 private + 1 sensitive skipped, the other 3 survive. The frame is
     # re-sorted chronologically per user when the priors are computed.
     assert sorted(frame["post_id"]) == ["5550001", "5550002", "5550005"]
-    assert frame["source"].unique().tolist() == [ENSOSYAL_SOURCE_ID]
+    assert frame["source"].unique().tolist() == [NSOSYAL_SOURCE_ID]
     assert frame.attrs["skipped_payloads"] == 2
     assert frame.attrs["timezone_basis_counts"] == {"source_offset": 2, "utc_fallback": 1}
 
@@ -376,7 +376,7 @@ def test_ingested_batch_survives_the_feature_pipeline(posts, config):
 
 
 def test_non_canonical_category_is_left_for_the_classifier(posts, config):
-    """EnSosyal labels that are not canonical must not be smuggled in."""
+    """NSosyal labels that are not canonical must not be smuggled in."""
     row = _record({**posts[0], "category": "kahve_kultur"}, config)
     assert row["category_l1"] is None
     assert "kahve_kultur" not in CANONICAL_CATEGORIES
@@ -413,12 +413,12 @@ def test_tolerant_spellings_still_map(config):
 
 # --- transport ---------------------------------------------------------------
 def test_transport_refuses_to_run_without_authorised_credentials(monkeypatch):
-    monkeypatch.delenv("ENSOSYAL_API_TOKEN", raising=False)
-    monkeypatch.delenv("ENSOSYAL_API_BASE_URL", raising=False)
-    client = EnSosyalClient()
+    monkeypatch.delenv("NSOSYAL_API_TOKEN", raising=False)
+    monkeypatch.delenv("NSOSYAL_API_BASE_URL", raising=False)
+    client = NSosyalClient()
 
     assert not client.is_configured
-    with pytest.raises(EnSosyalTransportNotConfigured, match="not configured"):
+    with pytest.raises(NSosyalTransportNotConfigured, match="not configured"):
         client.fetch_posts()
 
 
@@ -430,8 +430,8 @@ def test_transport_unwraps_the_feed_envelope(feed):
         seen["auth"] = request.headers.get("authorization")
         return httpx.Response(200, json=feed)
 
-    client = EnSosyalClient(
-        base_url="https://ensosyal.example/api",
+    client = NSosyalClient(
+        base_url="https://nsosyal.example/api",
         token="issued-token",
         posts_path="/v1/discover/posts",
         client=httpx.Client(transport=httpx.MockTransport(handler)),

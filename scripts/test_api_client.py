@@ -1,4 +1,4 @@
-"""Interactive and CLI client to test EnPusula Advisor API with custom inputs."""
+"""Interactive and CLI client to test NPusula Advisor API with custom inputs."""
 import argparse
 import json
 import sys
@@ -9,7 +9,7 @@ API_BASE_URL = "http://127.0.0.1:8000"
 
 def print_banner():
     print("=" * 65)
-    print("EnPusula - Canlı Danışman API Test İstemcisi")
+    print("NPusula - Canlı Danışman API Test İstemcisi")
     print("AMD Radeon RX 9070 XT GPU & Google DeepMind Gemma 4 Entegrasyonu")
     print("=" * 65)
 
@@ -84,7 +84,7 @@ def run_test(idea: str, media_type: str, user_id: str, base_url: str = API_BASE_
 
 def main():
     print_banner()
-    parser = argparse.ArgumentParser(description="EnPusula API Test İstemcisi")
+    parser = argparse.ArgumentParser(description="NPusula API Test İstemcisi")
     parser.add_argument("--idea", type=str, help="İçerik fikri metni")
     parser.add_argument("--media", choices=["photo", "video"], default="photo", help="Medya türü (photo/video)")
     parser.add_argument("--user", type=str, default="alpeerkaraca", help="Kullanıcı adı")

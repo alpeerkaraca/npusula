@@ -321,7 +321,7 @@ def evaluate(limit_rows: int | None = None) -> dict:
                 "the decision variable."
             ),
             "causality": (
-                "No causal claim is made anywhere. A causal statement requires EnSosyal A/B or controlled "
+                "No causal claim is made anywhere. A causal statement requires NSosyal A/B or controlled "
                 "exploration data."
             ),
         },

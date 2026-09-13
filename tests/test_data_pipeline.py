@@ -116,7 +116,7 @@ def test_dataset_guardrails_reject_demo_rows(normalizer):
 
 def test_dataset_guardrails_reject_foreign_sources_and_row_drift(normalizer):
     foreign = pd.DataFrame({
-        "source": ["ensosyal_demo"],
+        "source": ["nsosyal_demo"],
         "user_id": ["real_user"],
         "post_id": ["1"],
     })

@@ -1,4 +1,4 @@
-"""Gemma 4 Strategic Advisor Engine for EnPusula (google/gemma-4-E4B-it).
+"""Gemma 4 Strategic Advisor Engine for NPusula (google/gemma-4-E4B-it).
 
 Produces the Turkish explanation that sits on top of the two-layer output:
 Layer A (base potential) plus Layer B (observational time windows).
@@ -82,7 +82,7 @@ class GemmaAdvisorEngine:
 
         prompt = (
             f"<start_of_turn>user\n"
-            f"Sen EnSosyal platformunun içerik ve paylaşım zamanı strateji danışmanısın (Gemma 4 Advisor).\n"
+            f"Sen NSosyal platformunun içerik ve paylaşım zamanı strateji danışmanısın (Gemma 4 Advisor).\n"
             f"Aşağıdaki içerik fikrini, kategori bilgisini, iki katmanlı modelimizin çıktısını "
             f"(içerik potansiyeli + tarihsel gözlemsel zaman pencereleri) ve Qdrant vektör aramasından "
             f"gelen en başarılı gönderileri analiz et.\n\n"
@@ -133,7 +133,7 @@ class GemmaAdvisorEngine:
         opts = "; ".join(f"{name} ({desc})" for name, desc in topic_descriptions.items() if name in options)
         prompt = (
             f"<start_of_turn>user\n"
-            f"Sen EnSosyal platformunun içerik konu sınıflandırıcısısın.\n"
+            f"Sen NSosyal platformunun içerik konu sınıflandırıcısısın.\n"
             f"Aşağıdaki içerik fikrini YALNIZCA şu konulardan birine ata:\n{opts}\n\n"
             f"Fikir: \"{idea}\"\n\n"
             f"TALİMAT: SADECE listedeki konu adlarından birini yanıtla, başka hiçbir metin ekleme.\n"

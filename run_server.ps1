@@ -1,6 +1,6 @@
-# EnPusula FastAPI Sunucu Başlatıcı
+# NPusula FastAPI Sunucu Başlatıcı
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "EnPusula Backend Sunucusu Başlatılıyor..." -ForegroundColor Green
+Write-Host "NPusula Backend Sunucusu Başlatılıyor..." -ForegroundColor Green
 Write-Host "Adres: http://127.0.0.1:8000" -ForegroundColor Yellow
 Write-Host "Swagger UI: http://127.0.0.1:8000/docs" -ForegroundColor Yellow
 Write-Host "============================================================" -ForegroundColor Cyan

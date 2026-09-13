@@ -14,3 +14,7 @@ graphify-out/
 *.log
 *.md
 !NOTICE.md
+
+# Secrets: the image reads its environment from compose, never from .env.
+.env
+.env.*

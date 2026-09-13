@@ -1,6 +1,6 @@
 """Checks the plan's completion checklist against the artifacts on disk.
 
-The plan (ENPUSULA_MODEL_VE_SAAT_ONERISI_DUZELTME_PLANI.md) ends with a
+The plan (NPUSULA_MODEL_VE_SAAT_ONERISI_DUZELTME_PLANI.md) ends with a
 11-item acceptance list. This script re-derives each item from the data,
 artifacts and source contracts instead of trusting the prose in the README, so
 a regression in any of them fails here.

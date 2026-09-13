@@ -1,9 +1,16 @@
-"""Downloads train_dataset.jsonl from Nextcloud WebDAV with resumable chunked streaming."""
+"""Downloads train_dataset.jsonl from Nextcloud WebDAV with resumable chunked streaming.
+
+Credentials come from WEBDAV_URL, WEBDAV_USER and WEBDAV_PASSWORD - the
+repository `.env` or the process environment, the latter winning (see
+backend/env_loader.py).
+"""
 import base64
 import os
 from pathlib import Path
 import time
 import urllib.request
+
+from backend.env_loader import load_project_env
 
 RAW_DIR = Path("data/raw")
 RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -11,16 +18,13 @@ TARGET_FILE = RAW_DIR / "train_dataset.jsonl"
 
 
 def load_env() -> dict[str, str]:
-    env_vars = {}
-    env_file = Path(".env")
-    if env_file.exists():
-        with open(env_file, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    k, v = line.split("=", 1)
-                    env_vars[k.strip()] = v.strip()
-    return env_vars
+    """WebDAV settings: process environment first, then the repo `.env`."""
+    load_project_env()
+    return {
+        key: os.environ[key]
+        for key in ("WEBDAV_URL", "WEBDAV_USER", "WEBDAV_PASSWORD")
+        if os.environ.get(key)
+    }
 
 
 def download_dataset():

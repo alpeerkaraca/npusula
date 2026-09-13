@@ -1,4 +1,4 @@
-"""Package exporting all strict Pydantic schemas for EnPusula."""
+"""Package exporting all strict Pydantic schemas for NPusula."""
 from backend.schemas.base import StrictSchema
 from backend.schemas.post import MediaType, MediaTypeEnum, PostRecord
 from backend.schemas.profile import (

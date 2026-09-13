@@ -1,8 +1,8 @@
-"""EnSosyal ingestion adapter — a contract, not a scraper.
+"""NSosyal ingestion adapter — a contract, not a scraper.
 
 Shapes handled
 --------------
-EnSosyal's feed responses (schema: `nsosyal_features.json.shema`) arrive as::
+NSosyal's feed responses (schema: `nsosyal_features.json.shema`) arrive as::
 
     {"success": true, "message": "...", "data": {"items": [Post, ...], "total": N}}
 
@@ -10,13 +10,13 @@ What this module is
 -------------------
 The data controller hands over a payload (API response, export or webhook body)
 and this adapter maps it onto the canonical `PostRecord` columns, applying the
-KVKK filter on the way in. It is the only place where EnSosyal field names
+KVKK filter on the way in. It is the only place where NSosyal field names
 appear (`FIELD_CANDIDATES`).
 
 What this module deliberately is **not**
 ----------------------------------------
 * No session/cookie reuse, no endpoint defaults, no anti-bot handling:
-  `EnSosyalClient` requires credentials the data controller issues.
+  `NSosyalClient` requires credentials the data controller issues.
 * No PII retention by default: `user_id` is pseudonymised with a salted hash,
   free text is stripped of HTML/URLs/handles/e-mails/phone numbers, and the
   account object (username, display name, bio, avatar, profile fields), mentions,
@@ -33,7 +33,7 @@ the offset embedded in `created_at`:
 * ``"2026-09-12T18:30:00Z"`` or naive → no local time, ``timezone_basis="utc_fallback"``
 
 Fallback rows still train Layer A, but Layer B (the window layer) must not make
-local-time claims for them — the pipeline enforces that. If EnSosyal wants window
+local-time claims for them — the pipeline enforces that. If NSosyal wants window
 recommendations, they must send the user's timezone or an offset; until then every
 row is a fallback and the window answer stays "belirsiz".
 """
@@ -53,7 +53,7 @@ import httpx
 
 from backend.services.canonical_taxonomy import CANONICAL_CATEGORIES
 from backend.services.post_contract import (
-    ENSOSYAL_SOURCE_ID,
+    NSOSYAL_SOURCE_ID,
     INGESTED_COLUMNS,
     OUTPUT_COLUMNS,
     add_leakage_free_priors,
@@ -64,12 +64,12 @@ from backend.services.post_contract import (
 )
 from backend.services.time_features import parse_utc_offset, resolve_post_local_time
 
-PSEUDONYM_SALT_ENV = "ENSOSYAL_PSEUDONYM_SALT"
-API_TOKEN_ENV = "ENSOSYAL_API_TOKEN"
-API_BASE_URL_ENV = "ENSOSYAL_API_BASE_URL"
+PSEUDONYM_SALT_ENV = "NSOSYAL_PSEUDONYM_SALT"
+API_TOKEN_ENV = "NSOSYAL_API_TOKEN"
+API_BASE_URL_ENV = "NSOSYAL_API_BASE_URL"
 
 # ---------------------------------------------------------------------------
-# Field mapping: the single place to touch when EnSosyal's contract changes.
+# Field mapping: the single place to touch when NSosyal's contract changes.
 # Paths are dotted ("account.account_id") so nested objects need no special case.
 # Several spellings are accepted per concept because the same value travels under
 # different names across feed/detail endpoints.
@@ -153,7 +153,7 @@ SKIP_REASONS = (
 )
 
 
-class EnSosyalTransportNotConfigured(RuntimeError):
+class NSosyalTransportNotConfigured(RuntimeError):
     """Raised when no authorised transport was provided.
 
     The adapter refuses to invent an endpoint or reuse a browser session: the
@@ -161,7 +161,7 @@ class EnSosyalTransportNotConfigured(RuntimeError):
     """
 
 
-class EnSosyalResponseError(RuntimeError):
+class NSosyalResponseError(RuntimeError):
     """The API answered with ``success: false`` or an envelope we cannot read."""
 
 
@@ -203,13 +203,13 @@ class EngagementWeights:
 
 
 @dataclass
-class EnSosyalAdapterConfig:
+class NSosyalAdapterConfig:
     """How strict the adapter is about the data it accepts."""
 
     pseudonymize_users: bool = True
     scrub_text: bool = True
     drop_personal_fields: bool = True
-    media_root: str = "data/raw/ensosyal_media"
+    media_root: str = "data/raw/nsosyal_media"
     engagement_weights: EngagementWeights = field(default_factory=EngagementWeights)
     salt: str | None = None
     # Distribution policy: the timing model only learns from posts the platform
@@ -222,7 +222,7 @@ class EnSosyalAdapterConfig:
     def resolved_salt(self) -> str:
         salt = self.salt or os.getenv(PSEUDONYM_SALT_ENV, "")
         if not salt:
-            raise EnSosyalTransportNotConfigured(
+            raise NSosyalTransportNotConfigured(
                 f"{PSEUDONYM_SALT_ENV} is not set. Pseudonymising user ids needs a project salt: "
                 "without one the pseudonyms are not stable across runs, and with a guessable one they "
                 "are reversible. Set the env var (or pass config.salt) before ingesting."
@@ -243,10 +243,10 @@ def unwrap_envelope(body: Any) -> tuple[list[dict], int | None]:
     if isinstance(body, list):
         return [item for item in body if isinstance(item, dict)], None
     if not isinstance(body, dict):
-        raise EnSosyalResponseError(f"unexpected response type: {type(body).__name__}")
+        raise NSosyalResponseError(f"unexpected response type: {type(body).__name__}")
 
     if body.get("success") is False:
-        raise EnSosyalResponseError(f"EnSosyal reported failure: {body.get('message')!r}")
+        raise NSosyalResponseError(f"NSosyal reported failure: {body.get('message')!r}")
 
     data = body.get("data", body)
     if isinstance(data, dict):
@@ -265,7 +265,7 @@ def unwrap_envelope(body: Any) -> tuple[list[dict], int | None]:
         candidate = body.get(key)
         if isinstance(candidate, list):
             return [item for item in candidate if isinstance(item, dict)], body.get("total")
-    raise EnSosyalResponseError("could not locate a post list in the response envelope")
+    raise NSosyalResponseError("could not locate a post list in the response envelope")
 
 
 def _dotted_get(payload: dict, path: str) -> Any:
@@ -464,7 +464,7 @@ def engagement_counters(payload: dict) -> tuple[float | None, dict[str, float]]:
     return views, interactions
 
 
-def skip_reason(payload: dict, config: EnSosyalAdapterConfig) -> str | None:
+def skip_reason(payload: dict, config: NSosyalAdapterConfig) -> str | None:
     """Why this payload will not become a row (None when it will).
 
     Separating this from the mapping keeps the ingest report honest: "we skipped
@@ -493,10 +493,10 @@ def skip_reason(payload: dict, config: EnSosyalAdapterConfig) -> str | None:
 def to_post_record(
     payload: dict,
     *,
-    config: EnSosyalAdapterConfig,
+    config: NSosyalAdapterConfig,
     ingested_at_utc: datetime | None = None,
 ) -> dict | None:
-    """Maps one EnSosyal payload onto the canonical ingestion row.
+    """Maps one NSosyal payload onto the canonical ingestion row.
 
     Returns None when the payload cannot be a training row; `skip_reason` says
     which gate rejected it. The returned dict holds the *source-derived* columns
@@ -538,7 +538,7 @@ def to_post_record(
 
     return {
         "schema_version": "1.0",
-        "source": ENSOSYAL_SOURCE_ID,
+        "source": NSOSYAL_SOURCE_ID,
         "post_id": str(post_id),
         "user_id": resolved_user,
         "published_at_utc": local.utc_dt,
@@ -576,7 +576,7 @@ def _optional_text(value: Any) -> str | None:
 
 
 def reconcile_category(payload: dict, canonical_categories: Iterable[str]) -> str | None:
-    """Returns the payload category when EnSosyal already speaks the canonical names.
+    """Returns the payload category when NSosyal already speaks the canonical names.
 
     The pipeline classifies categories from the title when they are absent; this
     helper exists so a source that *does* send canonical categories can be trusted
@@ -592,7 +592,7 @@ def reconcile_category(payload: dict, canonical_categories: Iterable[str]) -> st
 def ingest_payloads(
     payloads: Iterable[dict],
     *,
-    config: EnSosyalAdapterConfig | None = None,
+    config: NSosyalAdapterConfig | None = None,
     ingested_at_utc: datetime | None = None,
     skip_log: Callable[[str], None] | None = None,
 ) -> pd.DataFrame:
@@ -606,7 +606,7 @@ def ingest_payloads(
     `frame.attrs` carries the ingest audit: skipped counts by reason, the timezone
     basis distribution and the personal fields that arrived and were dropped.
     """
-    config = config or EnSosyalAdapterConfig()
+    config = config or NSosyalAdapterConfig()
     ingested_at_utc = ingested_at_utc or datetime.now(timezone.utc)
     rows: list[dict] = []
     skipped_by_reason: dict[str, int] = {}
@@ -649,8 +649,8 @@ def ingest_payloads(
     return frame
 
 
-class EnSosyalClient:
-    """Authorised transport for pulling posts from an EnSosyal-provided endpoint.
+class NSosyalClient:
+    """Authorised transport for pulling posts from an NSosyal-provided endpoint.
 
     Deliberately minimal: bearer token, one documented path, bounded pages. It does
     not authenticate as a user, hold cookies, or discover endpoints — those are the
@@ -687,9 +687,9 @@ class EnSosyalClient:
         corpus on its own.
         """
         if not self.is_configured:
-            raise EnSosyalTransportNotConfigured(
-                f"EnSosyal transport is not configured: set {API_BASE_URL_ENV} and {API_TOKEN_ENV} "
-                "(or pass base_url/token) with credentials issued by EnSosyal. This adapter will not "
+            raise NSosyalTransportNotConfigured(
+                f"NSosyal transport is not configured: set {API_BASE_URL_ENV} and {API_TOKEN_ENV} "
+                "(or pass base_url/token) with credentials issued by NSosyal. This adapter will not "
                 "guess an endpoint or reuse a browser session."
             )
         params = {key: value for key, value in {"since": since, "until": until, "limit": limit}.items() if value}
@@ -710,10 +710,10 @@ class EnSosyalClient:
 __all__ = [
     "AUDITED_PERSONAL_PATHS",
     "DEFAULT_ALLOWED_VISIBILITY",
-    "EnSosyalAdapterConfig",
-    "EnSosyalClient",
-    "EnSosyalResponseError",
-    "EnSosyalTransportNotConfigured",
+    "NSosyalAdapterConfig",
+    "NSosyalClient",
+    "NSosyalResponseError",
+    "NSosyalTransportNotConfigured",
     "EngagementWeights",
     "FIELD_CANDIDATES",
     "SKIP_REASONS",

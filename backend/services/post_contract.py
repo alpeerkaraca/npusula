@@ -1,7 +1,7 @@
 """The canonical ingestion contract shared by every data source.
 
 Both data paths — the SMPD normalizer (`scripts/02_normalize_smp.py`) and the
-EnSosyal adapter (`backend/adapters/ensosyal.py`) — write the same columns and
+NSosyal adapter (`backend/adapters/nsosyal.py`) — write the same columns and
 pass through the same gates. Keeping the contract in one module is what makes
 plan §7 step 1 ("önce aynı canonical feature sözleşmesine normalize et") a
 mechanical operation instead of a re-implementation.
@@ -23,8 +23,8 @@ from pydantic import StrictInt
 from backend.schemas.post import OPTIONAL_UNWRITTEN_FIELDS, PostRecord
 
 SMPD_SOURCE_ID = "smpd_real"
-ENSOSYAL_SOURCE_ID = "ensosyal"
-KNOWN_SOURCE_IDS = frozenset({SMPD_SOURCE_ID, ENSOSYAL_SOURCE_ID})
+NSOSYAL_SOURCE_ID = "nsosyal"
+KNOWN_SOURCE_IDS = frozenset({SMPD_SOURCE_ID, NSOSYAL_SOURCE_ID})
 
 DEMO_USER_IDS = frozenset({"demo_user_01", "demo_user_02", "demo_user_03"})
 
@@ -216,7 +216,7 @@ __all__ = [
     "DERIVED_PRIOR_COLUMNS",
     "add_leakage_free_priors",
     "SMPD_SOURCE_ID",
-    "ENSOSYAL_SOURCE_ID",
+    "NSOSYAL_SOURCE_ID",
     "KNOWN_SOURCE_IDS",
     "DEMO_USER_IDS",
     "SCHEMA_SAMPLE_SIZE",

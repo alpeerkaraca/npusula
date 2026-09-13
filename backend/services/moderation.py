@@ -1,4 +1,4 @@
-"""Model-based content safety and moderation guardrail service for EnPusula.
+"""Model-based content safety and moderation guardrail service for NPusula.
 
 Includes:
 1. Adversarial Text Normalizer: De-obfuscates leetspeak, symbol substitutions (e.g. c1pl4q -> ciplak),
@@ -203,7 +203,7 @@ class GemmaModerationGuardrail:
     REASON_TEMPLATES: dict[str, str] = {
         "sexual_content": (
             "İçerik Güvenlik İhlali (Müstehcenlik/Yetişkin İçerik): Girdiğiniz içerik fikri "
-            "EnSosyal Topluluk Kuralları ve Güvenlik İlkelerine aykırıdır."
+            "NSosyal Topluluk Kuralları ve Güvenlik İlkelerine aykırıdır."
         ),
         "gambling": (
             "İçerik Güvenlik İhlali (Yasa Dışı Kumar/Bahis): Yasa dışı bahis ve kumar "
@@ -211,7 +211,7 @@ class GemmaModerationGuardrail:
         ),
         "violence": (
             "İçerik Güvenlik İhlali (Şiddet/Zararlı İçerik): Şiddet, tehlike veya kendine "
-            "zarar verme barındıran fikirler EnSosyal ilkelerine aykırıdır."
+            "zarar verme barındıran fikirler NSosyal ilkelerine aykırıdır."
         ),
         "hate_speech": (
             "İçerik Güvenlik İhlali (Nefret Söylemi): Ayrımcılık veya nefret barındıran "
@@ -235,7 +235,7 @@ class GemmaModerationGuardrail:
         """Constructs Gemma 4 instruction-following prompt for semantic evaluation."""
         return (
             f"<start_of_turn>user\n"
-            f"Sen EnSosyal platformunun içerik güvenliği ve moderasyon modelisin (Gemma Safety Guardrail / ShieldGemma).\n"
+            f"Sen NSosyal platformunun içerik güvenliği ve moderasyon modelisin (Gemma Safety Guardrail / ShieldGemma).\n"
             f"Kullanıcının ilettiği içerik fikrini platform kurallarına göre analiz et.\n\n"
             f"İÇERİK BİLGİSİ:\n"
             f"- Orijinal Metin: \"{text}\"\n"

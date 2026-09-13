@@ -3,7 +3,7 @@
 These files are kept for provenance and for the "same split protocol" comparison in
 `artifacts/final_evaluation.json` (`legacy_comparison`). **Nothing in the runtime
 loads them.** They were produced before the two-layer rework described in
-`ENPUSULA_MODEL_VE_SAAT_ONERISI_DUZELTME_PLANI.md`.
+`NPUSULA_MODEL_VE_SAAT_ONERISI_DUZELTME_PLANI.md`.
 
 | File | What it was | Why it is legacy |
 |---|---|---|

@@ -18,7 +18,7 @@ def test_post_record_valid():
         post_id="post_123",
         user_id="user_456",
         published_at_utc=datetime.now(timezone.utc),
-        title="Testing EnPusula MVP",
+        title="Testing NPusula MVP",
         tags=["ai", "ml", "ensocial"],
         media_type=MediaTypeEnum.PHOTO,
         popularity_score=6.25,
@@ -35,7 +35,7 @@ def test_post_record_rejects_string_for_float():
             post_id="post_123",
             user_id="user_456",
             published_at_utc=datetime.now(timezone.utc),
-            title="Testing EnPusula MVP",
+            title="Testing NPusula MVP",
             tags=["ai"],
             popularity_score="6.25",  # String instead of float!
         )
@@ -49,7 +49,7 @@ def test_post_record_rejects_extra_fields():
             post_id="post_123",
             user_id="user_456",
             published_at_utc=datetime.now(timezone.utc),
-            title="Testing EnPusula MVP",
+            title="Testing NPusula MVP",
             tags=["ai"],
             unexpected_field="disallowed",
         )

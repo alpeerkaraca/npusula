@@ -1,4 +1,4 @@
-"""Generates high-performing, domain-accurate exemplar posts for all 10 EnSosyal topics."""
+"""Generates high-performing, domain-accurate exemplar posts for all 10 NSosyal topics."""
 import datetime
 from pathlib import Path
 import random

@@ -29,6 +29,7 @@ import time
 import numpy as np
 import pandas as pd
 
+from backend.env_loader import load_project_env
 from backend.services.history_feature import compute_leakage_free_history
 from backend.services.post_contract import (
     DEMO_USER_IDS,
@@ -45,6 +46,8 @@ from backend.services.post_contract import SMPD_SOURCE_ID as SOURCE_ID
 from backend.services.provenance import file_sha256, git_commit_sha, utc_now_iso, write_json_with_provenance
 from backend.services.time_features import resolve_post_local_time
 
+load_project_env()
+
 RAW_FILE = Path("data/raw/train_dataset.jsonl")
 OUTPUT_PARQUET = Path("data/processed/posts.parquet")
 REPORT_PATH = Path("data/reports/data_quality.json")
@@ -52,7 +55,7 @@ REPORT_PATH = Path("data/reports/data_quality.json")
 # Media files referenced by the JSONL are resolved against this root. They are
 # NOT shipped with the corpus, so `media_available` is legitimately False for
 # every row today; the check exists so that a corpus which does ship them is
-# reported truthfully.
+# reported truthfully. SMPD_MEDIA_ROOT lives in .env.
 MEDIA_ROOT = Path(os.getenv("SMPD_MEDIA_ROOT", "data/raw/media"))
 
 

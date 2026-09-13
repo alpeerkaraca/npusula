@@ -719,7 +719,7 @@
     "mean_recommended_lift_delta_vs_baseline": "Recommended window minus an arbitrary supported window of the same category/weekday. The absolute recommended lift is expected to be negative on held-out data because groups are selected by their train estimate (winner's curse); only this delta is readable.",
     "bootstrap_ci_coverage": "Share of group intervals containing the held-out mean. Below the nominal level means the intervals are too narrow under temporal drift — reported, not hidden.",
     "legacy_advantage": "The legacy vector's lower post-level MAE comes from conditioning on the publish hour and from using the residual offset as an input. Neither is available when the hour is the decision variable.",
-    "causality": "No causal claim is made anywhere. A causal statement requires EnSosyal A/B or controlled exploration data."
+    "causality": "No causal claim is made anywhere. A causal statement requires NSosyal A/B or controlled exploration data."
   },
   "audit": {
     "tuning_protocol": {

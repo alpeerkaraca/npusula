@@ -1,4 +1,4 @@
-# EnPusula — Model, Veri ve Saat Önerisi Düzeltme Planı
+# NPusula — Model, Veri ve Saat Önerisi Düzeltme Planı
 
 ## Pull #1 sonrası güncelleme — 13 Eylül 2026
 
@@ -221,7 +221,7 @@ SMPD training corpus → medya dosyaları yok → CLIP embedding ile popularity 
 Kullanıcının yüklediği medya → CLIP category/tag hint'i → mevcut advisor input'larını iyileştirir
 ```
 
-Bu nedenle agent, CLIP'in 512-D embedding'ini mevcut LightGBM eğitimine “varmış gibi” eklemeyecek. Görsel popularity feature'ı ancak EnSosyal veya lisanslı, dosyası mevcut eğitim korpusu geldiğinde ayrı veri sözleşmesi ve yeniden eğitimle eklenebilir.
+Bu nedenle agent, CLIP'in 512-D embedding'ini mevcut LightGBM eğitimine “varmış gibi” eklemeyecek. Görsel popularity feature'ı ancak NSosyal veya lisanslı, dosyası mevcut eğitim korpusu geldiğinde ayrı veri sözleşmesi ve yeniden eğitimle eklenebilir.
 
 ---
 
@@ -485,7 +485,7 @@ base potential + time lift
 Tie-aware sıralama veya önerilen pencere
 ```
 
-Bu katman kullanıcı bazlı “geçmişte hep bu saatte paylaştı” metriği kullanmayacak. EnSosyal verisi biriktikten sonra ayrıca kişiselleştirilmiş `user × category × bucket` katmanı eklenebilir; fakat minimum support ve shrinkage olmadan eklenmeyecek.
+Bu katman kullanıcı bazlı “geçmişte hep bu saatte paylaştı” metriği kullanmayacak. NSosyal verisi biriktikten sonra ayrıca kişiselleştirilmiş `user × category × bucket` katmanı eklenebilir; fakat minimum support ve shrinkage olmadan eklenmeyecek.
 
 ---
 
@@ -577,7 +577,7 @@ no-claim / broad-window fallback oranı
 - `Spearman` yalnız post popularity sıralama başarısı olarak yazılacak.
 - Saat önerisi için `NDCG@3`, held-out lift ve confidence coverage ayrıca raporlanacak.
 - Offline Flickr sonuçları “gözlemsel” etiketi taşır.
-- EnSosyal A/B veya kontrollü exploration olmadan nedensel saat etkisi iddia edilmez.
+- NSosyal A/B veya kontrollü exploration olmadan nedensel saat etkisi iddia edilmez.
 
 ---
 
@@ -658,9 +658,9 @@ API response'ta local zamanın doğru görünmesi
 
 ---
 
-# Faz 7 — EnSosyal geldiğinde gerçek adaptasyon
+# Faz 7 — NSosyal geldiğinde gerçek adaptasyon
 
-Flickr modeli yalnız başlangıç/benchmark rolünde kalacak. EnSosyal API ile gerçek loglar geldiğinde ayrı bir adaptasyon yapılacak.
+Flickr modeli yalnız başlangıç/benchmark rolünde kalacak. NSosyal API ile gerçek loglar geldiğinde ayrı bir adaptasyon yapılacak.
 
 ## Toplanacak minimum veri
 
@@ -691,10 +691,10 @@ Kullanıcıya uygun 2–3 zaman penceresi sun.
 Uygun pencereler arasında küçük, rastgeleleştirilmiş dağıtım uygula.
 ```
 
-4. Hangi pencerenin gerçekten daha iyi olduğunu EnSosyal outcome’larından öğren.
+4. Hangi pencerenin gerçekten daha iyi olduğunu NSosyal outcome’larından öğren.
 5. Yeterli veri oluşunca contextual bandit veya platforma özel time-lift modeli değerlendir.
 
-Rastgeleleştirme olmadan EnSosyal verisi de gözlemsel bias taşır; yalnız daha uygun domain verisi olur.
+Rastgeleleştirme olmadan NSosyal verisi de gözlemsel bias taşır; yalnız daha uygun domain verisi olur.
 
 ---
 

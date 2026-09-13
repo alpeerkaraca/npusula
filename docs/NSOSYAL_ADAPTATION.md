@@ -1,6 +1,6 @@
-# EnSosyal verisi geldiğinde adaptasyon planı (Faz 7)
+# NSosyal verisi geldiğinde adaptasyon planı (Faz 7)
 
-Bu belge, bugünkü sistemin **ne olduğunu** ve EnSosyal logları geldiğinde
+Bu belge, bugünkü sistemin **ne olduğunu** ve NSosyal logları geldiğinde
 **neyin değişeceğini** ayırır. Bugünkü Flickr/SMPD modeli bir *benchmark ve
 başlangıç prior'udur*; ürünün kalıcı modeli değildir.
 
@@ -44,13 +44,13 @@ Opsiyonel ama yüksek değerli:
 
 ## Önerilen öğrenme stratejisi
 
-1. **Aynı canonical sözleşmeye normalize et.** EnSosyal satırları
+1. **Aynı canonical sözleşmeye normalize et.** NSosyal satırları
    `PostRecord` şemasına (bkz. `backend/schemas/post.py`) ve
    `scripts/02_normalize_smp.py`'deki yerel zaman kurallarına uysun:
    `local_datetime` / `local_hour` / `local_weekday` + `timezone_basis`.
    Saat dilimi bilinmiyorsa satır `utc_fallback` olarak işaretlenir ve o
    satırlar Katman B'de **kullanılmaz**.
-2. **Flickr modelini yalnız prior olarak kullan.** Katman A'yı EnSosyal
+2. **Flickr modelini yalnız prior olarak kullan.** Katman A'yı NSosyal
    verisiyle yeniden eğitirken ilk sürümde Flickr modelinin çıktısını offset
    olarak korumak meşrudur; ama Katman B tablosu **sıfırdan** kurulur, çünkü
    platform, kitle ve etkileşim ölçeği farklıdır.
@@ -59,7 +59,7 @@ Opsiyonel ama yüksek değerli:
    (örn. %70/15/15). Öneri kalitesi düşmesin diye keşif payı, mevcut modelin
    en iyi penceresini dışlamayacak şekilde sınırlanır.
 4. **Hangi pencerenin gerçekten daha iyi olduğunu outcome'lardan öğren.**
-   Rastgeleleştirme olmadan EnSosyal verisi de gözlemseldir; yalnızca
+   Rastgeleleştirme olmadan NSosyal verisi de gözlemseldir; yalnızca
    daha uygun bir domain olur, nedensel kanıt olmaz.
 5. **Yeterli veri birikince** contextual bandit veya platforma özel bir
    time-lift modeli değerlendir. Minimum destek ve shrinkage olmadan
@@ -74,7 +74,7 @@ Opsiyonel ama yüksek değerli:
 - Tag hizası sınıfları: aligned / mismatched / generic / NSFW / unknown.
 - Öneri çıktısı **pencere**dir; kanıt seviyesi ve destek her zaman döner.
 - Güven kuralı aynıdır: destek + CI sıfırdan ayrılması + anlamlı fark eşiği.
-  Eşikler EnSosyal validation'ında yeniden seçilir (`scripts/tune_lgbm.py`).
+  Eşikler NSosyal validation'ında yeniden seçilir (`scripts/tune_lgbm.py`).
 
 ## Yapılmayacaklar
 
@@ -93,9 +93,9 @@ Opsiyonel ama yüksek değerli:
 
 ## Sözleşme analizi: `nsosyal_features.json.shema` (keşfet akışı)
 
-EnSosyal'in paylaştığı şema Mastodon uyumlu bir status objesi. Adapter artık bu
+NSosyal'in paylaştığı şema Mastodon uyumlu bir status objesi. Adapter artık bu
 sözleşmeye göre yazıldı ve testler bu şemaya birebir uyan sentetik fixture'la
-koşuyor (`tests/fixtures/ensosyal/explore_feed_sample.json`).
+koşuyor (`tests/fixtures/nsosyal/explore_feed_sample.json`).
 
 | Sözleşme | Adapter davranışı |
 |---|---|
@@ -122,8 +122,8 @@ Tek sinyal `created_at`:
 
 Fallback satırlar Katman A'yı eğitir ama **Katman B (pencere katmanı) onlar için
 yerel saat iddiası kuramaz** — boru hattı bunu zaten zorunlu kılıyor. Yani
-EnSosyal `created_at`'i UTC gönderiyorsa, pencere önerisi tüm satırlarda
-"belirsiz" kalır. EnSosyal'den istenmesi gereken tek şey:
+NSosyal `created_at`'i UTC gönderiyorsa, pencere önerisi tüm satırlarda
+"belirsiz" kalır. NSosyal'den istenmesi gereken tek şey:
 
 ```text
 Kullanıcının zaman dilimi (IANA adı veya UTC offset), post başına.
@@ -132,9 +132,9 @@ Kullanıcının zaman dilimi (IANA adı veya UTC offset), post başına.
 Bu alan gelmeden timing özelliği ölçülebilir hale gelemez; alan geldiğinde
 `FIELD_CANDIDATES`'e iki satır eklenir ve zincir yeniden koşar.
 
-## Adapter hazır: `backend/adapters/ensosyal.py`
+## Adapter hazır: `backend/adapters/nsosyal.py`
 
-EnSosyal ekibinin entegrasyon için ihtiyaç duyacağı katman yazıldı. Adapter bir
+NSosyal ekibinin entegrasyon için ihtiyaç duyacağı katman yazıldı. Adapter bir
 **veri kabul sözleşmesidir**, veri toplama aracı değildir:
 
 | Yapar | Yapmaz |
@@ -145,27 +145,27 @@ EnSosyal ekibinin entegrasyon için ihtiyaç duyacağı katman yazıldı. Adapte
 | Hedef değişkeni tek bir belgeli formülle üretir (`log1p(views)`, yoksa `log1p(ağırlıklı etkileşim)`) | Etkileşim yoksa satır uydurmaz — payload'ı atlar ve sayar |
 | Batch'i aynı kapılardan geçirir (kolon sözleşmesi + `PostRecord` örnek doğrulaması + leakage-free prior'lar) | Kategori uydurmaz: kanonik olmayan platform etiketi boş bırakılır, sınıflandırıcı devralır |
 
-Transport **yetkili** olmak zorundadır: `ENSOSYAL_API_BASE_URL` + `ENSOSYAL_API_TOKEN`
-(EnSosyal'in verdiği kimlik) yoksa `fetch_posts` hata verir. Pseudonimizasyon için
-`ENSOSYAL_PSEUDONYM_SALT` zorunludur (yoksa hata verir; tahmin edilebilir tuz
+Transport **yetkili** olmak zorundadır: `NSOSYAL_API_BASE_URL` + `NSOSYAL_API_TOKEN`
+(NSosyal'in verdiği kimlik) yoksa `fetch_posts` hata verir. Pseudonimizasyon için
+`NSOSYAL_PSEUDONYM_SALT` zorunludur (yoksa hata verir; tahmin edilebilir tuz
 pseudonimi geri döndürülebilir yapar).
 
-Testler: `tests/test_ensosyal_adapter.py` (sentetik fixture'larla; repoda hiçbir
-gerçek EnSosyal verisi yoktur).
+Testler: `tests/test_nsosyal_adapter.py` (sentetik fixture'larla; repoda hiçbir
+gerçek NSosyal verisi yoktur).
 
 ### Entegrasyon sırası
 
-1. EnSosyal `ENSOSYAL_API_BASE_URL` + token + veri işleme sözleşmesini sağlar.
+1. NSosyal `NSOSYAL_API_BASE_URL` + token + veri işleme sözleşmesini sağlar.
 2. `FIELD_CANDIDATES` gerçek sözleşmeye göre güncellenir (tek dosya, tek tablo).
 3. `ingest_payloads` ile çekilen batch `posts.parquet`'e yazılır
-   (`source="ensosyal"`, aynı kolonlar).
+   (`source="nsosyal"`, aynı kolonlar).
 4. `tune_lgbm.py → 05_train_lgbm.py → 06_time_lift.py → evaluate_final.py`
-   zinciri EnSosyal verisiyle yeniden koşar.
+   zinciri NSosyal verisiyle yeniden koşar.
 
-## Uygulama sırası (EnSosyal verisi elde edildiğinde)
+## Uygulama sırası (NSosyal verisi elde edildiğinde)
 
 1. Yeni kaynağı `scripts/02_normalize_smp.py`'ye kardeş bir normalizer olarak
-   ekle (aynı `PostRecord` sözleşmesi, `source="ensosyal"`, demo kapıları).
+   ekle (aynı `PostRecord` sözleşmesi, `source="nsosyal"`, demo kapıları).
 2. `data_quality.json` eşdeğerini üret: satır sayısı, kullanıcı sayısı, tarih
    aralığı, `timezone_basis` dağılımı, ölçüm penceresi dağılımı.
 3. `scripts/tune_lgbm.py` → yeni validation'da eşikleri ve bucket boyutunu
@@ -173,7 +173,7 @@ gerçek EnSosyal verisi yoktur).
 4. `scripts/05_train_lgbm.py` → Katman A'yı yeniden eğit (Flickr modelini
    `--init-model` benzeri bir offset olarak kullanmak opsiyonel).
 5. `scripts/06_time_lift.py` → Katman B tablosunu **sıfırdan** kur.
-6. `scripts/evaluate_final.py` → kilitli EnSosyal test penceresinde B/C/D
+6. `scripts/evaluate_final.py` → kilitli NSosyal test penceresinde B/C/D
    raporunu üret ve bu belgedeki iddiaları güncelle.
 7. Keşif dağıtımını başlat; ilk anlamlı A/B sonucu gelene kadar ürün dili
    "gözlemsel / desteklenen pencere" olarak kalır.

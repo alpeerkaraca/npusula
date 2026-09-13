@@ -1,8 +1,18 @@
-"""Configuration and environment settings for EnPusula."""
+"""Configuration and environment settings for NPusula.
+
+Every value is read from the process environment, after the repository's
+`.env` file has been loaded into it (see `backend/env_loader.py`); a variable
+that the environment already defines takes precedence over `.env`. The keys
+this module reads are documented in `.env.example`.
+"""
 import os
 from pathlib import Path
 import socket
 import urllib.request
+
+from backend.env_loader import load_project_env
+
+load_project_env()
 
 
 def find_qdrant_host() -> str:
