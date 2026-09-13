@@ -2917,14 +2917,14 @@
     }
   },
   "tuning_source": "artifacts\\tuning_results.json",
-  "elapsed_seconds": 72.52,
+  "elapsed_seconds": 69.72,
   "provenance": {
-    "git_commit": "8791e8fdec32a18b47676ae7f6c889fc13e1a62c",
+    "git_commit": "e4164cfc031e04eb3663dba88321243668f96c84",
     "git_dirty": false,
     "git_worktree_dirty": true,
-    "trained_at_utc": "2026-09-13T11:31:08.761176+00:00",
+    "trained_at_utc": "2026-09-13T15:54:50.207294+00:00",
     "dataset_parquet": "data\\processed\\posts.parquet",
-    "dataset_sha256": "ed5b7fc3bbe188a88dc6a1e2beada3491af681adca615a6884ceeaa49b4d6aec",
+    "dataset_sha256": "d98a0c2b4735a71e35ad5e0e466f18722fa5c34a1f67e8192d467b8356a231bd",
     "raw_file_sha256": "b5a918bddc0171ac291c48c31ef36f56076a7c86642133faa32e28faee6c08ce",
     "model_output": "artifacts\\base_potential_lgbm.txt",
     "model_output_sha256": "c518fcfb122c613d187e88f296e24408397cf31c25bd0c9d4497be966c2e6f4f",

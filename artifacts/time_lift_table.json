@@ -9038,12 +9038,12 @@
     }
   },
   "provenance": {
-    "git_commit": "8791e8fdec32a18b47676ae7f6c889fc13e1a62c",
+    "git_commit": "e4164cfc031e04eb3663dba88321243668f96c84",
     "git_dirty": false,
     "git_worktree_dirty": true,
-    "built_at_utc": "2026-09-13T11:32:26.866252+00:00",
+    "built_at_utc": "2026-09-13T15:56:11.735804+00:00",
     "dataset_parquet": "data\\processed\\posts.parquet",
-    "dataset_sha256": "ed5b7fc3bbe188a88dc6a1e2beada3491af681adca615a6884ceeaa49b4d6aec",
+    "dataset_sha256": "d98a0c2b4735a71e35ad5e0e466f18722fa5c34a1f67e8192d467b8356a231bd",
     "tuning_source": "artifacts\\tuning_results.json",
     "residual_source": "expanding_window_oof_train_predictions",
     "oof_folds": 5,

@@ -14,7 +14,7 @@
   },
   "dataset": {
     "rows": 305613,
-    "parquet_sha256": "ed5b7fc3bbe188a88dc6a1e2beada3491af681adca615a6884ceeaa49b4d6aec",
+    "parquet_sha256": "d98a0c2b4735a71e35ad5e0e466f18722fa5c34a1f67e8192d467b8356a231bd",
     "raw_file_sha256": "b5a918bddc0171ac291c48c31ef36f56076a7c86642133faa32e28faee6c08ce",
     "demo_row_count": 0,
     "timezone_basis_distribution": {
@@ -737,15 +737,15 @@
       "selection_rule": "Stage 1: min validation pinball loss. Stage 2: max mean lift of the recommended window measured against the supported-window baseline (both scale-free across bucket geometries and immune to winner's-curse regression), tie-broken by top-1 positive-lift rate, NDCG@3, lower no-claim rate, then support. The no-claim cap of 0.9 filters candidates when any candidate satisfies it; if none does, the miss is recorded instead of aborting.",
       "bucket_size_comparison_note": "NDCG@3 is not comparable between 3h (8 candidates) and 4h (6 candidates) geome-tries, which is why the geometry decision rides on the observed lift of the recommended window instead."
     },
-    "checked_at": "2026-09-13T11:32:31.476608+00:00"
+    "checked_at": "2026-09-13T15:56:16.767878+00:00"
   },
-  "elapsed_seconds": 66.43,
+  "elapsed_seconds": 56.81,
   "provenance": {
-    "git_commit": "8791e8fdec32a18b47676ae7f6c889fc13e1a62c",
+    "git_commit": "e4164cfc031e04eb3663dba88321243668f96c84",
     "git_dirty": false,
     "git_worktree_dirty": true,
-    "evaluated_at_utc": "2026-09-13T11:33:37.965703+00:00",
-    "dataset_sha256": "ed5b7fc3bbe188a88dc6a1e2beada3491af681adca615a6884ceeaa49b4d6aec",
+    "evaluated_at_utc": "2026-09-13T15:57:13.679581+00:00",
+    "dataset_sha256": "d98a0c2b4735a71e35ad5e0e466f18722fa5c34a1f67e8192d467b8356a231bd",
     "model_path": "C:\\Users\\alpeerkaraca\\Desktop\\Projects\\npusula\\artifacts\\base_potential_lgbm.txt",
     "time_lift_path": "artifacts\\time_lift_table.json",
     "split_protocol": "chronological_train_validation_locked_test",
