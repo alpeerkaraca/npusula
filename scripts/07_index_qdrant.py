@@ -30,8 +30,11 @@ def index_qdrant(top_k: int = 10_000):
     # Context is title-only. Empty-title rows cannot receive a genuine text vector.
     df = df[df["title"].fillna("").astype(str).str.strip().str.len() >= 3].copy()
     df["category_l1"] = df.apply(_canonical_category, axis=1)
+    # Retrieval tags keep only semantically aligned hashtags: the Qdrant payload
+    # feeds the advisor's tag suggestions, so `unknown`/mismatched tags must not
+    # survive into the index (plan §6.2).
     df["tags"] = df.apply(
-        lambda row: align_tags(row.get("tags"), context_category=row["category_l1"])["accepted_tags"],
+        lambda row: align_tags(row.get("tags"), context_category=row["category_l1"])["aligned_semantic"],
         axis=1,
     )
 

@@ -1,7 +1,7 @@
 [project]
-name = "enpusula"
+name = "npusula"
 version = "0.1.0"
-description = "EnPusula - AI-powered Post Timing & Profile Drift Advisor for EnSosyal"
+description = "NPusula - AI-powered Post Timing & Profile Drift Advisor for NSosyal"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

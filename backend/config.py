@@ -1,8 +1,18 @@
-"""Configuration and environment settings for EnPusula."""
+"""Configuration and environment settings for NPusula.
+
+Every value is read from the process environment, after the repository's
+`.env` file has been loaded into it (see `backend/env_loader.py`); a variable
+that the environment already defines takes precedence over `.env`. The keys
+this module reads are documented in `.env.example`.
+"""
 import os
 from pathlib import Path
 import socket
 import urllib.request
+
+from backend.env_loader import load_project_env
+
+load_project_env()
 
 
 def find_qdrant_host() -> str:
@@ -29,8 +39,17 @@ class Settings:
     PROCESSED_DATA_PATH: Path = DATA_DIR / "processed" / "posts.parquet"
     ARTIFACTS_DIR: Path = BASE_DIR / "artifacts"
     DEMO_ACCOUNTS_PATH: Path = ARTIFACTS_DIR / "demo_accounts.json"
-    MODEL_PATH: Path = ARTIFACTS_DIR / "lgbm_popularity.txt"
-    METRICS_PATH: Path = ARTIFACTS_DIR / "metrics.json"
+
+    # --- Layer A / Layer B artifacts (plan §4, §5) ---------------------------
+    # The pre-rework artifacts (metrics.json, lgbm_popularity.txt,
+    # tuning_results.json, pytorch_popularity_gpu.pt) live in artifacts/legacy/
+    # and are never loaded by the runtime.
+    MODEL_PATH: Path = ARTIFACTS_DIR / "base_potential_lgbm.txt"
+    METRICS_PATH: Path = ARTIFACTS_DIR / "base_potential_metrics.json"
+    TIME_LIFT_PATH: Path = ARTIFACTS_DIR / "time_lift_table.json"
+    TUNING_PATH: Path = ARTIFACTS_DIR / "tuning_results.json"
+    FINAL_EVALUATION_PATH: Path = ARTIFACTS_DIR / "final_evaluation.json"
+    LEGACY_ARTIFACTS_DIR: Path = ARTIFACTS_DIR / "legacy"
 
     GEMMA_MODEL_NAME: str = os.getenv("GEMMA_MODEL_NAME", "google/gemma-4-E4B-it")
     GEMMA_API_URL: str = os.getenv("GEMMA_API_URL", "http://127.0.0.1:11434")

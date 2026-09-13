@@ -2,6 +2,10 @@
 # LightGBM's text model parser (lgb_popularity.txt) chokes on CRLF, and
 # joblib/pickle artifacts are binary.
 artifacts/lgbm_popularity.txt -text
+artifacts/base_potential_lgbm.txt -text
 artifacts/*.joblib -text
 artifacts/*.pt -text
 artifacts/*.json -text
+artifacts/legacy/*.txt -text
+artifacts/legacy/*.pt -text
+artifacts/legacy/*.json -text

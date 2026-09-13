@@ -1,0 +1,755 @@
+{
+  "split_protocol": "chronological_train_validation_locked_test",
+  "tuning_data": "validation_only",
+  "test_touched_before_final": false,
+  "evaluation_run_count": 1,
+  "split": {
+    "strategy": "chronological_70_15_15",
+    "train_rows": 213929,
+    "validation_rows": 45842,
+    "test_rows": 45842,
+    "train_end_utc": "2015-12-27 05:53:31+00:00",
+    "validation_end_utc": "2016-01-31 06:50:47+00:00",
+    "test_start_utc": "2016-01-31 06:50:51+00:00"
+  },
+  "dataset": {
+    "rows": 305613,
+    "parquet_sha256": "d98a0c2b4735a71e35ad5e0e466f18722fa5c34a1f67e8192d467b8356a231bd",
+    "raw_file_sha256": "b5a918bddc0171ac291c48c31ef36f56076a7c86642133faa32e28faee6c08ce",
+    "demo_row_count": 0,
+    "timezone_basis_distribution": {
+      "source_offset": 195418,
+      "utc_fallback": 110195
+    }
+  },
+  "production_variant": "A3",
+  "objective": {
+    "name": "quantile",
+    "alpha": 0.6
+  },
+  "base_potential": {
+    "count": 45842,
+    "mae": 1.094653,
+    "median_ae": 0.766149,
+    "spearman": 0.803974,
+    "pinball_loss": 0.51287,
+    "pinball_alpha": 0.6,
+    "prediction_bias": 0.34457,
+    "calibration": {
+      "prediction_mean": 6.780528,
+      "target_mean": 6.435959,
+      "bias": 0.34457
+    },
+    "tail": {
+      "percentile": 80.0,
+      "threshold": 8.49,
+      "count": 9182,
+      "tail_mae": 1.354175,
+      "tail_bias": -1.145385
+    },
+    "baseline_mae": 1.148054,
+    "baseline_spearman": 0.802635,
+    "baseline_kind": "account_baseline (shrunk user history prior, train-only category medians)"
+  },
+  "base_potential_subgroups": {
+    "history_depth:cold_start": {
+      "count": 5041,
+      "mae": 1.962297,
+      "median_ae": 1.675797,
+      "spearman": 0.382919,
+      "pinball_loss": 0.912036,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.691124,
+      "calibration": {
+        "prediction_mean": 7.724159,
+        "target_mean": 7.033035,
+        "bias": 0.691124
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 9.26,
+        "count": 1009,
+        "tail_mae": 2.262305,
+        "tail_bias": -2.219716
+      }
+    },
+    "history_depth:very_low_history": {
+      "count": 9331,
+      "mae": 1.582885,
+      "median_ae": 1.356778,
+      "spearman": 0.672102,
+      "pinball_loss": 0.761353,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.300899,
+      "calibration": {
+        "prediction_mean": 7.362786,
+        "target_mean": 7.061886,
+        "bias": 0.300899
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 9.31,
+        "count": 1869,
+        "tail_mae": 2.151362,
+        "tail_bias": -2.0497
+      }
+    },
+    "history_depth:low_history": {
+      "count": 8900,
+      "mae": 1.00072,
+      "median_ae": 0.815738,
+      "spearman": 0.891046,
+      "pinball_loss": 0.474719,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.256406,
+      "calibration": {
+        "prediction_mean": 6.707212,
+        "target_mean": 6.450806,
+        "bias": 0.256406
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.54,
+        "count": 1789,
+        "tail_mae": 1.285812,
+        "tail_bias": -1.158252
+      }
+    },
+    "history_depth:medium_history": {
+      "count": 13280,
+      "mae": 0.681289,
+      "median_ae": 0.507899,
+      "spearman": 0.907185,
+      "pinball_loss": 0.318186,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.224583,
+      "calibration": {
+        "prediction_mean": 6.394231,
+        "target_mean": 6.169648,
+        "bias": 0.224583
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.97,
+        "count": 2672,
+        "tail_mae": 0.747213,
+        "tail_bias": -0.372308
+      }
+    },
+    "history_depth:high_history": {
+      "count": 9290,
+      "mae": 0.814351,
+      "median_ae": 0.563345,
+      "spearman": 0.898794,
+      "pinball_loss": 0.361539,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.456367,
+      "calibration": {
+        "prediction_mean": 6.306111,
+        "target_mean": 5.849744,
+        "bias": 0.456367
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.612,
+        "count": 1858,
+        "tail_mae": 0.715222,
+        "tail_bias": 0.009315
+      }
+    },
+    "timezone:source_offset": {
+      "count": 30902,
+      "mae": 1.097233,
+      "median_ae": 0.778546,
+      "spearman": 0.798109,
+      "pinball_loss": 0.513372,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.352446,
+      "calibration": {
+        "prediction_mean": 6.976511,
+        "target_mean": 6.624065,
+        "bias": 0.352446
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.64,
+        "count": 6186,
+        "tail_mae": 1.329778,
+        "tail_bias": -1.120077
+      }
+    },
+    "timezone:utc_fallback": {
+      "count": 14940,
+      "mae": 1.089317,
+      "median_ae": 0.742946,
+      "spearman": 0.803982,
+      "pinball_loss": 0.511831,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.328279,
+      "calibration": {
+        "prediction_mean": 6.375156,
+        "target_mean": 6.046877,
+        "bias": 0.328279
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.13,
+        "count": 2996,
+        "tail_mae": 1.428693,
+        "tail_bias": -1.191883
+      }
+    },
+    "media:photo": {
+      "count": 45734,
+      "mae": 1.094792,
+      "median_ae": 0.766161,
+      "spearman": 0.803855,
+      "pinball_loss": 0.512837,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.345588,
+      "calibration": {
+        "prediction_mean": 6.776907,
+        "target_mean": 6.431319,
+        "bias": 0.345588
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.48,
+        "count": 9201,
+        "tail_mae": 1.351155,
+        "tail_bias": -1.144518
+      }
+    },
+    "media:video": {
+      "count": 108,
+      "mae": 1.035919,
+      "median_ae": 0.728412,
+      "spearman": 0.789022,
+      "pinball_loss": 0.526608,
+      "pinball_alpha": 0.6,
+      "prediction_bias": -0.086489,
+      "calibration": {
+        "prediction_mean": 8.313974,
+        "target_mean": 8.400463,
+        "bias": -0.086489
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 11.486,
+        "count": 22,
+        "tail_mae": 1.583778,
+        "tail_bias": -0.51083
+      }
+    },
+    "category:technology": {
+      "count": 42,
+      "mae": 0.693445,
+      "median_ae": 0.27109,
+      "spearman": 0.237096,
+      "pinball_loss": 0.315,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.317227,
+      "calibration": {
+        "prediction_mean": 5.611037,
+        "target_mean": 5.29381,
+        "bias": 0.317227
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 5.226,
+        "count": 9,
+        "tail_mae": 1.512043,
+        "tail_bias": 0.568004
+      }
+    },
+    "category:automotive": {
+      "count": 1451,
+      "mae": 1.016515,
+      "median_ae": 0.756909,
+      "spearman": 0.74357,
+      "pinball_loss": 0.478083,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.30175,
+      "calibration": {
+        "prediction_mean": 7.325485,
+        "target_mean": 7.023735,
+        "bias": 0.30175
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.39,
+        "count": 292,
+        "tail_mae": 1.192355,
+        "tail_bias": -0.996737
+      }
+    },
+    "category:fashion_beauty": {
+      "count": 7690,
+      "mae": 1.088893,
+      "median_ae": 0.747786,
+      "spearman": 0.812975,
+      "pinball_loss": 0.506063,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.383837,
+      "calibration": {
+        "prediction_mean": 7.746388,
+        "target_mean": 7.362551,
+        "bias": 0.383837
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 9.83,
+        "count": 1540,
+        "tail_mae": 1.120684,
+        "tail_bias": -0.847482
+      }
+    },
+    "category:travel_tourism": {
+      "count": 9189,
+      "mae": 0.973698,
+      "median_ae": 0.637809,
+      "spearman": 0.802016,
+      "pinball_loss": 0.445979,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.408703,
+      "calibration": {
+        "prediction_mean": 6.496677,
+        "target_mean": 6.087974,
+        "bias": 0.408703
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.78,
+        "count": 1839,
+        "tail_mae": 1.174593,
+        "tail_bias": -0.83716
+      }
+    },
+    "category:food_dining": {
+      "count": 3098,
+      "mae": 1.047322,
+      "median_ae": 0.713738,
+      "spearman": 0.814548,
+      "pinball_loss": 0.473166,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.504951,
+      "calibration": {
+        "prediction_mean": 6.143966,
+        "target_mean": 5.639015,
+        "bias": 0.504951
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.176,
+        "count": 620,
+        "tail_mae": 1.256856,
+        "tail_bias": -0.99304
+      }
+    },
+    "category:entertainment_gaming": {
+      "count": 2137,
+      "mae": 1.020999,
+      "median_ae": 0.702103,
+      "spearman": 0.827217,
+      "pinball_loss": 0.484868,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.256318,
+      "calibration": {
+        "prediction_mean": 6.117867,
+        "target_mean": 5.861549,
+        "bias": 0.256318
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.28,
+        "count": 429,
+        "tail_mae": 1.264173,
+        "tail_bias": -1.137736
+      }
+    },
+    "category:sports_fitness": {
+      "count": 6,
+      "mae": 1.560176,
+      "median_ae": 0.758686,
+      "spearman": 0.257143,
+      "pinball_loss": 0.744029,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.360587,
+      "calibration": {
+        "prediction_mean": 6.782254,
+        "target_mean": 6.421667,
+        "bias": 0.360587
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.73,
+        "count": 2,
+        "tail_mae": 1.344643,
+        "tail_bias": -0.771996
+      }
+    },
+    "category:nature_wildlife": {
+      "count": 462,
+      "mae": 1.177157,
+      "median_ae": 0.920769,
+      "spearman": 0.735943,
+      "pinball_loss": 0.558522,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.300563,
+      "calibration": {
+        "prediction_mean": 6.192597,
+        "target_mean": 5.892035,
+        "bias": 0.300563
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.52,
+        "count": 94,
+        "tail_mae": 1.430287,
+        "tail_bias": -1.335911
+      }
+    },
+    "category:art_design": {
+      "count": 262,
+      "mae": 0.915674,
+      "median_ae": 0.568507,
+      "spearman": 0.85755,
+      "pinball_loss": 0.405055,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.527822,
+      "calibration": {
+        "prediction_mean": 7.699768,
+        "target_mean": 7.171947,
+        "bias": 0.527822
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 9.578,
+        "count": 53,
+        "tail_mae": 0.81975,
+        "tail_bias": 0.319922
+      }
+    },
+    "category:business_economy": {
+      "count": 8,
+      "mae": 1.106434,
+      "median_ae": 1.150454,
+      "spearman": 0.880952,
+      "pinball_loss": 0.551286,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.01931,
+      "calibration": {
+        "prediction_mean": 6.45556,
+        "target_mean": 6.43625,
+        "bias": 0.01931
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.4,
+        "count": 2,
+        "tail_mae": 1.267214,
+        "tail_bias": -1.267214
+      }
+    },
+    "category:social_lifestyle": {
+      "count": 21497,
+      "mae": 1.168891,
+      "median_ae": 0.845302,
+      "spearman": 0.783338,
+      "pinball_loss": 0.555391,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.290542,
+      "calibration": {
+        "prediction_mean": 6.681016,
+        "target_mean": 6.390474,
+        "bias": 0.290542
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.55,
+        "count": 4328,
+        "tail_mae": 1.513928,
+        "tail_bias": -1.384035
+      }
+    }
+  },
+  "time_lift": {
+    "supported_bucket_count": 354,
+    "bucket_support_distribution": {
+      "min": 1,
+      "median": 126,
+      "max": 5752
+    },
+    "level_group_counts": {
+      "category_weekday_bucket": 541,
+      "category_bucket": 87,
+      "global_weekday_bucket": 56,
+      "global_bucket": 8
+    },
+    "level_eligible_group_counts": {
+      "category_weekday_bucket": 354,
+      "category_bucket": 67,
+      "global_weekday_bucket": 56,
+      "global_bucket": 8
+    },
+    "held_out_bucket_lift_mae": 1.079014,
+    "held_out_bucket_lift_spearman": 0.026245,
+    "held_out_bucket_lift_spearman_pooled": 0.09629,
+    "observed_group_count": 456,
+    "evaluated_rows_with_supported_group": 45842,
+    "top1_actual_bucket_hit_rate": 0.135814,
+    "top3_actual_bucket_hit_rate": 0.37265,
+    "top1_positive_lift_hit_rate": 0.099232,
+    "ndcg_at_3": 0.327893,
+    "ndcg_rows": 28701,
+    "mean_ranking_regret": 0.41434,
+    "mean_ranking_regret_rows": 45590,
+    "mean_recommended_observed_lift": -0.319538,
+    "mean_recommended_observed_lift_rows": 45590,
+    "mean_observed_lift_supported_baseline": -0.323595,
+    "mean_recommended_lift_delta_vs_baseline": 0.004057,
+    "mean_recommended_lift_delta_rows": 45590,
+    "positive_lift_precision_by_confidence": {
+      "high": 0.084906,
+      "medium": null,
+      "low": 0.09985
+    },
+    "bootstrap_ci_coverage": 0.311404,
+    "bootstrap_ci_coverage_groups": 456,
+    "tie_or_no_claim_rate": 0.994983,
+    "confidence_rate": {
+      "high": 0.005017,
+      "medium": 0.0,
+      "low": 0.994983
+    },
+    "base_prediction_mean": 6.780528,
+    "interpretation": "Held-out observational generalisation of the window ranking. Not causal: the Flickr corpus is observational and has no randomised exploration."
+  },
+  "product_confidence_report": {
+    "test_rows": 45842,
+    "confidence_rate": {
+      "high": 0.005017,
+      "medium": 0.0,
+      "low": 0.994983
+    },
+    "cold_start_recommendation_rate": 0.109965,
+    "utc_fallback_recommendation_rate": 0.325902,
+    "no_claim_or_broad_window_rate": 0.994983,
+    "positive_lift_precision_by_confidence": {
+      "high": 0.084906,
+      "medium": null,
+      "low": 0.09985
+    }
+  },
+  "legacy_comparison": {
+    "protocol": "same train/validation/test split, same residual target, legacy 36-column vector",
+    "metrics": {
+      "count": 45842,
+      "mae": 0.875857,
+      "median_ae": 0.554812,
+      "spearman": 0.866572,
+      "pinball_loss": 0.406461,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.314669,
+      "calibration": {
+        "prediction_mean": 6.750627,
+        "target_mean": 6.435959,
+        "bias": 0.314669
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.49,
+        "count": 9182,
+        "tail_mae": 1.025583,
+        "tail_bias": -0.573961
+      }
+    },
+    "diagnostic_without_baseline_input": {
+      "metrics": {
+        "count": 45842,
+        "mae": 1.117341,
+        "median_ae": 0.778929,
+        "spearman": 0.805466,
+        "pinball_loss": 0.519315,
+        "pinball_alpha": 0.6,
+        "prediction_bias": 0.393553,
+        "calibration": {
+          "prediction_mean": 6.829512,
+          "target_mean": 6.435959,
+          "bias": 0.393553
+        },
+        "tail": {
+          "percentile": 80.0,
+          "threshold": 8.49,
+          "count": 9182,
+          "tail_mae": 1.354154,
+          "tail_bias": -1.214053
+        }
+      },
+      "note": "Same legacy vector with `account_baseline` removed as an input (it stays the residual offset). Separates the time features' contribution from the double-counted offset. Not a production candidate either."
+    },
+    "interpretation": "The legacy vector scores lower post-level MAE because it is allowed to condition on the publish hour — the very variable the product has to choose — and to take `account_baseline` as an input while it is also the residual offset. Neither is available in the recommendation task, so this is a same-protocol reference, not a better recommender.",
+    "historical_artifact": {
+      "note": "Archived number from the pre-rework artifact. NOT comparable: different split protocol, and the same test split had already been inspected during tuning.",
+      "stored_model_mae": 0.85337,
+      "stored_model_spearman": 0.869772,
+      "stored_baseline_mae": 1.14815,
+      "stored_dataset_rows": 305613
+    }
+  },
+  "feature_importance": [
+    {
+      "feature": "unknown_tag_count",
+      "importance": 3551
+    },
+    {
+      "feature": "unknown_tag_ratio",
+      "importance": 3177
+    },
+    {
+      "feature": "text_svd_3",
+      "importance": 2554
+    },
+    {
+      "feature": "text_svd_0",
+      "importance": 2356
+    },
+    {
+      "feature": "text_svd_4",
+      "importance": 2222
+    },
+    {
+      "feature": "text_svd_2",
+      "importance": 2173
+    },
+    {
+      "feature": "text_svd_5",
+      "importance": 2160
+    },
+    {
+      "feature": "text_svd_7",
+      "importance": 2157
+    },
+    {
+      "feature": "text_svd_6",
+      "importance": 2098
+    },
+    {
+      "feature": "text_svd_1",
+      "importance": 1955
+    },
+    {
+      "feature": "semantic_tag_ratio",
+      "importance": 1816
+    },
+    {
+      "feature": "history_depth_code",
+      "importance": 1777
+    },
+    {
+      "feature": "tag_category_entropy",
+      "importance": 1498
+    },
+    {
+      "feature": "mismatched_tag_count",
+      "importance": 1203
+    },
+    {
+      "feature": "primary_cat_code",
+      "importance": 1029
+    },
+    {
+      "feature": "generic_tag_count",
+      "importance": 891
+    },
+    {
+      "feature": "primary_subcat_code",
+      "importance": 621
+    },
+    {
+      "feature": "aligned_tag_count",
+      "importance": 536
+    },
+    {
+      "feature": "timezone_basis_fallback",
+      "importance": 505
+    },
+    {
+      "feature": "primary_cat_confidence",
+      "importance": 496
+    },
+    {
+      "feature": "nsfw_tag_count",
+      "importance": 330
+    },
+    {
+      "feature": "context_source_code",
+      "importance": 191
+    },
+    {
+      "feature": "has_secondary_cat",
+      "importance": 73
+    },
+    {
+      "feature": "media_type_code",
+      "importance": 37
+    }
+  ],
+  "time_lift_validation_reference": {
+    "bucket_hours": 3,
+    "shrinkage_k": 100.0,
+    "min_support_posts": 20,
+    "min_support_users": 10,
+    "min_meaningful_lift": 0.05,
+    "validation_ndcg_at_3": 0.410477,
+    "validation_mean_recommended_observed_lift": -0.144082,
+    "validation_mean_recommended_lift_delta_vs_baseline": 0.118472,
+    "validation_mean_observed_lift_supported_baseline": -0.262554,
+    "validation_top1_positive_lift_hit_rate": 0.154727,
+    "validation_tie_rate": 0.995768,
+    "validation_bucket_lift_mae": 1.022443,
+    "supported_bucket_count": 354
+  },
+  "metric_interpretation": {
+    "mae": "Post popularity prediction error only. Not window/timing quality.",
+    "spearman": "Post popularity ranking quality only. Not window/timing quality.",
+    "pinball_loss": "Quantile loss of the base-potential prediction.",
+    "time_lift_ndcg_at_3": "Observational ranking quality of the 3-hour windows (held out).",
+    "time_lift_hit_rates": "Observational; only rows whose group passed the support bar are scored.",
+    "mean_recommended_lift_delta_vs_baseline": "Recommended window minus an arbitrary supported window of the same category/weekday. The absolute recommended lift is expected to be negative on held-out data because groups are selected by their train estimate (winner's curse); only this delta is readable.",
+    "bootstrap_ci_coverage": "Share of group intervals containing the held-out mean. Below the nominal level means the intervals are too narrow under temporal drift — reported, not hidden.",
+    "legacy_advantage": "The legacy vector's lower post-level MAE comes from conditioning on the publish hour and from using the residual offset as an input. Neither is available when the hour is the decision variable.",
+    "causality": "No causal claim is made anywhere. A causal statement requires NSosyal A/B or controlled exploration data."
+  },
+  "audit": {
+    "tuning_protocol": {
+      "tuning_data": "validation_only",
+      "test_rows_loaded": 0,
+      "split": {
+        "strategy": "chronological_70_15_15",
+        "train_rows": 213929,
+        "validation_rows": 45842,
+        "test_rows": 45842,
+        "train_end_utc": "2015-12-27 05:53:31+00:00",
+        "validation_end_utc": "2016-01-31 06:50:47+00:00",
+        "test_start_utc": "2016-01-31 06:50:51+00:00"
+      },
+      "selection_rule": "Stage 1: min validation pinball loss. Stage 2: max mean lift of the recommended window measured against the supported-window baseline (both scale-free across bucket geometries and immune to winner's-curse regression), tie-broken by top-1 positive-lift rate, NDCG@3, lower no-claim rate, then support. The no-claim cap of 0.9 filters candidates when any candidate satisfies it; if none does, the miss is recorded instead of aborting.",
+      "bucket_size_comparison_note": "NDCG@3 is not comparable between 3h (8 candidates) and 4h (6 candidates) geome-tries, which is why the geometry decision rides on the observed lift of the recommended window instead."
+    },
+    "checked_at": "2026-09-13T15:56:16.767878+00:00"
+  },
+  "elapsed_seconds": 56.81,
+  "provenance": {
+    "git_commit": "e4164cfc031e04eb3663dba88321243668f96c84",
+    "git_dirty": false,
+    "git_worktree_dirty": true,
+    "evaluated_at_utc": "2026-09-13T15:57:13.679581+00:00",
+    "dataset_sha256": "d98a0c2b4735a71e35ad5e0e466f18722fa5c34a1f67e8192d467b8356a231bd",
+    "model_path": "C:\\Users\\alpeerkaraca\\Desktop\\Projects\\npusula\\artifacts\\base_potential_lgbm.txt",
+    "time_lift_path": "artifacts\\time_lift_table.json",
+    "split_protocol": "chronological_train_validation_locked_test",
+    "tuning_data": "validation_only",
+    "test_touched_before_final": false
+  }
+}

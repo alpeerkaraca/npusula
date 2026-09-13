@@ -203,17 +203,18 @@ def test_store_evicts_oldest_when_full():
 
 
 # --- model-input override -------------------------------------------------
-def test_media_category_override_rewrites_category_and_interaction_features():
+def test_media_category_override_rewrites_the_category_columns():
     """The image category must be applied directly, not through the keyword mapper.
 
     `classify_post_category` cannot round-trip every canonical name (gaming and
     art_design lose their keyword to a word-boundary rule), so the override
-    writes the code itself and keeps derived features consistent.
+    writes the code itself. Layer A has no time-interaction columns any more, so
+    the override only has to keep the category columns consistent.
     """
     import pandas as pd
 
     from backend.services.canonical_taxonomy import CATEGORY_CODE_MAP
-    from backend.services.recommendation import RecommendationService
+    from backend.services.recommendation import BASE_FEATURES, RecommendationService
 
     service = RecommendationService(model_path=Path("artifacts/.training-placeholder.txt"))
     features = pd.DataFrame([{
@@ -221,16 +222,19 @@ def test_media_category_override_rewrites_category_and_interaction_features():
         "title": "bugün çok güzeldi",
         "tags": [],
         "media_type": "photo",
+        "timezone_basis": "source_offset",
     }])
     X = service._prepare_features(features)
+
+    assert set(X.columns) == set(BASE_FEATURES)
+    assert "cat_x_hour" not in X.columns and "hour" not in X.columns
 
     assert RecommendationService._apply_media_category(X, None) is False
     assert RecommendationService._apply_media_category(X, _media_analysis("food_dining")) is True
 
     expected = float(CATEGORY_CODE_MAP["food_dining"])
     assert X["primary_cat_code"].iloc[0] == expected
-    assert X["cat_x_hour"].iloc[0] == expected * 100 + X["hour"].iloc[0]
-    assert X["cat_x_weekday"].iloc[0] == expected * 10 + X["weekday"].iloc[0]
+    assert X["primary_cat_confidence"].iloc[0] == _media_analysis("food_dining").category_confidence
 
     # An uncertain analysis (no category) must leave the row untouched.
     assert RecommendationService._apply_media_category(X, _media_analysis(None)) is False
@@ -296,7 +300,7 @@ def test_media_api_analyzes_upload_and_feeds_the_advisor():
 
 # --- graceful degradation -------------------------------------------------
 def test_analyzer_degrades_when_weights_are_unavailable(tmp_path: Path):
-    analyzer = MediaAnalyzer(model_name="enpusula/does-not-exist", cache_dir=tmp_path)
+    analyzer = MediaAnalyzer(model_name="npusula/does-not-exist", cache_dir=tmp_path)
     assert analyzer.warm_up() is False
     assert analyzer.is_ready is False
     with pytest.raises(MediaUnavailableError):

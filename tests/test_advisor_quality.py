@@ -108,11 +108,45 @@ def test_advisor_api_family_idea_quality(client):
     assert any(tag in {"#yaşam", "#lifestyle", "#günlükyaşam"} for tag in data["accepted_tags"])
 
 
+def test_suggested_tags_are_aligned_semantics_only_and_deduplicated(client):
+    """Only verified tags may be suggested, and never twice (plan §6.2)."""
+    response = client.post("/api/recommend/advisor", json={
+        "user_id": "31253@N15",
+        "idea": "Büyük dil modellerinde prompt mühendisliği ve dikkat mekanizmaları",
+        "media_type": "photo",
+        "horizon": "next_7_days",
+        "timezone": "Europe/Istanbul",
+    })
+    assert response.status_code == 200
+    data = response.json()
+
+    # The category classifier matched no keyword, so the category is a fallback
+    # and is reported as such instead of being asserted as knowledge.
+    assert data["primary_category_is_fallback"] is True
+    assert data["primary_category_confidence"] <= 0.30
+
+    assert data["suggested_tags"], "a technology idea must still get verified tags"
+    assert len(data["suggested_tags"]) <= 3
+    assert set(data["suggested_tags"]) <= set(data["accepted_tags"])
+    assert all(tag.startswith("#") for tag in data["suggested_tags"])
+
+    lowered = [tag.lower() for tag in data["accepted_tags"]]
+    assert len(lowered) == len(set(lowered)), f"duplicate tags reported: {data['accepted_tags']}"
+
+
 def test_turkish_tags_are_recognized_by_taxonomy():
-    """Turkish hashtags must align to the semantic taxonomy, not be rejected."""
+    """Turkish hashtags must align to the semantic taxonomy of their own category."""
     from backend.services.tag_taxonomy import align_tags
 
-    for tags in (["#yaşam", "#lifestyle"], ["#spor", "#antrenman"], ["#aile", "#mutluluk"]):
-        result = align_tags(tags, context_category="social_events")
-        assert result["accepted_tags"], f"Turkish tags rejected: {tags}"
-        assert not result["nsfw_filtered_tags"]
+    cases = [
+        (["#yaşam", "#lifestyle"], "social_lifestyle"),
+        (["#spor", "#antrenman"], "sports_fitness"),
+        (["#aile", "#mutluluk"], "social_lifestyle"),
+        (["#yapayzeka", "#kodlama"], "technology"),
+        (["#kahve", "#yemek"], "food_dining"),
+    ]
+    for tags, canonical_category in cases:
+        result = align_tags(tags, context_category=canonical_category)
+        assert result["aligned_semantic"], f"Turkish tags not aligned for {canonical_category}: {tags}"
+        assert not result["nsfw_filtered"]
+        assert not result["mismatched_semantic"]

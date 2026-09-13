@@ -3,8 +3,11 @@ Canonical Taxonomy Service (G2)
 Provides a versioned canonical taxonomy mapping SMPD categories to 11 platform-independent canonical categories.
 """
 
+import math
 import re
 from typing import Dict, List, Optional, Any, Tuple
+
+import pandas as pd
 
 # 1. Versioned dict mapping category -> list of subcategories
 CANONICAL_TAXONOMY_V1: Dict[str, List[str]] = {
@@ -27,6 +30,14 @@ CANONICAL_CATEGORIES: List[str] = list(CANONICAL_TAXONOMY_V1.keys())
 # 3. Category code mapping (0-10)
 CATEGORY_CODE_MAP: Dict[str, int] = {cat: idx for idx, cat in enumerate(CANONICAL_CATEGORIES)}
 
+# Inverse mapping, for reporting and for rebuilding legacy features from codes.
+CANONICAL_BY_CODE: Dict[int, str] = {code: name for name, code in CATEGORY_CODE_MAP.items()}
+
+
+def canonical_name(code: int) -> str:
+    """Canonical category name for a code (falls back to the classifier default)."""
+    return CANONICAL_BY_CODE.get(int(code), "social_lifestyle")
+
 # 4. Subcategory code mapping
 SUBCATEGORY_CODE_MAP: Dict[str, int] = {}
 _subcat_idx = 0
@@ -34,6 +45,60 @@ for cat, subcats in CANONICAL_TAXONOMY_V1.items():
     for subcat in subcats:
         SUBCATEGORY_CODE_MAP[subcat] = _subcat_idx
         _subcat_idx += 1
+
+# 4b. Canonical category <-> tag-domain bridge (plan §3.1).
+#
+# The two taxonomies used different names ("canonical category" from post
+# classification, "tag domain" from the hashtag keyword bank), so "is this tag
+# aligned with the post?" used to compare `technology` against `tech_software`
+# and always answer "no". This is the single source of truth for that bridge.
+#
+# `automotive` intentionally maps to no tag domain: the 12-domain hashtag bank
+# has no automotive vocabulary, so a `#cars` tag is `unknown` rather than
+# silently "misaligned".
+CANONICAL_TO_TAG_DOMAINS: Dict[str, Tuple[str, ...]] = {
+    "technology": ("tech_software",),
+    "automotive": (),
+    "fashion_beauty": ("beauty_cosmetics", "fashion_apparel"),
+    "travel_tourism": ("travel_tourism",),
+    "food_dining": ("food_beverage",),
+    "entertainment_gaming": ("gaming_esports", "art_entertainment"),
+    "sports_fitness": ("sports_fitness",),
+    "nature_wildlife": ("nature_wildlife",),
+    "art_design": ("art_entertainment", "urban_architecture"),
+    "business_economy": ("business_finance",),
+    "social_lifestyle": ("social_events",),
+}
+
+TAG_DOMAIN_TO_CANONICAL: Dict[str, str] = {}
+for _canonical, _domains in CANONICAL_TO_TAG_DOMAINS.items():
+    for _domain in _domains:
+        TAG_DOMAIN_TO_CANONICAL[_domain] = _canonical
+
+
+def tag_domains_for_category(category: str | int | float | None) -> Tuple[str, ...]:
+    """Returns the tag domains that count as aligned for a canonical category.
+
+    Accepts the canonical name ("technology"), its integer code (0) or the
+    integral float pandas hands back from a feature column (0.0). Unknown inputs
+    return an empty tuple: alignment then degrades to `unknown` instead of
+    pretending the tag is misaligned.
+    """
+    if category is None or isinstance(category, bool):
+        return ()
+    if isinstance(category, float):
+        if not category.is_integer():
+            return ()
+        category = int(category)
+    if isinstance(category, int):
+        name = CANONICAL_BY_CODE.get(category)
+        return CANONICAL_TO_TAG_DOMAINS.get(name, ()) if name else ()
+    return CANONICAL_TO_TAG_DOMAINS.get(str(category).strip().lower(), ())
+
+
+def canonical_for_tag_domain(domain: str) -> str | None:
+    """Returns the canonical category a tag domain belongs to (inverse bridge)."""
+    return TAG_DOMAIN_TO_CANONICAL.get(str(domain).strip().lower())
 
 # 5. Mapping from SMPD's original categories/subcategories/concepts to canonical categories
 # This is a basic keyword mapping. Depending on SMPD categories, this can be expanded.
@@ -111,6 +176,23 @@ SMPD_TO_CANONICAL_MAPPING: Dict[str, Tuple[str, str]] = {
     "tatil": ("social_lifestyle", "daily_life"),
 }
 
+def _clean_optional_text(value: Any) -> Optional[str]:
+    """Normalizes a taxonomy input to ``str | None``.
+
+    Callers pass values straight out of a DataFrame, so missing entries arrive
+    as ``NaN``/``pd.NA`` rather than ``None``; joining those into the search
+    string used to raise instead of degrading to "no taxonomy input".
+    """
+    if value is None:
+        return None
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    if value is pd.NA:  # type: ignore[comparison-overlap]
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 # 6. classify_post_category function
 def classify_post_category(
     title: str,
@@ -140,7 +222,15 @@ def classify_post_category(
         - secondary_cat_confidence: float
     """
     # Create a searchable string from inputs
-    inputs = filter(None, [title, smpd_category, smpd_subcategory, smpd_concept])
+    inputs = filter(
+        None,
+        (
+            _clean_optional_text(title),
+            _clean_optional_text(smpd_category),
+            _clean_optional_text(smpd_subcategory),
+            _clean_optional_text(smpd_concept),
+        ),
+    )
     text_to_search = " ".join(inputs).lower()
     
     primary_match = None

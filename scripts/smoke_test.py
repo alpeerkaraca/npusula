@@ -1,4 +1,4 @@
-"""Smoke test verifying all core EnPusula workflows end-to-end."""
+"""Smoke test verifying all core NPusula workflows end-to-end."""
 import json
 from fastapi.testclient import TestClient
 
@@ -7,7 +7,7 @@ from backend.app import app
 
 def run_smoke_test():
     print("=" * 60)
-    print("EnPusula MVP - End-to-End Smoke Test")
+    print("NPusula MVP - End-to-End Smoke Test")
     print("=" * 60)
 
     with TestClient(app) as client:
@@ -21,11 +21,18 @@ def run_smoke_test():
         print(f"[2/6] Registered accounts: {len(users)}")
 
         # 3. Quick recommendation for a real user with posting history
-        quick = client.get("/api/recommend/quick/31253@N15").json()
+        quick = client.get(
+            "/api/recommend/quick/31253@N15", params={"timezone": "Europe/Istanbul"}
+        ).json()
         print(f"[3/6] Quick recommendation for 31253@N15 (real SMPD user):")
         print(f"      Active topic: {quick['active_topic']}")
-        for s in quick["slots"]:
-            print(f"      - {s['datetime_utc'][:16]} | {s['predicted_popularity']} | {s['label']}")
+        print(f"      Confidence: {quick['confidence_label']} | timezone basis: {quick['timezone_basis']}")
+        for window in quick["windows"]:
+            print(
+                f"      - {window['weekday']} {window['time_range_local']} "
+                f"(local {window['window_start_local'][:16]}) | lift {window['observational_time_lift']:+.3f} "
+                f"| kanıt: {window['evidence_level']} | destek: {window['support_post_count']}"
+            )
         print(f"      Explanation: {quick['explanation']}")
 
         # 4. Profile drift check for a real user concentrated in one topic
@@ -50,13 +57,19 @@ def run_smoke_test():
             "idea": "Büyük dil modellerinde prompt mühendisliği ve dikkat mekanizmaları",
             "media_type": "photo",
             "horizon": "next_7_days",
+            "timezone": "Europe/Istanbul",
         }
         advisor = client.post("/api/recommend/advisor", json=idea_payload).json()
         print(f"[6/6] Advisor Response for idea: '{idea_payload['idea'][:40]}...'")
         print(f"      Inferred Topic: {advisor['topic']}")
-        print(f"      Recommended Slots:")
-        for s in advisor["recommendations"]:
-            print(f"      - {s['datetime_utc'][:16]} | Score: {s['predicted_popularity']} | {s['label']}")
+        print(f"      Base potential: {advisor['windows'][0]['base_potential'] if advisor['windows'] else '-'}"
+              f" | Confidence: {advisor['confidence_level']} | tie/no-claim: {advisor['is_tie_or_broad_window']}")
+        print(f"      Recommended Windows:")
+        for window in advisor["windows"]:
+            print(
+                f"      - {window['weekday']} {window['time_range_local']} "
+                f"| lift {window['observational_time_lift']:+.3f} | {window['evidence_level']}"
+            )
         print(f"      Suggested Tags: {advisor['suggested_tags']}")
         print(f"      Similar Posts Count: {len(advisor['similar_posts'])}")
         print(f"      Explanation: {advisor['explanation']}")

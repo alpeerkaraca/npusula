@@ -131,7 +131,7 @@ class RetrievalService:
         """Provides real text-encoded exemplars when Qdrant is unavailable."""
         posts = []
         for idx, topic in enumerate(TOPIC_ORDER):
-            tags = TOPIC_DEFAULT_TAGS.get(topic, ["#ensosyal"])
+            tags = TOPIC_DEFAULT_TAGS.get(topic, ["#nsosyal"])
             title = f"{topic} için başarılı içerik stratejileri"
             posts.append({
                 "post_id": f"fallback-{idx + 1}",
@@ -183,14 +183,14 @@ class RetrievalService:
                 clean_tag = tag.strip()
                 if not clean_tag.startswith("#"):
                     clean_tag = f"#{clean_tag}"
-                if clean_tag and is_clean_tag(clean_tag) and clean_tag.lower() not in ["#ensosyal"]:
+                if clean_tag and is_clean_tag(clean_tag) and clean_tag.lower() not in ["#nsosyal"]:
                     tag_scores[clean_tag] += weight
 
         top_pairs = tag_scores.most_common(top_k)
         extracted = [tag for tag, _ in top_pairs]
 
         # If filtered tags are fewer than top_k, supplement with high-relevance topic defaults
-        defaults = TOPIC_DEFAULT_TAGS.get(topic or "", ["#Teknoloji", "#Gelişim", "#EnSosyal"])
+        defaults = TOPIC_DEFAULT_TAGS.get(topic or "", ["#Teknoloji", "#Gelişim", "#NSosyal"])
         for d in defaults:
             if len(extracted) >= top_k:
                 break

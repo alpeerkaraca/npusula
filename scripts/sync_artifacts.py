@@ -5,10 +5,10 @@ Teammates fetch the prepared weights instead of retraining from scratch:
     python scripts/sync_artifacts.py download    # resumable, skips up-to-date files
     python scripts/sync_artifacts.py upload      # maintainers publish current weights
 
-Credentials are read from the environment first (WEBDAV_URL, WEBDAV_USER,
-WEBDAV_PASSWORD), then from a local .env file - same convention as
-scripts/download_dataset.py. Files are stored under the WEBDAV_URL folder
-in an "enpusula_artifacts" subdirectory.
+Credentials come from WEBDAV_URL, WEBDAV_USER and WEBDAV_PASSWORD - the same
+`.env`/environment resolution (backend/env_loader.py) every other entry point
+uses, with the environment taking precedence. Files are stored under the
+WEBDAV_URL folder in an "npusula_artifacts" subdirectory.
 """
 from __future__ import annotations
 
@@ -20,35 +20,35 @@ import time
 import urllib.error
 import urllib.request
 
-REMOTE_DIR_NAME = "enpusula_artifacts"
+from backend.env_loader import load_project_env
+
+REMOTE_DIR_NAME = "npusula_artifacts"
 DEFAULT_BASE_URL = "https://cloud.alpeerkaraca.me/remote.php/dav/files/alpeerkaraca/HTWH101/"
+WEBDAV_KEYS = ("WEBDAV_URL", "WEBDAV_USER", "WEBDAV_PASSWORD")
 
 # (path relative to the repo root, required for serving)
 MANIFEST: list[tuple[str, bool]] = [
-    ("artifacts/lgbm_popularity.txt", True),
-    ("artifacts/metrics.json", True),
+    # Layer A (base potential) + Layer B (time-lift table): both are required at
+    # runtime, and the metrics report carries the provenance of both.
+    ("artifacts/base_potential_lgbm.txt", True),
+    ("artifacts/base_potential_metrics.json", True),
+    ("artifacts/time_lift_table.json", True),
     ("artifacts/text_svd_model.joblib", True),
     ("artifacts/qdrant_context_engine.joblib", True),
     ("artifacts/guardrail_classifier.joblib", True),
     ("artifacts/guardrail_metrics.json", False),
+    # The locked final evaluation is not needed to serve, but it is what the
+    # README quotes, so it travels with the weights.
+    ("artifacts/final_evaluation.json", False),
     # Enables rebuilding the Qdrant index without the 458 MB raw dataset.
     ("data/processed/posts.parquet", True),
 ]
 
 
 def load_env() -> dict[str, str]:
-    env: dict[str, str] = {}
-    env_file = Path(".env")
-    if env_file.exists():
-        for line in env_file.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                env[key.strip()] = value.strip()
-    for key in ("WEBDAV_URL", "WEBDAV_USER", "WEBDAV_PASSWORD"):
-        if os.getenv(key):
-            env[key] = os.environ[key]
-    return env
+    """WebDAV settings: process environment first, then the repo `.env`."""
+    load_project_env()
+    return {key: os.environ[key] for key in WEBDAV_KEYS if os.environ.get(key)}
 
 
 def remote_dir_url(env: dict[str, str]) -> str:

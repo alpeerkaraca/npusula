@@ -1,48 +1,104 @@
-"""Candidate time slot generation and selection logic."""
-from datetime import datetime, time, timedelta, timezone
+"""Candidate time slot/window generation and selection logic.
+
+Candidates are enumerated as hours and *presented* as 3-hour local windows
+(plan §4.1): the 7×24 = 168 hourly timestamps still exist, but only to give each
+bucket a concrete calendar position. Hours never compete against each other in
+the product.
+"""
+from datetime import datetime, timedelta, timezone
 import math
-from typing import Any
+from dataclasses import dataclass
 
-from backend.schemas.recommendation import CandidateSlot
+from backend.services.time_features import BUCKET_HOURS, bucket_of_hour
 
-
-# Every full hour: the model learns hour effects across the whole day, so the
-# recommendation phase must be able to select any hour (not only prime times).
+# Backwards-compatible export for callers that still need the hourly scan.
 SLOT_HOURS = list(range(24))
 
 
+@dataclass(frozen=True)
+class CandidateWindow:
+    """A concrete 3-hour window in the user's local calendar."""
+
+    local_start: datetime
+    local_end: datetime
+    utc_start: datetime
+    utc_end: datetime
+    weekday: int
+    bucket: int
+
+
 def build_candidate_slots(start_time: datetime | None = None, days_ahead: int = 7) -> list[datetime]:
-    """Generates 7 x 24 candidate timestamps: next 7 days at every full hour UTC."""
+    """Generates ``days_ahead x 24`` hourly timestamps from ``start_time`` (default UTC).
+
+    Kept as the low-level enumerator: windows and bucket boundaries are derived
+    from it so there is exactly one definition of "which hours exist".
+    """
     if start_time is None:
         start_time = datetime.now(timezone.utc)
-    elif start_time.tzinfo is None:
+    if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=timezone.utc)
 
-    candidates: list[datetime] = []
-    base_date = start_time.date()
+    # Start at the next full hour so a window never begins in the past.
+    first = start_time.replace(minute=0, second=0, microsecond=0)
+    if first < start_time:
+        first += timedelta(hours=1)
 
-    for day_offset in range(days_ahead):
-        target_date = base_date + timedelta(days=day_offset)
-        for hour in SLOT_HOURS:
-            slot_dt = datetime.combine(target_date, time(hour=hour, minute=0, second=0, tzinfo=timezone.utc))
-            # Include slots that are in the future or current horizon
-            if slot_dt >= start_time - timedelta(minutes=30):
-                candidates.append(slot_dt)
+    return [first + timedelta(hours=offset) for offset in range(days_ahead * len(SLOT_HOURS))]
 
-    # If some past slots were skipped, pad to ensure sufficient candidate coverage
-    while len(candidates) < days_ahead * len(SLOT_HOURS):
-        last_date = candidates[-1].date() if candidates else base_date
-        next_date = last_date + timedelta(days=1)
-        for hour in SLOT_HOURS:
-            candidates.append(datetime.combine(next_date, time(hour=hour, tzinfo=timezone.utc)))
-            if len(candidates) >= days_ahead * len(SLOT_HOURS):
-                break
 
-    return candidates[: days_ahead * len(SLOT_HOURS)]
+def build_candidate_windows(
+    start_local: datetime,
+    days_ahead: int = 7,
+    bucket_hours: int = BUCKET_HOURS,
+) -> list[CandidateWindow]:
+    """Builds exactly ``days_ahead x (24 / bucket_hours)`` windows in **local** time.
+
+    The hourly scan is used only to place each bucket on the calendar: the first
+    window starts at the next bucket boundary after ``start_local``, so the
+    horizon is a whole number of windows instead of partial first/last days.
+
+    The local timestamps are the ones shown to the user ("Salı 18.00–21.00");
+    the UTC pair is what a scheduler needs. Both are derived from the same
+    tz-aware local datetime, so DST transitions are handled by the timezone.
+    """
+    if start_local.tzinfo is None:
+        raise ValueError("start_local must be timezone-aware")
+
+    windows_per_day = max(1, 24 // bucket_hours)
+    target = days_ahead * windows_per_day
+    if target <= 0:
+        return []
+
+    windows: list[CandidateWindow] = []
+    # One extra day of hourly slots guarantees `target` bucket boundaries.
+    for slot in build_candidate_slots(start_time=start_local, days_ahead=days_ahead + 1):
+        if slot.hour % bucket_hours != 0:
+            continue
+        local_start = slot.replace(minute=0, second=0, microsecond=0)
+        local_end = local_start + timedelta(hours=bucket_hours)
+        windows.append(
+            CandidateWindow(
+                local_start=local_start,
+                local_end=local_end,
+                utc_start=local_start.astimezone(timezone.utc),
+                utc_end=local_end.astimezone(timezone.utc),
+                weekday=local_start.weekday(),
+                bucket=bucket_of_hour(local_start.hour),
+            )
+        )
+        if len(windows) == target:
+            break
+
+    return windows
 
 
 def extract_time_features(dt: datetime) -> dict[str, float]:
-    """Extracts cyclic and calendar time features for machine learning models."""
+    """Extracts cyclic and calendar time features.
+
+    Retained for reporting and tests only: the base-potential model does **not**
+    take time features any more (plan §3.2), so nothing in the model path may
+    consume this.
+    """
     hour = dt.hour
     weekday = dt.weekday()  # 0 = Monday, 6 = Sunday
 
@@ -58,46 +114,3 @@ def extract_time_features(dt: datetime) -> dict[str, float]:
         "weekday_cos": round(math.cos(weekday_rad), 4),
         "is_weekend": 1.0 if weekday >= 5 else 0.0,
     }
-
-
-def select_top_non_overlapping_slots(
-    scored_candidates: list[tuple[datetime, float]],
-    top_k: int = 3,
-    min_gap_hours: float = 3.0,
-) -> list[CandidateSlot]:
-    """Selects top-k slots sorted by predicted popularity that are separated by at least min_gap_hours."""
-    ranked = sorted(scored_candidates, key=lambda item: item[1], reverse=True)
-    selected: list[tuple[datetime, float]] = []
-
-    min_gap_seconds = min_gap_hours * 3600.0
-
-    for dt, score in ranked:
-        if all(abs((dt - prev_dt).total_seconds()) >= min_gap_seconds for prev_dt, _ in selected):
-            selected.append((dt, score))
-        if len(selected) == top_k:
-            break
-
-    # If not enough non-overlapping slots found, pad with highest available
-    if len(selected) < top_k:
-        for dt, score in ranked:
-            if not any(dt == s[0] for s in selected):
-                selected.append((dt, score))
-            if len(selected) == top_k:
-                break
-
-    results: list[CandidateSlot] = []
-    labels = ["Çok güçlü", "Güçlü", "Orta"]
-
-    for idx, (dt, score) in enumerate(selected):
-        label = labels[idx] if idx < len(labels) else "İyi"
-        results.append(
-            CandidateSlot(
-                datetime_utc=dt,
-                hour=dt.hour,
-                weekday=dt.weekday(),
-                predicted_popularity=round(score, 3),
-                label=label,
-            )
-        )
-
-    return results

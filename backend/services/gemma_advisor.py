@@ -1,35 +1,39 @@
-"""Gemma 4 Strategic Advisor Engine for EnPusula (google/gemma-4-E4B-it).
+"""Gemma 4 Strategic Advisor Engine for NPusula (google/gemma-4-E4B-it).
 
-Generates actionable, strategic Turkish recommendations combining:
-- Inferred content topic and media type
-- Deep Tabular Neural Network / LightGBM slot predictions
-- Qdrant retrieved high-popularity exemplars
+Produces the Turkish explanation that sits on top of the two-layer output:
+Layer A (base potential) plus Layer B (observational time windows).
+
+Mandatory wording rules (plan §6.2) — the model is instructed, and the
+deterministic fallback is written the same way:
+- never state a causal claim about the hour,
+- say so explicitly when confidence is low,
+- speak of "geçmiş gözlemlerde desteklenen pencere",
+- disclose a UTC fallback when the caller sent no timezone,
+- suggest only semantically aligned hashtags.
 """
 import logging
-from typing import Any
+
 import httpx
 
 from backend.config import settings
 from backend.schemas.post import MediaTypeEnum
-from backend.schemas.recommendation import CandidateSlot, SimilarPost
+from backend.schemas.recommendation import RecommendedWindow, SimilarPost, WindowRecommendation
 
 logger = logging.getLogger(__name__)
 
-TR_WEEKDAYS = [
-    "Pazartesi",
-    "Salı",
-    "Çarşamba",
-    "Perşembe",
-    "Cuma",
-    "Cumartesi",
-    "Pazar",
-]
+
+def format_window_turkish(window: RecommendedWindow) -> str:
+    """Formats a window as ``Salı 18.00–21.00``."""
+    return f"{window.weekday} {window.time_range_local}"
 
 
-def format_slot_turkish(slot: CandidateSlot) -> str:
-    weekday_str = TR_WEEKDAYS[slot.weekday]
-    hour_str = f"{slot.hour:02d}:00"
-    return f"{weekday_str} {hour_str}"
+def _window_line(window: RecommendedWindow, index: int) -> str:
+    support = f"{window.support_post_count} gönderi/{window.support_user_count} kullanıcı"
+    lift = f"{window.observational_time_lift:+.2f}"
+    return (
+        f"- {index}. Pencere: {format_window_turkish(window)} "
+        f"(gözlemsel lift {lift}, destek {support}, kanıt: {window.evidence_level})"
+    )
 
 
 class GemmaAdvisorEngine:
@@ -50,45 +54,58 @@ class GemmaAdvisorEngine:
         idea: str,
         topic: str,
         media_type: MediaTypeEnum,
-        slots: list[CandidateSlot],
+        window_recommendation: WindowRecommendation,
         suggested_tags: list[str],
         similar_posts: list[SimilarPost],
     ) -> str:
         """Constructs a strict instruction-following prompt in Gemma 4 turn format."""
-        s1 = format_slot_turkish(slots[0]) if len(slots) > 0 else "Belirlenemedi"
-        s2 = format_slot_turkish(slots[1]) if len(slots) > 1 else ""
-        s3 = format_slot_turkish(slots[2]) if len(slots) > 2 else ""
+        windows = window_recommendation.windows
+        window_block = "\n".join(_window_line(window, index + 1) for index, window in enumerate(windows))
+        if not window_block:
+            window_block = "- Aday pencere hesaplanamadı."
 
-        tags_str = ", ".join(suggested_tags) if suggested_tags else "Genel"
+        tags_str = ", ".join(suggested_tags) if suggested_tags else "Doğrulanmış etiket yok"
 
         exemplar_summaries = []
-        for i, post in enumerate(similar_posts[:3], 1):
+        for index, post in enumerate(similar_posts[:3], 1):
             exemplar_summaries.append(
-                f"{i}. [Skor: {post.popularity_score:.1f}] {post.title[:50]} (Etiketler: {', '.join(post.tags[:3])})"
+                f"{index}. [Skor: {post.popularity_score:.1f}] {post.title[:50]} (Etiketler: {', '.join(post.tags[:3])})"
             )
         exemplars_str = "\n".join(exemplar_summaries) if exemplar_summaries else "Benzer gönderi verisi mevcut."
 
+        media_value = media_type.value if hasattr(media_type, "value") else str(media_type)
+        tz_note = (
+            "Kullanıcının saat dilimi bilinmiyor; pencereler UTC'ye göre hesaplandı ve bunu açıkça belirt."
+            if window_recommendation.timezone_fallback
+            else f"Pencereler kullanıcının yerel saatine göre hesaplandı ({window_recommendation.timezone_label})."
+        )
+
         prompt = (
             f"<start_of_turn>user\n"
-            f"Sen EnSosyal platformunun yapay zeka içerik ve paylaşım zamanı strateji danışmanısın (Gemma 4 Advisor).\n"
-            f"Aşağıdaki içerik fikrini, kategori bilgisini, AMD Radeon RX 9070 XT üzerinde koşan derin öğrenme "
-            f"modelimizin puanladığı aday zaman dilimlerini ve Qdrant vektör aramasından gelen en başarılı gönderileri analiz et.\n\n"
+            f"Sen NSosyal platformunun içerik ve paylaşım zamanı strateji danışmanısın (Gemma 4 Advisor).\n"
+            f"Aşağıdaki içerik fikrini, kategori bilgisini, iki katmanlı modelimizin çıktısını "
+            f"(içerik potansiyeli + tarihsel gözlemsel zaman pencereleri) ve Qdrant vektör aramasından "
+            f"gelen en başarılı gönderileri analiz et.\n\n"
             f"İÇERİK BİLGİSİ:\n"
             f"- Fikir: {idea}\n"
-            f"- Medya Türü: {media_type.value if hasattr(media_type, 'value') else media_type}\n"
-            f"- Kategori: {topic}\n\n"
-            f"EN İYİ ZAMAN DİLİMLERİ (Model Puanı):\n"
-            f"- 1. Aday: {s1} (Skor: {slots[0].predicted_popularity:.2f})\n"
-            f"- 2. Aday: {s2} (Skor: {slots[1].predicted_popularity if len(slots) > 1 else 0.0:.2f})\n"
-            f"- 3. Aday: {s3} (Skor: {slots[2].predicted_popularity if len(slots) > 2 else 0.0:.2f})\n\n"
+            f"- Medya Türü: {media_value}\n"
+            f"- Kategori: {topic}\n"
+            f"- İçerik potansiyeli (zamandan bağımsız): {window_recommendation.base_potential:.2f}\n"
+            f"- Güven seviyesi: {window_recommendation.confidence_label}\n\n"
+            f"ÖNERİLEN ZAMAN PENCERELERİ (gözlemsel):\n"
+            f"{window_block}\n\n"
             f"BENZER BAŞARILI GÖNDERİLER:\n"
             f"{exemplars_str}\n"
-            f"Önerilen Etiketler: {tags_str}\n\n"
-            f"TALİMATLAR:\n"
-            f"1. Açıklamanda mutlaka 'en güçlü aday' ifadesini kullanarak ilk adayı vurgula.\n"
-            f"2. Alternatif adayları ve önerilen etiketleri belirt.\n"
-            f"3. {media_type.value if hasattr(media_type, 'value') else media_type} formatına özel stratejik bir kanca (hook) veya içerik tavsiyesi ver.\n"
-            f"4. Yanıtı net, profesyonel Türkçe ile tek bir akıcı paragrafta sun.<end_of_turn>\n"
+            f"Doğrulanmış Etiketler: {tags_str}\n\n"
+            f"TALİMATLAR (ZORUNLU KURALLAR):\n"
+            f"1. Kesin nedensel iddia kurma. 'Bu saatte mutlaka daha fazla etkileşim alırsın' veya "
+            f"'en iyi saat kesinlikle şudur' deme.\n"
+            f"2. 'Geçmiş gözlemlerde desteklenen pencere' dilini kullan ve pencereleri saat aralığı olarak ver.\n"
+            f"3. Güven seviyesi düşükse bunu açıkça söyle; belirsizliği gizleme.\n"
+            f"4. {tz_note}\n"
+            f"5. Etiket önerisini yalnızca yukarıdaki doğrulanmış etiketlerden üret; "
+            f"doğrulanmamış etiketleri güvenle önerme.\n"
+            f"6. Yanıtı net, profesyonel Türkçe ile tek bir akıcı paragrafta sun.<end_of_turn>\n"
             f"<start_of_turn>model\n"
         )
         return prompt
@@ -116,7 +133,7 @@ class GemmaAdvisorEngine:
         opts = "; ".join(f"{name} ({desc})" for name, desc in topic_descriptions.items() if name in options)
         prompt = (
             f"<start_of_turn>user\n"
-            f"Sen EnSosyal platformunun içerik konu sınıflandırıcısısın.\n"
+            f"Sen NSosyal platformunun içerik konu sınıflandırıcısısın.\n"
             f"Aşağıdaki içerik fikrini YALNIZCA şu konulardan birine ata:\n{opts}\n\n"
             f"Fikir: \"{idea}\"\n\n"
             f"TALİMAT: SADECE listedeki konu adlarından birini yanıtla, başka hiçbir metin ekleme.\n"
@@ -134,8 +151,8 @@ class GemmaAdvisorEngine:
                     logger.debug("gemma topic classification returned status %d", res.status_code)
                     return None
                 response_text = (res.json().get("response") or "").strip()
-        except Exception as e:
-            logger.debug("gemma topic classification call failed: %s", e)
+        except Exception as exc:
+            logger.debug("gemma topic classification call failed: %s", exc)
             return None
 
         for option in options:
@@ -145,29 +162,54 @@ class GemmaAdvisorEngine:
 
     def _generate_fallback(
         self,
-        idea: str,
-        topic: str,
+        window_recommendation: WindowRecommendation,
         media_type: MediaTypeEnum,
-        slots: list[CandidateSlot],
         suggested_tags: list[str],
     ) -> str:
-        """Deterministic, highly tailored fallback reproducing Gemma 4 instruction output."""
-        s1 = format_slot_turkish(slots[0])
-        s2 = format_slot_turkish(slots[1]) if len(slots) > 1 else ""
-        s3 = format_slot_turkish(slots[2]) if len(slots) > 2 else ""
-        tags_str = ", ".join(suggested_tags)
+        """Deterministic fallback reproducing the required wording rules."""
+        windows = window_recommendation.windows
+        if not windows:
+            return (
+                "Bu içerik için önerilen paylaşım penceresi hesaplanamadı. "
+                "Lütfen daha sonra tekrar deneyin."
+            )
 
-        m_type = media_type.value if hasattr(media_type, "value") else str(media_type)
-        if m_type == "video":
-            tip = "Videonun ilk 3 saniyesinde merak uyandırıcı bir soru sorup görsel dinamizm sağlamak erişimi katlayacaktır."
-        else:
-            tip = "İlk görselde infografik veya net bir tipografi kullanarak kaydırma oranını artırabilirsiniz."
+        media_value = media_type.value if hasattr(media_type, "value") else str(media_type)
+        tip = (
+            "Videonun ilk 3 saniyesinde merak uyandırıcı bir soru sorup görsel dinamizm sağlamak erişimi artırabilir."
+            if media_value == "video"
+            else "İlk görselde infografik veya net bir tipografi kullanarak kaydırma oranını artırabilirsiniz."
+        )
+        tags_str = ", ".join(suggested_tags) if suggested_tags else "doğrulanmış etiket bulunamadı"
 
+        tz_note = (
+            " Saat dilimi bilgisi paylaşılmadığı için pencereler UTC'ye göre hesaplandı; "
+            "yerel saat diliminizi iletirseniz öneri netleşir."
+            if window_recommendation.timezone_fallback
+            else f" Pencereler yerel saatinize göre hesaplandı ({window_recommendation.timezone_label})."
+        )
+
+        if window_recommendation.is_tie_or_broad_window:
+            options = " veya ".join(format_window_turkish(window) for window in windows[:2])
+            return (
+                "Bu içerik için saat etkisi belirgin değil. "
+                f"{options} aralıklarından uygun olanı seçebilirsin. "
+                f"Güven seviyesi: {window_recommendation.confidence_label} "
+                f"(içerik potansiyeli {window_recommendation.base_potential:.2f})."
+                f"{tz_note}"
+            )
+
+        best = windows[0]
+        alternatives = ", ".join(format_window_turkish(window) for window in windows[1:])
+        alternative_text = f" Alternatif olarak {alternatives} pencereleri değerlendirilebilir." if alternatives else ""
         return (
-            f"Bu fikir için en güçlü aday {s1} (tahmini skor: {slots[0].predicted_popularity:.2f}). "
-            f"Alternatif olarak {s2} ve {s3} değerlendirilebilir. "
-            f"Benzer başarılı paylaşımlarda {tags_str} etiketleri öne çıkıyor. "
-            f"Strateji Önerisi: {tip}"
+            f"Geçmiş gözlemlerde desteklenen pencere {format_window_turkish(best)} "
+            f"(gözlemsel lift {best.observational_time_lift:+.2f}, destek: {best.support_post_count} gönderi / "
+            f"{best.support_user_count} kullanıcı). Bu bir nedensellik iddiası değil, tarihsel gözlemsel bir sinyaldir. "
+            f"İçerik potansiyeli {window_recommendation.base_potential:.2f}, güven seviyesi "
+            f"{window_recommendation.confidence_label}.{alternative_text} "
+            f"Doğrulanmış etiketler: {tags_str}. Strateji Önerisi: {tip}"
+            f"{tz_note}"
         )
 
     def generate_explanation(
@@ -175,16 +217,14 @@ class GemmaAdvisorEngine:
         idea: str,
         topic: str,
         media_type: MediaTypeEnum,
-        slots: list[CandidateSlot],
+        window_recommendation: WindowRecommendation,
         suggested_tags: list[str],
         similar_posts: list[SimilarPost],
     ) -> str:
         """Calls Gemma 4 endpoint if available, falling back safely to deterministic synthesis."""
         fallback = self._generate_fallback(
-            idea=idea,
-            topic=topic,
+            window_recommendation=window_recommendation,
             media_type=media_type,
-            slots=slots,
             suggested_tags=suggested_tags,
         )
 
@@ -193,30 +233,24 @@ class GemmaAdvisorEngine:
                 idea=idea,
                 topic=topic,
                 media_type=media_type,
-                slots=slots,
+                window_recommendation=window_recommendation,
                 suggested_tags=suggested_tags,
                 similar_posts=similar_posts,
             )
-            # Try contacting local Ollama or OpenAI-compatible endpoint
             endpoint = f"{self.api_url.rstrip('/')}/api/generate"
             with httpx.Client(timeout=self.timeout) as client:
                 res = client.post(
                     endpoint,
-                    json={
-                        "model": self.model_name,
-                        "prompt": prompt,
-                        "stream": False,
-                    },
+                    json={"model": self.model_name, "prompt": prompt, "stream": False},
                 )
                 if res.status_code == 200:
-                    data = res.json()
-                    text = data.get("response", "").strip()
+                    text = (res.json().get("response") or "").strip()
                     # Accept any substantive answer instead of requiring one
                     # exact phrase; local generation often rephrases.
                     if text and len(text) >= 50:
                         return text
                     logger.debug("gemma explanation too short (%d chars); using fallback", len(text))
-        except Exception as e:
-            logger.debug("gemma explanation call failed: %s; using fallback", e)
+        except Exception as exc:
+            logger.debug("gemma explanation call failed: %s; using fallback", exc)
 
         return fallback

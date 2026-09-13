@@ -1,4 +1,4 @@
-# EnPusula production stack: vector store, LLM runtime, and the API.
+# NPusula production stack: vector store, LLM runtime, and the API.
 #
 #   docker compose up -d --build          # qdrant + ollama (+ model pull) + api
 #   docker compose --profile tools run --rm trainer   # one-time data/model build
@@ -6,7 +6,7 @@
 # The processed dataset (./data) and model artifacts (./artifacts) are
 # bind-mounted into the containers; build them on the host or via the
 # `trainer` profile before serving traffic.
-name: enpusula
+name: npusula
 
 services:
   qdrant:
@@ -60,9 +60,12 @@ services:
       qdrant:
         condition: service_healthy
     environment:
+      # Network addresses stay pinned to the compose network: the host-side
+      # .env points at 127.0.0.1, which is wrong inside a container.
       QDRANT_HOST: qdrant
       QDRANT_PORT: "6333"
-      GEMMA_API_URL: ${GEMMA_API_URL:-http://ollama:11434}
+      GEMMA_API_URL: http://ollama:11434
+      # These are container-agnostic, so .env (or the shell) supplies them.
       GEMMA_MODEL_NAME: ${GEMMA_MODEL_NAME:-google/gemma-4-E4B-it}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       # Set to 1 for an offline demo once ./models is populated.
@@ -97,7 +100,10 @@ services:
       - ./artifacts:/app/artifacts
       - ./models:/app/models
     entrypoint: ["/bin/bash", "-c"]
-    command: ["python scripts/02_normalize_smp.py && python scripts/07_index_qdrant.py && python scripts/05_train_lgbm.py"]
+    # Full two-layer rebuild, in the order the pipeline requires: normalize ->
+    # validation-only tuning -> Layer A -> Layer B -> locked final test ->
+    # retrieval index. The test split is read only by evaluate_final.py.
+    command: ["python scripts/02_normalize_smp.py && python scripts/tune_lgbm.py && python scripts/05_train_lgbm.py && python scripts/06_time_lift.py && python scripts/evaluate_final.py && python scripts/07_index_qdrant.py"]
 
 volumes:
   qdrant_storage:

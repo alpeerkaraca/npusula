@@ -1,7 +1,11 @@
 """Tag cleaning, blacklist filtering, and 12-domain semantic taxonomy service.
 
-Cleans noisy, non-informative tags (camera brands, years, numeric noise, NSFW terms)
-and maps valid tags into 12 core semantic concept categories:
+`align_tags` classifies every tag as aligned / mismatched / generic / NSFW /
+unknown **relative to the post's canonical category**, using the bridge defined
+in `canonical_taxonomy.CANONICAL_TO_TAG_DOMAINS` (plan §3.1). Unknown tags are
+tracked separately and are never reported as irrelevant.
+
+The 12 core semantic concept domains:
 - beauty_cosmetics: eyeliner, makeup, beauty, lipstick, mascara, etc.
 - tech_software: computer, technology, tech, python, coding, ai, etc.
 - fashion_apparel: fashion, style, outfit, dress, shoes, etc.
@@ -18,6 +22,8 @@ and maps valid tags into 12 core semantic concept categories:
 from typing import Any
 import math
 import numpy as np
+
+from backend.services.canonical_taxonomy import tag_domains_for_category
 
 # Generic or promotional tags (discovery/promo)
 GENERIC_PROMOTIONAL_TAGS: set[str] = {
@@ -498,111 +504,137 @@ TAXONOMY_MAP: dict[str, set[str]] = {
 TAXONOMY_CATEGORIES = list(TAXONOMY_MAP.keys())
 
 
+# Tag alignment classes (plan §3.1.3). "unknown" is deliberately its own class:
+# a tag the dictionary has never seen is *unverified*, not *meaningless*, and
+# conflating the two is what made the old "irrelevant tag" ratio untrustworthy.
+TAG_CLASS_ALIGNED = "aligned_semantic"
+TAG_CLASS_MISMATCHED = "mismatched_semantic"
+TAG_CLASS_GENERIC = "generic_promotional"
+TAG_CLASS_NSFW = "nsfw_filtered"
+TAG_CLASS_UNKNOWN = "unknown"
+
+TAG_CLASSES = (
+    TAG_CLASS_ALIGNED,
+    TAG_CLASS_MISMATCHED,
+    TAG_CLASS_GENERIC,
+    TAG_CLASS_NSFW,
+    TAG_CLASS_UNKNOWN,
+)
+
+
+def _empty_alignment() -> dict:
+    return {
+        "aligned_semantic": [],
+        "mismatched_semantic": [],
+        "generic_promotional": [],
+        "nsfw_filtered": [],
+        "unknown": [],
+        "tag_classes": {},
+        "aligned_tag_count": 0.0,
+        "mismatched_tag_count": 0.0,
+        "generic_tag_count": 0.0,
+        "nsfw_tag_count": 0.0,
+        "unknown_tag_count": 0.0,
+        "total_tag_count": 0,
+        "semantic_tag_ratio": 0.0,
+        "unknown_tag_ratio": 0.0,
+        "tag_category_entropy": 0.0,
+    }
+
+
 def align_tags(
     tags: Any,
-    context_category: str | None = None,
+    context_category: str | int | None = None,
 ) -> dict:
+    """Classifies every tag against the canonical category of the post.
+
+    `context_category` is a canonical category name ("technology") or code (0) —
+    the tag-domain bridge in `canonical_taxonomy.CANONICAL_TO_TAG_DOMAINS` maps
+    it onto the 12 hashtag domains. A tag whose domain belongs to the post's
+    category is `aligned_semantic`; a tag whose domain belongs to a *different*
+    category is `mismatched_semantic`; a tag the bank does not know is `unknown`
+    (kept as its own count, never reported as irrelevant).
+
+    With no context category, matched tags cannot be judged mismatched and are
+    reported as aligned; callers that need the mismatched class must pass a
+    category (the advisor and training pipeline always do).
+    """
     if not isinstance(tags, (list, tuple, np.ndarray)):
-        return {
-            "accepted_tags": [],
-            "generic_tags": [],
-            "rejected_tags": [],
-            "nsfw_filtered_tags": [],
-            "accepted_tag_count": 0.0,
-            "generic_tag_count": 0.0,
-            "rejected_tag_count": 0.0,
-            "semantic_tag_ratio": 0.0,
-            "irrelevant_tag_ratio": 0.0,
-            "tag_alignment_mean": 0.0,
-            "tag_alignment_min": 0.0,
-            "tag_category_entropy": 0.0,
-        }
+        return _empty_alignment()
 
-    raw_tokens = [str(t).lower().strip().lstrip("#") for t in tags if str(t).strip()]
+    raw_tokens = [str(tag).lower().strip().lstrip("#") for tag in tags if str(tag).strip()]
     if not raw_tokens:
-        return {
-            "accepted_tags": [],
-            "generic_tags": [],
-            "rejected_tags": [],
-            "nsfw_filtered_tags": [],
-            "accepted_tag_count": 0.0,
-            "generic_tag_count": 0.0,
-            "rejected_tag_count": 0.0,
-            "semantic_tag_ratio": 0.0,
-            "irrelevant_tag_ratio": 0.0,
-            "tag_alignment_mean": 0.0,
-            "tag_alignment_min": 0.0,
-            "tag_category_entropy": 0.0,
-        }
+        return _empty_alignment()
 
-    accepted_tags = []
-    generic_tags = []
-    rejected_tags = []
-    nsfw_filtered_tags = []
-    alignment_scores = []
+    context_domains = tag_domains_for_category(context_category) if context_category is not None else None
+
+    classes: dict[str, list[str]] = {name: [] for name in TAG_CLASSES}
+    tag_classes: dict[str, str] = {}
     cat_counts = {cat: 0 for cat in TAXONOMY_CATEGORIES}
 
     for token in raw_tokens:
         if token in NSFW_TAGS:
-            nsfw_filtered_tags.append(token)
+            tag_class = TAG_CLASS_NSFW
         elif token in GENERIC_PROMOTIONAL_TAGS:
-            generic_tags.append(token)
-        elif token.isnumeric() or len(token) <= 1:
-            rejected_tags.append(token)
+            tag_class = TAG_CLASS_GENERIC
         else:
             matched_cats = [cat for cat, keywords in TAXONOMY_MAP.items() if token in keywords]
-            if matched_cats:
-                accepted_tags.append(token)
-                score = 1.0 if (context_category is None or context_category in matched_cats) else 0.5
-                alignment_scores.append(score)
+            if not matched_cats:
+                tag_class = TAG_CLASS_UNKNOWN
+            elif context_domains is None or any(cat in context_domains for cat in matched_cats):
+                tag_class = TAG_CLASS_ALIGNED
                 for cat in matched_cats:
                     cat_counts[cat] += 1
             else:
-                rejected_tags.append(token)
+                tag_class = TAG_CLASS_MISMATCHED
+                for cat in matched_cats:
+                    cat_counts[cat] += 1
+        classes[tag_class].append(token)
+        tag_classes[token] = tag_class
 
     total_tokens = len(raw_tokens)
-    accepted_count = len(accepted_tags)
-    
+    aligned_count = len(classes[TAG_CLASS_ALIGNED])
+
     total_cat = sum(cat_counts.values())
     entropy_val = 0.0
     if total_cat > 0:
-        probs = [c / total_cat for c in cat_counts.values()]
+        probs = [count / total_cat for count in cat_counts.values()]
         entropy_val = -sum(p * math.log2(p) for p in probs if p > 0)
 
     return {
-        "accepted_tags": accepted_tags,
-        "generic_tags": generic_tags,
-        "rejected_tags": rejected_tags,
-        "nsfw_filtered_tags": nsfw_filtered_tags,
-        "accepted_tag_count": float(accepted_count),
-        "generic_tag_count": float(len(generic_tags)),
-        "rejected_tag_count": float(len(rejected_tags)),
-        "semantic_tag_ratio": float(accepted_count / total_tokens),
-        "irrelevant_tag_ratio": float(len(rejected_tags) / total_tokens),
-        "tag_alignment_mean": float(np.mean(alignment_scores)) if alignment_scores else 0.0,
-        "tag_alignment_min": float(np.min(alignment_scores)) if alignment_scores else 0.0,
+        **classes,
+        "tag_classes": tag_classes,
+        "aligned_tag_count": float(aligned_count),
+        "mismatched_tag_count": float(len(classes[TAG_CLASS_MISMATCHED])),
+        "generic_tag_count": float(len(classes[TAG_CLASS_GENERIC])),
+        "nsfw_tag_count": float(len(classes[TAG_CLASS_NSFW])),
+        "unknown_tag_count": float(len(classes[TAG_CLASS_UNKNOWN])),
+        "total_tag_count": total_tokens,
+        "semantic_tag_ratio": float(aligned_count / total_tokens),
+        "unknown_tag_ratio": float(len(classes[TAG_CLASS_UNKNOWN]) / total_tokens),
         "tag_category_entropy": float(entropy_val),
     }
 
 
-def clean_and_filter_tags(tags: Any) -> tuple[list[str], float]:
-    """Filters noisy, camera, platform, and blacklisted tags.
+def clean_and_filter_tags(tags: Any, context_category: str | int | None = None) -> tuple[list[str], float]:
+    """Keeps only semantically aligned tags.
 
-    Returns (clean_tags, blacklisted_ratio).
+    Returns (aligned_tags, noise_ratio) where the noise ratio counts generic,
+    NSFW and unknown tags — i.e. everything the classifier could not confirm
+    for this post.
     """
     if not isinstance(tags, (list, tuple, np.ndarray)):
         return [], 0.0
 
-    raw_tokens = [str(t).lower().strip().lstrip("#") for t in tags if str(t).strip()]
+    raw_tokens = [str(tag).lower().strip().lstrip("#") for tag in tags if str(tag).strip()]
     if not raw_tokens:
         return [], 0.0
 
-    res = align_tags(tags)
-    raw_len = max(len(raw_tokens), 1)
-    rejected_count = len(res["generic_tags"]) + len(res["rejected_tags"]) + len(res["nsfw_filtered_tags"])
-    ratio = round(rejected_count / raw_len, 3)
-    
-    return res["accepted_tags"], ratio
+    result = align_tags(tags, context_category=context_category)
+    # Everything the classifier could not confirm for this post counts as noise,
+    # including tags that belong to a different category.
+    noise_count = len(raw_tokens) - len(result[TAG_CLASS_ALIGNED])
+    return result[TAG_CLASS_ALIGNED], round(noise_count / max(len(raw_tokens), 1), 3)
 
 
 def extract_concept_features(clean_tags: list[str]) -> dict[str, float]:
