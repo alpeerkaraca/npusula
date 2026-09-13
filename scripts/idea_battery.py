@@ -67,7 +67,8 @@ DEFAULT_USER = "31253@N15"
 
 def check_advisor(client: httpx.Client, base: str, case: dict) -> tuple[bool, str]:
     payload = {"user_id": DEFAULT_USER, "idea": case["idea"],
-               "media_type": case["media"], "horizon": "next_7_days"}
+               "media_type": case["media"], "horizon": "next_7_days",
+               "timezone": "Europe/Istanbul"}
     r = client.post(f"{base}/api/recommend/advisor", json=payload)
 
     if case.get("guardrail"):
@@ -83,8 +84,16 @@ def check_advisor(client: httpx.Client, base: str, case: dict) -> tuple[bool, st
         problems.append(f"topic={d.get('topic')!r}")
     if d.get("primary_category") not in CATEGORIES:
         problems.append(f"cat={d.get('primary_category')!r}")
-    if len(d.get("recommendations", [])) != 3:
-        problems.append(f"slots={len(d.get('recommendations', []))}")
+    windows = d.get("windows", [])
+    if not windows:
+        problems.append("windows=0")
+    else:
+        if len(windows) > 3:
+            problems.append(f"windows={len(windows)}")
+        if any(not window.get("is_tie_or_broad_window") and
+               window.get("confidence") == "high" and not window.get("support_post_count")
+               for window in windows):
+            problems.append("high-confidence window without support")
     if not d.get("explanation"):
         problems.append("no explanation")
     if case.get("topic") and d.get("topic") != case["topic"]:
@@ -108,8 +117,8 @@ def check_user(client: httpx.Client, base: str, name: str, path: str, expected: 
     for key, value in expected.items():
         if d.get(key) != value:
             problems.append(f"{key}={d.get(key)} (expected {value})")
-    if "quick" in path and len(d.get("slots", [])) != 3:
-        problems.append(f"slots={len(d.get('slots', []))}")
+    if "quick" in path and not d.get("windows"):
+        problems.append(f"windows={len(d.get('windows', []))}")
     info = f"{name}: " + ", ".join(f"{k}={d.get(k)}" for k in expected)
     return not problems, (info if not problems else "; ".join(problems))
 

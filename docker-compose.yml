@@ -97,7 +97,10 @@ services:
       - ./artifacts:/app/artifacts
       - ./models:/app/models
     entrypoint: ["/bin/bash", "-c"]
-    command: ["python scripts/02_normalize_smp.py && python scripts/07_index_qdrant.py && python scripts/05_train_lgbm.py"]
+    # Full two-layer rebuild, in the order the pipeline requires: normalize ->
+    # validation-only tuning -> Layer A -> Layer B -> locked final test ->
+    # retrieval index. The test split is read only by evaluate_final.py.
+    command: ["python scripts/02_normalize_smp.py && python scripts/tune_lgbm.py && python scripts/05_train_lgbm.py && python scripts/06_time_lift.py && python scripts/evaluate_final.py && python scripts/07_index_qdrant.py"]
 
 volumes:
   qdrant_storage:

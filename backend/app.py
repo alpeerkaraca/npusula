@@ -145,9 +145,19 @@ def record_profile_decision(user_id: str, payload: ProfileDecisionRequest) -> Pr
 
 
 @app.get("/api/recommend/quick/{user_id}", response_model=QuickRecommendationResponse)
-def get_quick_recommendation(user_id: str) -> QuickRecommendationResponse:
-    """Returns instant top-3 posting time recommendations for the user's active topic."""
-    return advisor_service.get_quick_recommendation(user_id)
+def get_quick_recommendation(
+    user_id: str,
+    timezone: str | None = None,
+    utc_offset_minutes: int | None = None,
+) -> QuickRecommendationResponse:
+    """Returns the supported sharing windows for the user's active topic.
+
+    Callers should pass their IANA `timezone` (or a fixed offset); without it the
+    windows are computed in UTC and the response says so (`timezone_basis`).
+    """
+    return advisor_service.get_quick_recommendation(
+        user_id, timezone_name=timezone, utc_offset_minutes=utc_offset_minutes
+    )
 
 
 @app.post("/api/recommend/advisor", response_model=AdvisorResponse)

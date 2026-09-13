@@ -1,5 +1,11 @@
-"""Danisman (Advisor) orchestrator combining recommendations, retrieval, and explanations."""
-from datetime import datetime
+"""Danisman (Advisor) orchestrator combining recommendations, retrieval, and explanations.
+
+The advisor speaks the two-layer language: an informational base potential plus
+recommended sharing **windows** with their observational evidence. It never
+returns a single ranked "best hour" (plan §4.4 and §6.1).
+"""
+from __future__ import annotations
+
 import logging
 import uuid
 
@@ -10,22 +16,23 @@ from backend.schemas.post import MediaTypeEnum
 from backend.schemas.recommendation import (
     AdvisorRequest,
     AdvisorResponse,
-    CandidateSlot,
     QuickRecommendationResponse,
+    RecommendedWindow,
 )
-from backend.services.gemma_advisor import GemmaAdvisorEngine, format_slot_turkish
+from backend.services.gemma_advisor import GemmaAdvisorEngine, format_window_turkish
 try:
     from backend.services.moderation import GemmaModerationGuardrail
 except ImportError:
     GemmaModerationGuardrail = None
 from backend.services.profile import ProfileService
 from backend.services.media_analysis import (
+    TEXT_CATEGORY_NO_MATCH_CONFIDENCE,
     MediaAnalysisStore,
     choose_topic_source,
     merge_tags,
     should_use_media_category,
 )
-from backend.services.recommendation import RecommendationService
+from backend.services.recommendation import RecommendationService, get_history_depth_code
 from backend.services.retrieval import RetrievalService, TOPIC_DEFAULT_TAGS, is_clean_tag
 from backend.services.canonical_taxonomy import classify_post_category
 from backend.services.tag_taxonomy import align_tags
@@ -54,8 +61,31 @@ def history_depth_name(evidence_post_count: int) -> str:
     return HISTORY_DEPTH_NAMES[4]
 
 
+def _windows_sentence(windows: list[RecommendedWindow]) -> str:
+    if not windows:
+        return "pencere hesaplanamadı"
+    return ", ".join(format_window_turkish(window) for window in windows[:3])
+
+
+def dedupe_tags(tags: list[str]) -> list[str]:
+    """De-duplicates hashtags case-insensitively, keeping the first occurrence.
+
+    Retrieved tags and topic defaults overlap heavily, and reporting the same
+    tag twice in `accepted_tags` would overstate how much evidence there is.
+    """
+    seen: set[str] = set()
+    unique: list[str] = []
+    for tag in tags:
+        key = tag.lstrip("#").strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        unique.append(tag)
+    return unique
+
+
 class AdvisorService:
-    """Orchestrates end-to-end advice: topic inference, slot ranking, similar posts, and explanation."""
+    """Orchestrates end-to-end advice: topic inference, window scoring, similar posts, explanation."""
 
     def __init__(
         self,
@@ -77,8 +107,14 @@ class AdvisorService:
         self.moderation = moderation_guardrail or (GemmaModerationGuardrail() if GemmaModerationGuardrail is not None else None)
         self.media_store = media_store
 
-    def get_quick_recommendation(self, user_id: str, days_ahead: int = 7) -> QuickRecommendationResponse:
-        """Generates quick recommendations for the user's active topic."""
+    def get_quick_recommendation(
+        self,
+        user_id: str,
+        days_ahead: int = 7,
+        timezone_name: str | None = None,
+        utc_offset_minutes: int | None = None,
+    ) -> QuickRecommendationResponse:
+        """Generates quick window recommendations for the user's active topic."""
         user_posts = self.post_repo.get_user_history(user_id)
         declared = self.user_repo.get_declared_profile(user_id)
         behavioral = self.profile_service.compute_behavioral_profile(user_id, user_posts)
@@ -87,13 +123,12 @@ class AdvisorService:
         active_topic = status.active_recommendation_topics[0].topic
         is_cold = behavioral.evidence_post_count == 0
 
-        # Prior mean calculation
         if not user_posts.empty and "user_popularity_mean_prior" in user_posts.columns:
             prior_mean = float(user_posts["user_popularity_mean_prior"].iloc[-1])
         else:
             prior_mean = 5.8
 
-        slots = self.rec_service.recommend_slots(
+        recommendation = self.rec_service.recommend_windows(
             user_prior_mean=prior_mean,
             user_post_count=behavioral.evidence_post_count,
             title="",
@@ -101,34 +136,48 @@ class AdvisorService:
             media_type=MediaTypeEnum.PHOTO,
             topic=active_topic,
             days_ahead=days_ahead,
-            top_k=3,
+            max_windows=3,
+            timezone_name=timezone_name,
+            utc_offset_minutes=utc_offset_minutes,
         )
 
-        s1_str = format_slot_turkish(slots[0])
-        s2_str = format_slot_turkish(slots[1]) if len(slots) > 1 else ""
-        s3_str = format_slot_turkish(slots[2]) if len(slots) > 2 else ""
-
-        if is_cold:
+        windows_text = _windows_sentence(recommendation.windows)
+        if recommendation.is_tie_or_broad_window:
             explanation = (
-                f"Henüz geçmiş paylaşımın bulunmadığı için {active_topic} kategorisinin "
-                f"en yüksek etkileşim alan saatlerine göre planlandı. En güçlü zaman: {s1_str}."
+                f"{active_topic} içeriklerin için saat etkisi belirgin değil; "
+                f"{windows_text} aralıklarından uygun olanı seçebilirsin. "
+                f"Güven seviyesi: {recommendation.confidence_label}."
             )
         else:
             explanation = (
-                f"{active_topic} odaklı paylaşımlarınız için en yüksek potansiyele sahip zaman {s1_str}. "
-                f"Alternatif olarak {s2_str} ve {s3_str} değerlendirilebilir."
+                f"Geçmiş gözlemlerde desteklenen pencere: {windows_text}. "
+                f"Bu nedensel bir iddia değil, tarihsel gözlemsel bir sinyaldir. "
+                f"Güven seviyesi: {recommendation.confidence_label}."
+            )
+        if recommendation.timezone_fallback:
+            explanation += (
+                " Saat dilimi bilgisi paylaşılmadığı için pencereler UTC'ye göre hesaplandı; "
+                "yerel saat dilimini iletirsen öneri netleşir."
+            )
+        if is_cold:
+            explanation += (
+                " Henüz geçmiş paylaşımın bulunmadığı için içerik potansiyeli kategori "
+                "ortalamasına dayanıyor."
             )
 
         return QuickRecommendationResponse(
             user_id=user_id,
             active_topic=active_topic,
-            slots=slots,
+            windows=recommendation.windows,
             cold_start=is_cold,
+            confidence=recommendation.confidence,
+            confidence_label=recommendation.confidence_label,
+            timezone_basis=recommendation.timezone_basis,
             explanation=explanation,
         )
 
     def advise(self, request: AdvisorRequest) -> AdvisorResponse:
-        """Processes user idea, retrieves similar posts, ranks candidate slots, and formats explanation."""
+        """Processes the user idea, retrieves similar posts, scores local windows, explains."""
         req_id = f"req-{uuid.uuid4().hex[:8]}"
 
         # 0. Content safety & policy guardrail (Gemma 4 Shield Guardrail)
@@ -155,8 +204,7 @@ class AdvisorService:
         else:
             fallback_topic = "Teknoloji Trendleri"
 
-        # 1b. Resolve an analysed upload, if the request references one. Expired
-        # or unknown ids degrade to the text-only path instead of failing.
+        # 1b. Resolve an analysed upload, if the request references one.
         media = None
         if request.media_id:
             media = self.media_store.get(request.media_id) if self.media_store else None
@@ -168,9 +216,7 @@ class AdvisorService:
 
         # 2. Infer topic. The TF-IDF classifier is only a fast confident path;
         # weak or zero matches are escalated to a confident image analysis and
-        # then to the Gemma topic judge, because the profile-topic fallback
-        # alone produces embarrassing mismatches
-        # (e.g. "amerikan güreşi izledik" -> Yazılım).
+        # then to the Gemma topic judge.
         inferred_topic, topic_sim = self.profile_service.classify_text_topic_confident(
             request.idea, fallback_topic=fallback_topic
         )
@@ -187,12 +233,13 @@ class AdvisorService:
             )
             if llm_topic:
                 inferred_topic = llm_topic
+
         category_result = classify_post_category(request.idea, None, None, None)
         primary_category = str(category_result["primary_category"])
 
         # The image category only overrides a text classification that matched
-        # nothing at all; `media_context` is forwarded to slot scoring only when
-        # it was actually adopted.
+        # nothing at all; `media_context` is forwarded to window scoring only
+        # when it was actually adopted.
         media_context = None
         if should_use_media_category(
             float(category_result["primary_cat_confidence"]),
@@ -213,36 +260,52 @@ class AdvisorService:
             category_filter=primary_category,
         )
 
-        # 4. Extract top weighted hashtags (topic-aware & safe)
-        suggested_tags = self.retrieval_service.extract_top_tags(similar_posts, top_k=3, topic=inferred_topic)
-        aligned_tags = align_tags(suggested_tags, context_category=primary_category)
-        accepted_tags = [f"#{tag}" for tag in aligned_tags["accepted_tags"]]
-        rejected_tags = [
-            f"#{tag}"
-            for tag in (
-                aligned_tags["generic_tags"]
-                + aligned_tags["rejected_tags"]
-                + aligned_tags["nsfw_filtered_tags"]
-            )
-        ]
+        # 4. Classify every candidate hashtag against this post's canonical
+        #    category. Only aligned-semantic tags may be recommended; tags the
+        #    dictionary does not know are reported as `unknown_tags` rather than
+        #    being called irrelevant or silently dropped (plan §3.1.4 and §6.2).
+        # Alignment needs a category we actually believe. When the text
+        # classifier matched nothing (its no-match floor) and no image category
+        # was adopted, `primary_category` is a fallback, not knowledge: a known
+        # tag must then be reported as aligned-by-domain rather than mislabelled
+        # `mismatched` against a category nobody asserted.
+        text_category_confidence = float(category_result["primary_cat_confidence"])
+        alignment_context: str | None = primary_category
+        if media_context is None and text_category_confidence <= TEXT_CATEGORY_NO_MATCH_CONFIDENCE:
+            alignment_context = None
 
-        # 4b. Media-derived hashtags lead the suggestion list: they describe the
-        # file the user actually attached. They come from a curated, NSFW-free
-        # bank and are re-checked by is_clean_tag, so they deliberately bypass
-        # the English-keyed semantic taxonomy above (which would reject Turkish
-        # hashtags outright). accepted/rejected keep describing only the tags
-        # derived from retrieved posts.
+        topic_defaults = TOPIC_DEFAULT_TAGS.get(inferred_topic, [])
+        candidate_tags = dedupe_tags(
+            self.retrieval_service.extract_top_tags(similar_posts, top_k=5, topic=inferred_topic)
+            + topic_defaults
+        )
+        alignment = align_tags(candidate_tags, context_category=alignment_context)
+        accepted_tags = [f"#{tag}" for tag in alignment["aligned_semantic"]]
+        rejected_tags = [
+            f"#{tag}" for tag in alignment["mismatched_semantic"] + alignment["nsfw_filtered"]
+        ]
+        unknown_tags = [f"#{tag}" for tag in alignment["unknown"]]
+
+        suggested_tags = accepted_tags[:3]
+
+        # 4b. Media-derived hashtags are verified against the category the image
+        # itself supports (they come from the same analysis, so they are aligned
+        # by construction unless the image disagrees with its own tags).
         if media is not None:
             media_tags = [tag for tag in media.suggested_tags if is_clean_tag(tag)]
+            media_alignment = align_tags(
+                media_tags, context_category=media.canonical_category or alignment_context
+            )
+            verified_media_tags = [f"#{tag}" for tag in media_alignment["aligned_semantic"]]
             suggested_tags = merge_tags(
-                media_tags,
+                verified_media_tags,
                 suggested_tags,
-                TOPIC_DEFAULT_TAGS.get(inferred_topic, []),
+                [],
                 limit=3,
             )
 
-        # 5. Score candidate slots (using GPU Tabular NN + LightGBM ensemble)
-        slots = self.rec_service.recommend_slots(
+        # 5. Score the local 3-hour windows of the next 7 days (Layer A + Layer B)
+        recommendation = self.rec_service.recommend_windows(
             user_prior_mean=prior_mean,
             user_post_count=behavioral.evidence_post_count,
             title=request.idea,
@@ -250,41 +313,63 @@ class AdvisorService:
             media_type=request.media_type,
             topic=inferred_topic,
             days_ahead=7,
-            top_k=3,
+            max_windows=3,
+            timezone_name=request.timezone,
+            utc_offset_minutes=request.utc_offset_minutes,
             media_context=media_context,
         )
 
-        # 6. Generate Google Gemma 4 strategic Turkish explanation
+        # 6. Generate the Gemma 4 explanation under the mandatory wording rules
         explanation = self.gemma_advisor.generate_explanation(
             idea=request.idea,
             topic=inferred_topic,
             media_type=request.media_type,
-            slots=slots,
+            window_recommendation=recommendation,
             suggested_tags=suggested_tags,
             similar_posts=similar_posts,
         )
 
+        if media_context is not None:
+            category_confidence = float(media_context.category_confidence)
+            category_is_fallback = False
+        else:
+            category_confidence = text_category_confidence
+            category_is_fallback = text_category_confidence <= TEXT_CATEGORY_NO_MATCH_CONFIDENCE
+
         history_depth = history_depth_name(behavioral.evidence_post_count)
         logger.info(
-            "advisor completed: request_id=%s user=%s topic=%s(%s) category=%s slots=%d similar=%d history_depth=%s media=%s",
+            "advisor completed: request_id=%s user=%s topic=%s(%s) category=%s windows=%d "
+            "confidence=%s tie=%s tz=%s similar=%d history_depth=%s media=%s",
             req_id, request.user_id, inferred_topic, topic_source, primary_category,
-            len(slots), len(similar_posts), history_depth,
+            len(recommendation.windows), recommendation.confidence,
+            recommendation.is_tie_or_broad_window, recommendation.timezone_basis,
+            len(similar_posts), history_depth,
             media.media_id if media is not None else "-",
         )
         return AdvisorResponse(
             request_id=req_id,
             topic=inferred_topic,
             primary_category=primary_category,
-            recommendations=slots,
+            primary_category_confidence=category_confidence,
+            primary_category_is_fallback=category_is_fallback,
+            windows=recommendation.windows,
             accepted_tags=accepted_tags,
             rejected_tags=rejected_tags,
+            unknown_tags=unknown_tags,
             suggested_tags=suggested_tags,
             explanation=explanation,
             similar_posts=similar_posts,
             history_depth=history_depth,
-            confidence_level=slots[0].confidence_level if slots else "Düşük",
-            model_version="lgbm-m5-residual + google/gemma-4-E4B-it",
-            data_source="SMPD benchmark & EnSosyal demo",
+            confidence_level=recommendation.confidence_label,
+            confidence=recommendation.confidence,
+            is_tie_or_broad_window=recommendation.is_tie_or_broad_window,
+            timezone_basis=recommendation.timezone_basis,
+            timezone_fallback=recommendation.timezone_fallback,
+            model_version="base-potential-lgbm + time-lift-table + google/gemma-4-E4B-it",
+            data_source="SMPD benchmark (observational) & EnSosyal demo",
             service_mode="deep_advisor",
             media_analysis=media,
         )
+
+
+__all__ = ["AdvisorService", "history_depth_name", "HISTORY_DEPTH_NAMES", "get_history_depth_code"]

@@ -25,12 +25,18 @@ DEFAULT_BASE_URL = "https://cloud.alpeerkaraca.me/remote.php/dav/files/alpeerkar
 
 # (path relative to the repo root, required for serving)
 MANIFEST: list[tuple[str, bool]] = [
-    ("artifacts/lgbm_popularity.txt", True),
-    ("artifacts/metrics.json", True),
+    # Layer A (base potential) + Layer B (time-lift table): both are required at
+    # runtime, and the metrics report carries the provenance of both.
+    ("artifacts/base_potential_lgbm.txt", True),
+    ("artifacts/base_potential_metrics.json", True),
+    ("artifacts/time_lift_table.json", True),
     ("artifacts/text_svd_model.joblib", True),
     ("artifacts/qdrant_context_engine.joblib", True),
     ("artifacts/guardrail_classifier.joblib", True),
     ("artifacts/guardrail_metrics.json", False),
+    # The locked final evaluation is not needed to serve, but it is what the
+    # README quotes, so it travels with the weights.
+    ("artifacts/final_evaluation.json", False),
     # Enables rebuilding the Qdrant index without the 458 MB raw dataset.
     ("data/processed/posts.parquet", True),
 ]

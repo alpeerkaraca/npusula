@@ -11,11 +11,12 @@ from backend.schemas.profile import (
 from backend.schemas.recommendation import (
     AdvisorRequest,
     AdvisorResponse,
-    CandidateSlot,
     FeatureImportanceEntry,
     ModelMetricsResponse,
     QuickRecommendationResponse,
+    RecommendedWindow,
     SimilarPost,
+    WindowRecommendation,
 )
 
 __all__ = [
@@ -28,7 +29,8 @@ __all__ = [
     "BehavioralProfile",
     "ProfileStatus",
     "ProfileDecisionRequest",
-    "CandidateSlot",
+    "RecommendedWindow",
+    "WindowRecommendation",
     "QuickRecommendationResponse",
     "AdvisorRequest",
     "SimilarPost",

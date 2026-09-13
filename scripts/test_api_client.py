@@ -60,12 +60,17 @@ def run_test(idea: str, media_type: str, user_id: str, base_url: str = API_BASE_
     print(f"Model Sürümü           : {response_data.get('model_version')}")
     print(f"Önerilen Etiketler     : {', '.join(response_data.get('suggested_tags', []))}")
 
-    print("\n[ÖNERİLEN EN İYİ 3 ZAMAN DİLİMİ (GPU & LightGBM Skoru)]")
-    for i, slot in enumerate(response_data.get("recommendations", []), 1):
-        dt = slot.get("datetime_utc", "")[:16]
-        score = slot.get("predicted_popularity", 0.0)
-        label = slot.get("label", "")
-        print(f"  {i}. {dt} UTC | Tahmini Popülerlik: {score:.2f} | Güven: {label}")
+    print("\n[ÖNERİLEN PAYLAŞIM PENCERELERİ (gözlemsel lift; kesin saat iddiası değildir)]")
+    for i, window in enumerate(response_data.get("windows", []), 1):
+        lift = window.get("observational_time_lift", 0.0)
+        print(
+            f"  {i}. {window.get('weekday')} {window.get('time_range_local')} "
+            f"(yerel başlangıç {window.get('window_start_local', '')[:16]}) | "
+            f"gözlemsel lift {lift:+.2f} | destek: {window.get('support_post_count')} | "
+            f"güven: {window.get('confidence_label')} | kanıt: {window.get('evidence_level')}"
+        )
+    if response_data.get("is_tie_or_broad_window"):
+        print("  Not: kanıt kesin sıralama için yeterli değil; pencere seçenekleri sunuldu.")
 
     similar = response_data.get("similar_posts", [])
     print(f"\n[QDRANT'TAN GETİRİLEN BENZER GÖNDERİLER ({len(similar)} adet)]")
