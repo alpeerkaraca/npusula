@@ -133,7 +133,7 @@ def classify_post_category(
         - primary_subcat_code: int
         - primary_category: str
         - primary_subcategory: str
-        - primary_cat_confidence: float
+        - primary_cat_confidence: float (deterministic match-density score, not a model probability)
         - has_secondary_cat: int (0/1)
         - secondary_category: str | None
         - secondary_subcategory: str | None
@@ -145,25 +145,28 @@ def classify_post_category(
     
     primary_match = None
     secondary_match = None
+    match_count = 0
     
     # Heuristic matching: keywords of length >= 4 match as word PREFIXES so
     # Turkish inflections are covered ("güreş" matches "güreşi", "aile"
     # matches "ailemle"); shorter keywords must match whole words only, so
     # "ai" does not match inside "ailemle" and "ev" does not match inside
     # "evlilik". Turkish characters are word characters in Python regexes.
+    # All matches are counted (no early break) so the confidence score stays
+    # informative; assignment semantics are unchanged by later matches.
     for keyword, (cat, subcat) in SMPD_TO_CANONICAL_MAPPING.items():
         if len(keyword) >= 4:
             matched = re.search(rf"(?<!\w){re.escape(keyword)}", text_to_search)
         else:
             matched = re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", text_to_search)
         if matched:
+            match_count += 1
             if primary_match is None:
                 primary_match = (cat, subcat)
             elif secondary_match is None and (cat, subcat) != primary_match:
                 secondary_match = (cat, subcat)
 
-            if primary_match and secondary_match:
-                break
+            # No early break: keep scanning to count all keyword matches.
                 
     # Fallback if no match
     if primary_match is None:
@@ -171,8 +174,9 @@ def classify_post_category(
         
     primary_cat, primary_subcat = primary_match
     
-    # Calculate a mock confidence
-    primary_conf = 0.85 if smpd_category else 0.55
+    # Deterministic match-density score (heuristic, NOT a trained-model
+    # probability): 0.30 when nothing matched, up to 0.95 for many hits.
+    primary_conf = 0.30 if match_count == 0 else round(min(0.95, 0.55 + 0.10 * match_count), 2)
     
     # Handle secondary category
     sec_cat = None
@@ -180,7 +184,7 @@ def classify_post_category(
     sec_conf = 0.0
     
     if secondary_match:
-        # Dummy secondary confidence for demonstration
+        # Secondary confidence stays lower than the primary by construction.
         sec_conf = 0.45
         if sec_conf >= 0.40:
             sec_cat, sec_subcat = secondary_match

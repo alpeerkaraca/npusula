@@ -48,6 +48,20 @@ etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
   Veri setinde Türkçe post bulunmadığından benzer-post listesi birçok Türkçe
   fikirde boş dönebilir; etiketler topic varsayılanlarına düşer.
 
+## Sunum notları ve bilinen sınırlamalar
+
+- Kategori çıkarımı **deterministik anahtar-kelime eşlemesidir** (eğitilmiş
+  semantik sınıflandırıcı değil). `primary_cat_confidence` eşleşme yoğunluğuna
+  dayanan sezgisel bir skordur (0.30 fallback – 0.95 çok eşleşme); **"AI güven
+  skoru" olarak sunulmamalıdır.**
+- Öneri motoru 7 × 24 = **168 aday saati** puanlar (yalnız prime-time saatler
+  değil); en iyi üç slot `min_gap_hours=3` kuralıyla seçilir.
+- Konu (topic) çıkarımı: kelime örtüşmesi zayıfsa Gemma yargıcı devreye girer;
+  Gemma erişilemezse kullanıcı profilindeki konuya düşülür.
+- Cold start (geçmişi olmayan hesap) modelin bilinen en zayıf grubudur
+  (MAE ~1.94); bu grupta kazanç, veri/sinyal eksikliğinden kapalı bir kapıdır
+  (bkz. deneysel sonuçlar).
+
 ## Çalıştırma
 
 ```bash
@@ -61,8 +75,8 @@ python scripts/train_guardrail_model.py   # guardrail modelini yeniden eğit
 
 | | Değer |
 |---|---|
-| LightGBM M5 (quantile α=0.55) | MAE 0.847, Spearman 0.870 |
-| Kuyruk — en popüler %20 (viral) | MAE 1.104, sapma −0.82 |
+| LightGBM M5 (quantile α=0.55) | MAE 0.853, Spearman 0.870 |
+| Kuyruk — en popüler %20 (viral) | MAE 1.082, sapma −0.70 |
 | Baseline (B1) | MAE 1.148, Spearman 0.803 |
 | Cold start (bilinen zayıf nokta) | MAE 1.94, Spearman 0.36 |
 | Guardrail | holdout macro-F1 0.70; FP bataryası 25/25, unsafe bataryası 14/14 |
