@@ -1,0 +1,210 @@
+.social-brand {
+  display: flex;
+  flex-direction: column;
+  width: 56px;
+  align-items: center;
+  gap: 4px;
+}
+.social-brand > span {
+  color: #e4e6ed;
+  font-size: 11px;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+.dashboard-brand,
+.pusula-shell .social-brand {
+  display: none;
+}
+.pusula-shell .dashboard-brand {
+  display: block;
+}
+.preference-label {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.social-shell {
+  max-width: 1450px;
+  padding: 28px 20px 0;
+  grid-template-columns: 316px minmax(0, 760px) 290px;
+  column-gap: 24px;
+  font-weight: 400;
+}
+.social-shell .sidebar {
+  width: 230px;
+  min-height: 0;
+  background: transparent;
+  padding: 0 0 24px;
+  top: 28px;
+  max-height: calc(100dvh - 56px);
+  gap: 12px;
+}
+.social-shell .sidebar nav {
+  margin-top: 32px;
+  gap: 10px !important;
+}
+.social-shell .sidebar nav button {
+  padding: 8px 12px !important;
+  min-height: 40px;
+  gap: 18px !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  border-radius: 999px !important;
+}
+.social-shell .sidebar nav button[aria-current="page"] {
+  background: #252933 !important;
+  color: #f3f5f8 !important;
+}
+.social-shell .new-post-button {
+  padding: 9px 12px !important;
+  min-height: 36px;
+  font-size: 14px !important;
+  color: white !important;
+  background: linear-gradient(100deg, #04c7d4, #3449ff) !important;
+}
+.social-shell .sidebar-preferences {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #383d49;
+  gap: 0 !important;
+}
+.social-shell .sidebar-preferences > div {
+  min-height: 72px;
+  border-bottom: 1px solid #383d49;
+}
+.social-shell .sidebar-preferences > button {
+  min-height: 64px;
+  gap: 18px !important;
+  padding-left: 10px !important;
+}
+.social-shell .sidebar-preferences > div:nth-child(2) {
+  border-bottom: 0;
+}
+.social-shell .sidebar-preferences span {
+  color: #c6c9d0 !important;
+}
+.social-shell .main-content {
+  background: #1c1f26;
+}
+.social-shell .post-composer {
+  background: #1c1f26;
+  border: 0;
+  border-bottom: 1px solid #383d49;
+  border-radius: 0;
+  margin: 0;
+}
+.social-shell .post-card {
+  border: 0;
+  border-bottom: 1px solid #272c36;
+  border-radius: 0;
+  margin: 0;
+  background: #1c1f26;
+  padding: 24px 20px !important;
+}
+.social-shell .post-card p {
+  white-space: pre-line;
+}
+.social-shell .post-actions {
+  gap: 12px;
+}
+.social-shell .post-actions > button,
+.social-shell .post-actions > span {
+  background: #252933 !important;
+  border: 1px solid #313642 !important;
+  border-radius: 999px;
+  padding: 5px 12px !important;
+  min-width: 40px;
+  justify-content: center;
+}
+.social-shell .right-sidebar {
+  padding: 8px 0 0;
+  top: 28px;
+  gap: 40px;
+}
+.social-shell .right-sidebar > div:nth-child(2) {
+  background: #191c23 !important;
+  border: 1px solid #2a303b !important;
+  padding: 24px !important;
+}
+.social-shell .right-sidebar > div:nth-child(2) > div:last-child {
+  gap: 0 !important;
+}
+.social-shell .right-sidebar > div:nth-child(2) > div:last-child > div {
+  padding: 12px 0;
+  border-bottom: 1px solid #292f3b;
+}
+.social-shell .messages-bar {
+  right: max(20px, calc((100vw - 1510px) / 2));
+  background: #1c1f26 !important;
+  width: 320px;
+}
+.teknofest-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px #cc257699;
+}
+.teknofest-avatar > span {
+  font-size: 7px;
+  color: white;
+  font-weight: 900;
+  transform: rotate(-12deg);
+}
+.teknofest-poster {
+  width: 100%;
+  aspect-ratio: 668/376;
+  margin-top: 16px;
+  border-radius: 14px;
+  background-image: url("/assets/teknofest-reference.png");
+  background-repeat: no-repeat;
+  background-size: 382.485% 346.277%;
+  background-position: 51.298% 65.767%;
+}
+.social-shell.light-theme .main-content,
+.social-shell.light-theme .post-card,
+.social-shell.light-theme .post-composer {
+  background: #f5f6f8;
+}
+@media (max-width: 1199px) {
+  .social-shell {
+    max-width: 1000px;
+    grid-template-columns: 220px minmax(0, 760px);
+    gap: 24px;
+    padding: 20px;
+  }
+  .social-shell .sidebar {
+    width: 210px;
+  }
+}
+@media (max-width: 767px) {
+  .social-shell {
+    display: block;
+    padding: 0 12px;
+  }
+  .social-shell .sidebar {
+    width: auto;
+    padding: 16px 12px 8px;
+    max-height: none;
+    top: 0;
+  }
+  .social-shell .sidebar nav {
+    margin-top: 12px;
+  }
+  .social-shell .sidebar-preferences > div,
+  .social-shell .sidebar-preferences > button {
+    min-height: 44px;
+    border: 0;
+  }
+  .social-shell .post-card {
+    padding: 20px 8px !important;
+  }
+  .social-shell .post-actions {
+    gap: 5px;
+  }
+  .social-shell .post-actions > button,
+  .social-shell .post-actions > span {
+    min-width: 0;
+    padding: 4px 6px !important;
+  }
+}

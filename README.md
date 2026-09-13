@@ -4,6 +4,12 @@ NSosyal için akıllı paylaşım zamanı danışmanı: bir içerik fikri verild
 **önerilen paylaşım pencerelerini**, tarihsel gözlemsel liftini, güven seviyesini
 ve önerilen etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 
+## Web arayüzü
+
+Son Stitch tasarımlarına göre geliştirilen React/Vite uygulaması `frontend/` klasöründedir. Kurulum ve çalıştırma için [frontend/README.md](frontend/README.md) belgesine bakın. Arayüz varsayılan olarak mock modunda çalışır.
+
+Arayüzün `/v1/pusula/*` sözleşmesi ile bu backend'in `/api/recommend/*` ve `/api/profile/*` uçları henüz eşlenmemiştir. HTTP modunu açmak tek başına entegrasyonu tamamlamaz; adaptör ve proxy yol eşlemesi uygulanmalıdır. Ayrıntılar: [entegrasyon belgesi](frontend/docs/backend-integration.md).
+
 > **Dil sözleşmesi.** Sistem "kesin en iyi saat" iddia etmez. Çıktı, kanıt
 > seviyesiyle birlikte bir **zaman penceresidir** ("Teknoloji içeriği için Salı
 > 18.00–21.00 aralığı, geçmiş gözlemlerde desteklenen bir pencere"). Saat
