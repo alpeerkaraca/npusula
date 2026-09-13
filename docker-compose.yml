@@ -50,7 +50,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull ${GEMMA_MODEL_NAME:-google/gemma-4-E4B-it}"]
+    command: ["ollama pull ${GEMMA_MODEL_NAME:-gemma4:e4b}"]
     restart: "no"
 
   api:
@@ -66,7 +66,7 @@ services:
       QDRANT_PORT: "6333"
       GEMMA_API_URL: http://ollama:11434
       # These are container-agnostic, so .env (or the shell) supplies them.
-      GEMMA_MODEL_NAME: ${GEMMA_MODEL_NAME:-google/gemma-4-E4B-it}
+      GEMMA_MODEL_NAME: ${GEMMA_MODEL_NAME:-gemma4:e4b}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       # Set to 1 for an offline demo once ./models is populated.
       HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-0}

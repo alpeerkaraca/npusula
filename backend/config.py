@@ -51,7 +51,7 @@ class Settings:
     FINAL_EVALUATION_PATH: Path = ARTIFACTS_DIR / "final_evaluation.json"
     LEGACY_ARTIFACTS_DIR: Path = ARTIFACTS_DIR / "legacy"
 
-    GEMMA_MODEL_NAME: str = os.getenv("GEMMA_MODEL_NAME", "google/gemma-4-E4B-it")
+    GEMMA_MODEL_NAME: str = os.getenv("GEMMA_MODEL_NAME", "gemma4:e4b")
     GEMMA_API_URL: str = os.getenv("GEMMA_API_URL", "http://127.0.0.1:11434")
 
     QDRANT_HOST: str = find_qdrant_host()

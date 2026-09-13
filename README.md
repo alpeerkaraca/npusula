@@ -306,7 +306,7 @@ docker compose logs -f api       # uygulama logları (LOG_LEVEL ile seviye)
 ```
 
 İlk açılışta `ollama-init` hizmeti `GEMMA_MODEL_NAME` modelini (varsayılan
-`google/gemma-4-E4B-it`) otomatik indirir. İndirme tamamlanana kadar
+`gemma4:e4b`) otomatik indirir. İndirme tamamlanana kadar
 LLM'e bağlı yollar (konu yargıcı, açıklama üretimi) deterministik
 fallback'lerine düşer; API bu sırada da çalışır.
 
@@ -370,7 +370,7 @@ ve script'ler değerleri oradan okur. Şablon: `.env.example` (`cp .env.example 
 |---|---|---|
 | `API_PORT` | 8000 | API'nin host portu (yalnızca compose) |
 | `GEMMA_API_URL` | `http://127.0.0.1:11434` | LLM uç noktası (compose içinde `ollama` servisi) |
-| `GEMMA_MODEL_NAME` | `google/gemma-4-E4B-it` | Ollama model adı |
+| `GEMMA_MODEL_NAME` | `gemma4:e4b` | Ollama model kimliği (HuggingFace adı `google/gemma-4-E4B-it` registry'de yok) |
 | `QDRANT_HOST` | otomatik keşif | Boşsa localhost → podman VM adresi denenir |
 | `QDRANT_PORT` | 6333 | Qdrant REST portu |
 | `LOG_LEVEL` | INFO | Uygulama log seviyesi |
