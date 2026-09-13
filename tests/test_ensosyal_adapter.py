@@ -190,6 +190,31 @@ def test_tags_and_text_helpers():
     assert scrub_text("&amp; &quot;tırnak&quot;") == '& "tırnak"'
 
 
+def test_scrubbing_preserves_dates_and_quantities():
+    """A news corpus is full of dates and amounts; they are content, not PII.
+
+    The naive "digits with separators" rule deleted every one of these, which
+    would silently shred legitimate text before it reaches the title SVD.
+    """
+    keep = [
+        "12.09.2026", "2026-09-13", "1 000 000", "12.500", "2026",
+        "Borsa 12.09.2026 tarihinde 1 000 000 puanı geçti",
+    ]
+    for probe in keep:
+        assert scrub_text(probe) == probe, f"legitimate content was scrubbed: {probe!r}"
+
+    # Real phone numbers still go away, in the shapes a Turkish corpus carries.
+    strip = [
+        "0555 123 45 67",
+        "+90 555 123 45 67",
+        "0 (555) 123 45 67",
+        "ara beni 05321234567",
+    ]
+    for probe in strip:
+        scrubbed = scrub_text(probe)
+        assert "555" not in scrubbed and "05321234567" not in scrubbed, f"phone survived: {probe!r}"
+
+
 def test_media_only_post_keeps_an_empty_title(posts, config):
     row = _record(posts[4], config)
     assert row["title"] == ""

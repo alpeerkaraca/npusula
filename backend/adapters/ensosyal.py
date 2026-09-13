@@ -122,6 +122,14 @@ _HANDLE_RE = re.compile(r"(?<!\w)@[\w.]+")
 _EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]+\b")
 _PHONE_RE = re.compile(r"(?<!\w)(?:\+?\d[\d\s().-]{7,}\d)(?!\w)")
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+# A phone-like candidate needs at least this many digits (a Turkish mobile
+# number carries 10-11). Anything shorter is a date, a price or a quantity.
+PHONE_MIN_DIGITS = 10
+_DATE_SHAPES = (
+    re.compile(r"\d{2}[.\-/]\d{2}[.\-/]\d{4}"),   # 12.09.2026
+    re.compile(r"\d{4}[.\-/]\d{2}[.\-/]\d{2}"),   # 2026-09-13
+)
 _HTML_ENTITIES = {
     "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"',
     "&#39;": "'", "&apos;": "'", "&nbsp;": " ",
@@ -339,12 +347,34 @@ def pseudonymize_user_id(user_id: Any, salt: str) -> str:
     return f"ensy_{digest[:24]}"
 
 
+def _strip_phone_numbers(text: str) -> str:
+    """Removes phone-like tokens without eating dates, prices or quantities.
+
+    A news corpus is full of ``12.09.2026``, ``2026-09-13`` and ``1 000 000``;
+    the naive "digits with separators" rule deletes all of them and silently
+    destroys legitimate content. A candidate is only treated as a phone number
+    when it carries at least `PHONE_MIN_DIGITS` digits and does not have a date
+    shape.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        candidate = match.group(0)
+        if sum(char.isdigit() for char in candidate) < PHONE_MIN_DIGITS:
+            return candidate
+        if any(shape.fullmatch(candidate.strip()) for shape in _DATE_SHAPES):
+            return candidate
+        return " "
+
+    return _PHONE_RE.sub(replace, text)
+
+
 def scrub_text(value: Any) -> str:
-    """Removes HTML, URLs, handles, e-mails and phone-like strings from free text.
+    """Removes HTML, URLs, handles, e-mails and real phone numbers from free text.
 
     This is both a privacy measure (the training corpus must not carry contact
     details) and a feature-quality one: the SMPD titles show how much noise
-    handles and links add to the title SVD.
+    handles and links add to the title SVD. Dates and thousands-separated
+    numbers are content, not contact details, and are deliberately preserved.
     """
     text = str(value or "")
     if not text:
@@ -355,7 +385,7 @@ def scrub_text(value: Any) -> str:
     text = _URL_RE.sub(" ", text)
     text = _EMAIL_RE.sub(" ", text)
     text = _HANDLE_RE.sub(" ", text)
-    text = _PHONE_RE.sub(" ", text)
+    text = _strip_phone_numbers(text)
     return " ".join(text.split())
 
 
