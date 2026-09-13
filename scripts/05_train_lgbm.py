@@ -1,4 +1,21 @@
-"""Chronological LightGBM ablation training for the residual recommendation model."""
+"""Trains Layer A (base potential) with the ablation ladder A0-A4.
+
+Split protocol (plan §2.1): train 70% fits models, validation 15% selects the
+variant and the hyperparameters, and the test 15% is **never read here** — only
+`scripts/evaluate_final.py` reads it, once, after selection is locked.
+
+Ablations:
+    A0  category/global baseline only (no account history)      — lower bound
+    A1  account offset only (`account_baseline`)                — history contribution
+    A2  A1 + content model (category/tag/text/history/context)  — content contribution
+    A3  A2 + media type                                          — production candidate
+    A4  legacy M5 vector (time features + baseline as input)     — comparison only
+
+Outputs:
+    artifacts/base_potential_lgbm.txt     (production booster)
+    artifacts/base_potential_metrics.json (validation metrics + provenance)
+    artifacts/text_svd_model.joblib       (train-only TF-IDF + SVD)
+"""
 from __future__ import annotations
 
 import argparse
@@ -6,297 +23,292 @@ import json
 from pathlib import Path
 import time
 
-import joblib
-import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr
-from sklearn.decomposition import TruncatedSVD
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import mean_absolute_error
-from sklearn.pipeline import Pipeline
 
-from backend.services.history_feature import compute_leakage_free_history
-from backend.services.recommendation import (
-    CATEGORY_FEATURES,
-    CONTEXT_FEATURES,
-    FEATURE_COLUMNS,
-    MEDIA_FEATURES,
-    TAG_FEATURES,
-    TEXT_SVD_FEATURES,
-    TIME_FEATURES,
-    RecommendationService,
+from backend.services.canonical_taxonomy import canonical_name
+from backend.services.legacy_m5_features import build_legacy_m5_frame
+from backend.services.provenance import file_sha256, git_commit_sha, git_is_dirty, utc_now_iso, write_json_with_provenance
+from backend.services.recommendation import A2_FEATURES, A3_FEATURES
+from backend.services.training import (
+    add_bucket_column,
+    base_potential_metrics,
+    build_recommendation_service,
+    compute_split_bounds,
+    fit_base_model,
+    fit_svd_pipeline,
+    fit_train_statistics,
+    load_chronological_frame,
+    subgroup_metrics,
 )
+from backend.services.time_lift import TimeLiftConfig
 
 PARQUET_FILE = Path("data/processed/posts.parquet")
-MODEL_OUTPUT = Path("artifacts/lgbm_popularity.txt")
-METRICS_OUTPUT = Path("artifacts/metrics.json")
+DATA_QUALITY_REPORT = Path("data/reports/data_quality.json")
+MODEL_OUTPUT = Path("artifacts/base_potential_lgbm.txt")
+METRICS_OUTPUT = Path("artifacts/base_potential_metrics.json")
 SVD_OUTPUT = Path("artifacts/text_svd_model.joblib")
+TUNING_INPUT = Path("artifacts/tuning_results.json")
 
-M1_FEATURES = TIME_FEATURES
-M2_FEATURES = TIME_FEATURES + CATEGORY_FEATURES + ["cat_x_hour", "cat_x_weekday"]
-M3_FEATURES = M2_FEATURES + TAG_FEATURES
-M4_FEATURES = M3_FEATURES + CONTEXT_FEATURES + TEXT_SVD_FEATURES + MEDIA_FEATURES
-# Every variant is trained on the RESIDUAL target (y - account_baseline) so the
-# table isolates incremental feature contributions. M0 is the formulation
-# reference: full feature set on the RAW target, showing what the residual
-# formulation itself buys over the feature engineering.
-ABLATION_FEATURES = {
-    "M0": FEATURE_COLUMNS,
-    "M1": M1_FEATURES,
-    "M2": M2_FEATURES,
-    "M3": M3_FEATURES,
-    "M4": M4_FEATURES,
-    "M5": FEATURE_COLUMNS,
-}
+PRODUCTION_CANDIDATES = ("A2", "A3")
 
 
-def _spearman(y_true: np.ndarray, predictions: np.ndarray) -> float:
-    if len(y_true) < 2 or np.all(predictions == predictions[0]):
-        return 0.0
-    value = spearmanr(y_true, predictions).statistic
-    return 0.0 if not np.isfinite(value) else float(value)
-
-
-def _metrics(y_true: np.ndarray, predictions: np.ndarray) -> dict[str, float]:
-    return {
-        "mae": round(float(mean_absolute_error(y_true, predictions)), 6),
-        "spearman": round(_spearman(y_true, predictions), 6),
-    }
-
-
-def _tail_metrics(
-    y_true: np.ndarray,
-    predictions: np.ndarray,
-    percentile: float = 80.0,
-) -> dict[str, float | int]:
-    """Metrics restricted to the top quintile of the true test target.
-
-    The product promises ranking quality and "relative potential" for the top
-    picks, so error on the high-popularity tail is tracked permanently.
-    """
-    threshold = float(np.percentile(y_true, percentile))
-    mask = y_true >= threshold
-    count = int(mask.sum())
-    if not count:
+def load_selected_config(path: Path = TUNING_INPUT) -> dict:
+    """Reads the validation-selected configuration produced by tune_lgbm.py."""
+    if not path.exists():
         return {
-            "percentile": percentile,
-            "threshold": round(threshold, 6),
-            "count": 0,
-            "top_quintile_mae": float("nan"),
-            "top_quintile_bias": float("nan"),
+            "source": "defaults (artifacts/tuning_results.json not found)",
+            "objective": "quantile",
+            "alpha": 0.55,
+            "lgbm_params": {},
+            "bucket_hours": 3,
+            "time_lift": TimeLiftConfig().to_dict(),
         }
+    document = json.loads(path.read_text(encoding="utf-8"))
+    selected = document.get("selected", {})
     return {
-        "percentile": percentile,
-        "threshold": round(threshold, 6),
-        "count": count,
-        "top_quintile_mae": round(float(mean_absolute_error(y_true[mask], predictions[mask])), 6),
-        "top_quintile_bias": round(float(np.mean(predictions[mask] - y_true[mask])), 6),
+        "source": str(path),
+        "objective": selected.get("objective", "quantile"),
+        "alpha": float(selected.get("alpha", 0.55)),
+        "lgbm_params": selected.get("lgbm_params", {}),
+        "bucket_hours": int(selected.get("bucket_hours", 3)),
+        "time_lift": selected.get("time_lift", TimeLiftConfig().to_dict()),
     }
 
 
-def _fit_model(
-    X_train: pd.DataFrame,
-    y_train: np.ndarray,
-    X_val: pd.DataFrame,
-    y_val: np.ndarray,
-    objective: str = "l1",
-    alpha: float = 0.55,
-) -> lgb.LGBMRegressor:
-    if objective == "quantile":
-        objective_params: dict[str, float | str] = {"objective": "quantile", "alpha": alpha}
-    else:
-        objective_params = {"objective": "regression_l1"}
-    model = lgb.LGBMRegressor(
-        **objective_params,
-        n_estimators=500,
-        learning_rate=0.05,
-        num_leaves=127,
-        min_child_samples=20,
-        subsample=0.85,
-        colsample_bytree=0.8,
-        reg_alpha=0.0,
-        reg_lambda=5.0,
-        random_state=42,
-        n_jobs=-1,
-        verbosity=-1,
+def _category_baseline(categories: np.ndarray, category_medians: dict[int, float], global_mean: float) -> np.ndarray:
+    return np.array(
+        [category_medians.get(int(code), global_mean) for code in categories], dtype=float
     )
-    model.fit(
-        X_train,
-        y_train,
-        eval_set=[(X_val, y_val)],
-        callbacks=[lgb.early_stopping(50, verbose=False)],
-    )
-    return model
 
 
-def _subgroup_metrics(
-    features: pd.DataFrame,
-    y_true: np.ndarray,
-    predictions: np.ndarray,
-) -> dict[str, dict[str, float | int]]:
-    groups: dict[str, dict[str, float | int]] = {}
-
-    def record(name: str, mask: np.ndarray) -> None:
-        count = int(mask.sum())
-        if count:
-            groups[name] = {"count": count, **_metrics(y_true[mask], predictions[mask])}
-
-    names = ["cold_start", "very_low_history", "low_history", "medium_history", "high_history"]
-    for code, name in enumerate(names):
-        record(f"history_depth:{name}", features["history_depth_code"].to_numpy() == code)
-    record("time_basis:local", features["time_basis_utc_fallback"].to_numpy() == 0)
-    record("time_basis:utc_fallback", features["time_basis_utc_fallback"].to_numpy() == 1)
-    for code in sorted(features["primary_cat_code"].astype(int).unique()):
-        record(f"primary_cat_code:{code}", features["primary_cat_code"].to_numpy() == code)
-    return groups
-
-
-def train(objective: str = "quantile", alpha: float = 0.55) -> None:
-    if objective == "quantile":
-        print(f"Objective: quantile (alpha={alpha}) — applied to every ablation variant.")
-    else:
-        print("Objective: regression_l1 — applied to every ablation variant.")
+def train(limit_rows: int | None = None) -> dict:
     started = time.time()
+    config = load_selected_config()
+    print(f"Selected configuration source: {config['source']}")
+
     print(f"Loading chronological dataset from {PARQUET_FILE}...")
-    df = pd.read_parquet(PARQUET_FILE)
-    df["published_at_utc"] = pd.to_datetime(df["published_at_utc"], utc=True)
-    df = df.sort_values("published_at_utc").reset_index(drop=True)
-    target_column = "target_popularity" if "target_popularity" in df.columns else "popularity_score"
-    y = pd.to_numeric(df[target_column], errors="coerce").fillna(5.8).to_numpy(dtype=float)
+    frame = load_chronological_frame(PARQUET_FILE)
+    if limit_rows:
+        frame = frame.iloc[:limit_rows].reset_index(drop=True)
+        print(f"[smoke mode] limited to {len(frame):,} rows")
+    frame = add_bucket_column(frame, config["bucket_hours"])
 
-    n_rows = len(df)
-    train_end = int(n_rows * 0.70)
-    val_end = int(n_rows * 0.85)
-    if train_end == 0 or val_end <= train_end or val_end >= n_rows:
-        raise ValueError("Dataset is too small for a 70/15/15 chronological split.")
+    bounds = compute_split_bounds(len(frame))
+    train_end, validation_end = bounds.train_end, bounds.validation_end
+    print(
+        f"Split: train={bounds.train_rows:,} validation={bounds.validation_rows:,} test={bounds.test_rows:,} "
+        "(test is not read by this script)"
+    )
 
-    global_mean = float(np.mean(y[:train_end]))
-    global_median = float(np.median(y[:train_end]))
-    # Recompute priors from chronologically preceding rows; never trust stale columns.
-    df = compute_leakage_free_history(df, default_popularity_mean=global_mean)
-    df = df.sort_values("published_at_utc").reset_index(drop=True)
-    y = pd.to_numeric(df[target_column], errors="coerce").fillna(global_mean).to_numpy(dtype=float)
+    y = pd.to_numeric(frame["popularity_score"], errors="coerce").fillna(5.8).to_numpy(dtype=float)
 
     print("Fitting title-only TF-IDF + SVD on the oldest 70%...")
-    train_titles = df.iloc[:train_end]["title"].fillna("").astype(str)
-    svd_pipeline = Pipeline([
-        ("tfidf", TfidfVectorizer(max_features=5000, sublinear_tf=True)),
-        ("svd", TruncatedSVD(n_components=len(TEXT_SVD_FEATURES), random_state=42)),
-    ])
-    svd_pipeline.fit(train_titles)
-    SVD_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(svd_pipeline, SVD_OUTPUT)
+    svd_pipeline = fit_svd_pipeline(
+        frame.iloc[:train_end]["title"], SVD_OUTPUT, n_components=8
+    )
 
-    rec_service = RecommendationService(model_path=Path("artifacts/.training-placeholder.txt"))
-    rec_service.default_popularity = global_mean
-    rec_service.svd_pipeline = svd_pipeline
-    X = rec_service._prepare_features(df)
-    if list(X.columns) != FEATURE_COLUMNS or X.shape[1] != 36:
-        raise RuntimeError(f"Feature contract mismatch: expected 36 columns, got {X.shape[1]}.")
+    service = build_recommendation_service(default_popularity=1.0)
+    service.svd_pipeline = svd_pipeline
+    X = service._prepare_features(frame)
+    stats = fit_train_statistics(service, y[:train_end], X.iloc[:train_end]["primary_cat_code"].to_numpy())
+    baseline = service.account_baseline(frame, categories=X["primary_cat_code"].to_numpy())
+    X["account_baseline"] = baseline
+    categories = [canonical_name(code) for code in X["primary_cat_code"].to_numpy(dtype=int)]
 
-    # Cold-start fallback uses only category medians learned from the train window.
-    train_codes = X.iloc[:train_end]["primary_cat_code"].astype(int).reset_index(drop=True)
-    category_medians = pd.Series(y[:train_end]).groupby(train_codes).median()
-    cold_mask = df["user_post_count_prior"].to_numpy() == 0
-    cold_codes = X.loc[cold_mask, "primary_cat_code"].astype(int)
-    X.loc[cold_mask, "account_baseline"] = cold_codes.map(category_medians).fillna(global_mean).to_numpy()
+    print(
+        f"Train stats: global_mean={stats['global_train_mean']:.4f}, "
+        f"category medians for {len(stats['category_train_medians'])} categories (train-only)"
+    )
 
-    test_slice = slice(val_end, n_rows)
-    y_test = y[test_slice]
-    results: dict[str, dict[str, float | int]] = {
-        "B0": {"feature_count": 0, **_metrics(y_test, np.full(len(y_test), global_median))},
-        "B1": {"feature_count": 1, **_metrics(y_test, X.iloc[test_slice]["account_baseline"].to_numpy())},
+    y_train = y[:train_end]
+    y_val = y[train_end:validation_end]
+    baseline_train = baseline[:train_end]
+    baseline_val = baseline[train_end:validation_end]
+    residual_train = y_train - baseline_train
+    residual_val = y_val - baseline_val
+
+    validation_frame = frame.iloc[train_end:validation_end].reset_index(drop=True)
+    validation_frame["primary_cat_code"] = X.iloc[train_end:validation_end]["primary_cat_code"].to_numpy(dtype=int)
+
+    legacy_X = build_legacy_m5_frame(X, frame, categories)
+
+    objective, alpha = config["objective"], config["alpha"]
+    precision_alpha = alpha if objective == "quantile" else 0.5
+
+    ablation_features: dict[str, pd.DataFrame | None] = {
+        "A0": None,
+        "A1": None,
+        "A2": X[A2_FEATURES],
+        "A3": X[A3_FEATURES],
+        "A4": legacy_X,
+    }
+    ablation_targets = {
+        "A0": "category_baseline",
+        "A1": "account_offset",
+        "A2": "residual",
+        "A3": "residual",
+        "A4": "residual",
     }
 
-    trained_models: dict[str, lgb.LGBMRegressor] = {}
-    for code, columns in ABLATION_FEATURES.items():
-        print(f"Training {code} with {len(columns)} features...")
-        residual = code != "M0"
-        baseline = X.iloc[:train_end]["account_baseline"].to_numpy()
-        train_target = y[:train_end] - baseline if residual else y[:train_end]
-        val_baseline = X.iloc[train_end:val_end]["account_baseline"].to_numpy()
-        val_target = y[train_end:val_end] - val_baseline if residual else y[train_end:val_end]
-        model = _fit_model(
-            X.iloc[:train_end][columns], train_target,
-            X.iloc[train_end:val_end][columns], val_target,
+    category_prediction = _category_baseline(
+        X["primary_cat_code"].to_numpy(dtype=int), service.category_train_medians, service.default_popularity
+    )
+
+    print("Training ablation ladder (validation-selected, test untouched)...")
+    ablation_results: dict[str, dict] = {}
+    fitted_models: dict[str, object] = {}
+    for code, features in ablation_features.items():
+        if code == "A0":
+            predictions_val = category_prediction[train_end:validation_end]
+            metrics = base_potential_metrics(y_val, predictions_val, alpha=precision_alpha)
+            ablation_results[code] = {
+                "description": "category/global baseline only",
+                "feature_count": 0,
+                "target": ablation_targets[code],
+                "validation": metrics,
+                "subgroups": subgroup_metrics(validation_frame, y_val, predictions_val, alpha=precision_alpha),
+            }
+            print(f"[{code}] validation MAE={metrics['mae']:.4f} pinball={metrics['pinball_loss']:.4f}")
+            continue
+        if code == "A1":
+            predictions_val = baseline_val
+            metrics = base_potential_metrics(y_val, predictions_val, alpha=precision_alpha)
+            ablation_results[code] = {
+                "description": "account offset only (shrunk user history prior)",
+                "feature_count": 1,
+                "target": ablation_targets[code],
+                "validation": metrics,
+                "subgroups": subgroup_metrics(validation_frame, y_val, predictions_val, alpha=precision_alpha),
+            }
+            print(f"[{code}] validation MAE={metrics['mae']:.4f} pinball={metrics['pinball_loss']:.4f}")
+            continue
+
+        model = fit_base_model(
+            features.iloc[:train_end],
+            residual_train,
+            features.iloc[train_end:validation_end],
+            residual_val,
             objective=objective,
             alpha=alpha,
+            params=config["lgbm_params"],
         )
-        raw_predictions = model.predict(X.iloc[test_slice][columns])
-        predictions = X.iloc[test_slice]["account_baseline"].to_numpy() + raw_predictions if residual else raw_predictions
-        results[code] = {
-            "feature_count": len(columns),
-            "target": "residual" if residual else "ham",
-            **_metrics(y_test, predictions),
+        predictions_val = baseline_val + model.predict(features.iloc[train_end:validation_end])
+        metrics = base_potential_metrics(y_val, predictions_val, alpha=precision_alpha)
+        ablation_results[code] = {
+            "description": {
+                "A2": "account offset + content (category/tag/text/history/context)",
+                "A3": "A2 + media type",
+                "A4": "legacy M5 vector (time features + baseline as input)",
+            }[code],
+            "feature_count": int(features.shape[1]),
+            "target": ablation_targets[code],
+            "validation": metrics,
+            "subgroups": subgroup_metrics(validation_frame, y_val, predictions_val, alpha=precision_alpha),
+            "best_iteration": int(getattr(model, "best_iteration_", 0) or 0),
         }
-        trained_models[code] = model
+        fitted_models[code] = model
+        print(
+            f"[{code}] validation MAE={metrics['mae']:.4f} pinball={metrics['pinball_loss']:.4f} "
+            f"rho={metrics['spearman']:.4f} features={features.shape[1]}"
+        )
 
-    final_model = trained_models["M5"]
-    final_predictions = X.iloc[test_slice]["account_baseline"].to_numpy() + final_model.predict(
-        X.iloc[test_slice][FEATURE_COLUMNS]
+    production_code = min(
+        PRODUCTION_CANDIDATES,
+        key=lambda code: (
+            ablation_results[code]["validation"]["pinball_loss"],
+            ablation_results[code]["validation"]["mae"],
+        ),
     )
-    feature_importance = sorted(
-        ({"feature": f, "importance": int(i)} for f, i in zip(FEATURE_COLUMNS, final_model.feature_importances_)),
-        key=lambda item: item["importance"], reverse=True,
-    )
+    print(f"Selected production variant: {production_code} (validation pinball + MAE tie-break)")
+
+    production_model = fitted_models[production_code]
     MODEL_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    final_model.booster_.save_model(str(MODEL_OUTPUT))
+    production_model.booster_.save_model(str(MODEL_OUTPUT))
 
-    metrics = {
-        "dataset_rows": n_rows,
-        "feature_count": len(FEATURE_COLUMNS),
-        "target": target_column,
-        "objective": {"name": objective, "alpha": (alpha if objective == "quantile" else None)},
-        "split": {
-            "strategy": "chronological_70_15_15",
-            "train_rows": train_end,
-            "validation_rows": val_end - train_end,
-            "test_rows": n_rows - val_end,
-            "train_end_utc": df.iloc[train_end - 1]["published_at_utc"].isoformat(),
-            "validation_end_utc": df.iloc[val_end - 1]["published_at_utc"].isoformat(),
+    production_features = A2_FEATURES if production_code == "A2" else A3_FEATURES
+    feature_importance = sorted(
+        (
+            {"feature": feature, "importance": int(importance)}
+            for feature, importance in zip(production_features, production_model.feature_importances_)
+        ),
+        key=lambda entry: entry["importance"],
+        reverse=True,
+    )
+
+    quality_report = {}
+    if DATA_QUALITY_REPORT.exists():
+        quality_report = json.loads(DATA_QUALITY_REPORT.read_text(encoding="utf-8"))
+
+    dataset_sha256 = quality_report.get("raw_file_sha256")
+    payload = {
+        "model_kind": "base_potential_lgbm (Layer A, no time features)",
+        "production_variant": production_code,
+        "objective": {"name": objective, "alpha": alpha if objective == "quantile" else None},
+        "hyperparameters": config["lgbm_params"],
+        "feature_contract": {
+            "production_features": production_features,
+            "a2_features": A2_FEATURES,
+            "a3_features": A3_FEATURES,
+            "time_features_present": False,
+            "note": (
+                "hour/weekday/month/cyclical encodings/cat_x_hour/cat_x_weekday/history_x_hour are "
+                "absent from the model; account_baseline is the residual offset, not an input."
+            ),
         },
-        "global_train_mean": global_mean,
-        "global_train_median": global_median,
-        "category_train_medians": {
-            str(int(code)): float(value) for code, value in category_medians.items()
-        },
-        "ablations": results,
-        "baseline_mae": results["B1"]["mae"],
-        "baseline_spearman": results["B1"]["spearman"],
-        "model_mae": results["M5"]["mae"],
-        "model_spearman": results["M5"]["spearman"],
-        "subgroups": _subgroup_metrics(X.iloc[test_slice], y_test, final_predictions),
-        "tail": _tail_metrics(y_test, final_predictions),
+        "split": bounds.to_dict(frame),
+        "global_train_mean": stats["global_train_mean"],
+        "category_train_medians": stats["category_train_medians"],
+        "ablations": ablation_results,
+        "selection_rule": (
+            f"validation pinball loss first, validation MAE as tie-break, candidates {PRODUCTION_CANDIDATES}; "
+            "test split not read in this script"
+        ),
         "feature_importance": feature_importance,
+        "base_potential": ablation_results[production_code]["validation"],
+        "base_potential_subgroups": ablation_results[production_code]["subgroups"],
+        "dataset": {
+            "rows": int(len(frame)),
+            "raw_file_sha256": dataset_sha256,
+            "valid_row_count": quality_report.get("valid_row_count"),
+            "demo_row_count": quality_report.get("demo_row_count"),
+            "timezone_basis_distribution": quality_report.get("timezone_basis_distribution"),
+        },
+        "tuning_source": config["source"],
         "elapsed_seconds": round(time.time() - started, 2),
     }
-    METRICS_OUTPUT.write_text(json.dumps(metrics, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(json.dumps(results, indent=2))
-    print(f"Saved M5 residual model to {MODEL_OUTPUT} and metrics to {METRICS_OUTPUT}.")
+    provenance = {
+        "git_commit": git_commit_sha(),
+        "git_dirty": git_is_dirty(),
+        "trained_at_utc": utc_now_iso(),
+        "dataset_parquet": str(PARQUET_FILE),
+        "dataset_sha256": file_sha256(PARQUET_FILE),
+        "raw_file_sha256": dataset_sha256,
+        "model_output": str(MODEL_OUTPUT),
+        "model_output_sha256": file_sha256(MODEL_OUTPUT),
+        "split_protocol": "chronological_train_validation_locked_test",
+        "tuning_data": "validation_only",
+        "test_touched_before_final": False,
+    }
+    write_json_with_provenance(METRICS_OUTPUT, payload, provenance)
+
+    print(f"Saved production model ({production_code}) to {MODEL_OUTPUT}")
+    print(f"Validation metrics written to {METRICS_OUTPUT}")
+    print(f"Elapsed: {payload['elapsed_seconds']}s")
+    return payload
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--objective",
-        choices=["l1", "quantile"],
-        default="quantile",
-        help=(
-            "LightGBM objective for every ablation variant (default: quantile). "
-            "quantile alpha=0.55 is the adopted config: it cuts top-quintile test MAE "
-            "from 1.177 to 1.093 for +0.012 overall MAE vs regression_l1."
-        ),
-    )
-    parser.add_argument(
-        "--alpha",
-        type=float,
-        default=0.55,
-        help="Quantile alpha, only used with --objective quantile (default: 0.55).",
+        "--limit-rows",
+        type=int,
+        default=None,
+        help="Smoke-test only: train on the first N chronological rows (never for real artifacts).",
     )
     return parser.parse_args(argv)
 
 
 if __name__ == "__main__":
-    args = _parse_args()
-    train(objective=args.objective, alpha=args.alpha)
+    arguments = _parse_args()
+    train(limit_rows=arguments.limit_rows)
