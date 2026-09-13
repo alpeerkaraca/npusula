@@ -1,0 +1,61 @@
+{
+  "_comment": [
+    "Synthetic fixture for backend/adapters/ensosyal.py. Every value is invented:",
+    "no EnSosyal user data is reproduced here. The shapes are deliberately messy",
+    "(`id` vs `post_id`, `caption` vs `text`, alt spellings for counters) because",
+    "real endpoints are rarely uniform, and the adapter must survive that."
+  ],
+  "posts": [
+    {
+      "id": "ens-1001",
+      "author_id": "u-77",
+      "created_at": "2026-09-12T18:30:00Z",
+      "timezone_offset": "+03:00",
+      "caption": "Sabah kahvesi ve kitap keyfi 📚 http://example.invalid/promo @kahveci",
+      "hashtags": ["kahve", "#kitap", "Kahve"],
+      "media_type": "image",
+      "category": "food_dining",
+      "views": 4200,
+      "likes": 120,
+      "comments": 8,
+      "saves": 15,
+      "engagement_window_hours": 24,
+      "profile_text": "Kişisel profil metni — kişisel veri, adaptör tarafından düşürülür",
+      "location": "Kadıköy, İstanbul"
+    },
+    {
+      "post_id": "ens-1002",
+      "user_id": "u-78",
+      "published_at_utc": "2026-09-12T05:15:00Z",
+      "timezone_rfc": "Europe/Berlin",
+      "utc_offset": "+02:00",
+      "text": "Derin öğrenme ile görüntü işleme notları",
+      "tags": "yapayzeka, derinogrenme, python",
+      "media_type": "video",
+      "canonical_category": "technology",
+      "impressions": 15000,
+      "like_count": 540,
+      "share_count": 61,
+      "save_count": 88
+    },
+    {
+      "post_id": "ens-1003",
+      "user_id": "u-79",
+      "created_at": "2026-09-11T20:05:00Z",
+      "text": "Konser gecesi, müzik dolu bir akşam",
+      "tags": [],
+      "media_type": "story",
+      "category": "music",
+      "likes": 44
+    },
+    {
+      "post_id": "ens-1004",
+      "user_id": "u-80",
+      "created_at": "2026-09-10T09:00:00Z",
+      "text": "Veri seti taraması",
+      "media_type": "photo",
+      "views": 0,
+      "likes": 0
+    }
+  ]
+}

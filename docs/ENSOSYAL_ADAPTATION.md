@@ -91,6 +91,36 @@ Opsiyonel ama yüksek değerli:
 - **Küçük gruplara kesin sıralama yok.** Support altındaki gruplar hiyerarşide
   yukarı taşınır ve `evidence_level` bunu açıkça söyler.
 
+## Adapter hazır: `backend/adapters/ensosyal.py`
+
+EnSosyal ekibinin entegrasyon için ihtiyaç duyacağı katman yazıldı. Adapter bir
+**veri kabul sözleşmesidir**, veri toplama aracı değildir:
+
+| Yapar | Yapmaz |
+|---|---|
+| Gelen payload'ı kanonik `PostRecord` kolonlarına mapler (alan adları `FIELD_CANDIDATES` içinde tek yerde) | Çerez/oturum yeniden kullanmaz, dokümante edilmemiş endpoint varsaymaz |
+| `timezone_offset`/IANA ile yerel saati üretir (`local_hour`, `local_weekday`, `timezone_basis`) | Kullanıcı adı, profil metni, konum saklamaz |
+| KVKK süzgeci: `user_id` tuzlu hash ile pseudonimize, metinden URL/@handle/e-posta/telefon temizliği | Medya dosyası indirmez (yalnız yerel ayna varsa `media_available=True`) |
+| Hedef değişkeni tek bir belgeli formülle üretir (`log1p(views)`, yoksa `log1p(ağırlıklı etkileşim)`) | Etkileşim yoksa satır uydurmaz — payload'ı atlar ve sayar |
+| Batch'i aynı kapılardan geçirir (kolon sözleşmesi + `PostRecord` örnek doğrulaması + leakage-free prior'lar) | Kategori uydurmaz: kanonik olmayan platform etiketi boş bırakılır, sınıflandırıcı devralır |
+
+Transport **yetkili** olmak zorundadır: `ENSOSYAL_API_BASE_URL` + `ENSOSYAL_API_TOKEN`
+(EnSosyal'in verdiği kimlik) yoksa `fetch_posts` hata verir. Pseudonimizasyon için
+`ENSOSYAL_PSEUDONYM_SALT` zorunludur (yoksa hata verir; tahmin edilebilir tuz
+pseudonimi geri döndürülebilir yapar).
+
+Testler: `tests/test_ensosyal_adapter.py` (sentetik fixture'larla; repoda hiçbir
+gerçek EnSosyal verisi yoktur).
+
+### Entegrasyon sırası
+
+1. EnSosyal `ENSOSYAL_API_BASE_URL` + token + veri işleme sözleşmesini sağlar.
+2. `FIELD_CANDIDATES` gerçek sözleşmeye göre güncellenir (tek dosya, tek tablo).
+3. `ingest_payloads` ile çekilen batch `posts.parquet`'e yazılır
+   (`source="ensosyal"`, aynı kolonlar).
+4. `tune_lgbm.py → 05_train_lgbm.py → 06_time_lift.py → evaluate_final.py`
+   zinciri EnSosyal verisiyle yeniden koşar.
+
 ## Uygulama sırası (EnSosyal verisi elde edildiğinde)
 
 1. Yeni kaynağı `scripts/02_normalize_smp.py`'ye kardeş bir normalizer olarak

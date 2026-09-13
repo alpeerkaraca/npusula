@@ -91,6 +91,28 @@ def test_alignment_without_context_does_not_invent_mismatches():
     assert result["mismatched_semantic"] == []
 
 
+def test_dataframe_missing_values_do_not_break_classification():
+    """Missing taxonomy values arrive as NaN, not None, when they come from a frame."""
+    import numpy as np
+    import pandas as pd
+
+    frame = pd.DataFrame([{
+        "title": "sabah kahvesi",
+        "category_l1": None,
+        "category_l2": np.nan,
+        "concept": pd.NA,
+    }])
+    result = classify_post_category(
+        frame.iloc[0]["title"],
+        frame.iloc[0]["category_l1"],
+        frame.iloc[0]["category_l2"],
+        frame.iloc[0]["concept"],
+    )
+
+    assert result["primary_category"] in {"food_dining", "social_lifestyle"}
+    assert result["primary_cat_confidence"] >= 0.30
+
+
 def test_empty_and_invalid_inputs_are_safe():
     for payload in ([], None, "python", 42):
         result = align_tags(payload, context_category="technology")

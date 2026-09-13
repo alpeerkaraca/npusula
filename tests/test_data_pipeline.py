@@ -120,7 +120,7 @@ def test_dataset_guardrails_reject_foreign_sources_and_row_drift(normalizer):
         "user_id": ["real_user"],
         "post_id": ["1"],
     })
-    with pytest.raises(AssertionError, match="smpd_real"):
+    with pytest.raises(AssertionError, match="unexpected source"):
         normalizer.assert_dataset_guardrails(foreign, expected_raw_valid_row_count=1)
 
     ok = pd.DataFrame({"source": [normalizer.SOURCE_ID], "user_id": ["real_user"], "post_id": ["1"]})

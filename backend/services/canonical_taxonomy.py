@@ -3,8 +3,11 @@ Canonical Taxonomy Service (G2)
 Provides a versioned canonical taxonomy mapping SMPD categories to 11 platform-independent canonical categories.
 """
 
+import math
 import re
 from typing import Dict, List, Optional, Any, Tuple
+
+import pandas as pd
 
 # 1. Versioned dict mapping category -> list of subcategories
 CANONICAL_TAXONOMY_V1: Dict[str, List[str]] = {
@@ -173,6 +176,23 @@ SMPD_TO_CANONICAL_MAPPING: Dict[str, Tuple[str, str]] = {
     "tatil": ("social_lifestyle", "daily_life"),
 }
 
+def _clean_optional_text(value: Any) -> Optional[str]:
+    """Normalizes a taxonomy input to ``str | None``.
+
+    Callers pass values straight out of a DataFrame, so missing entries arrive
+    as ``NaN``/``pd.NA`` rather than ``None``; joining those into the search
+    string used to raise instead of degrading to "no taxonomy input".
+    """
+    if value is None:
+        return None
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    if value is pd.NA:  # type: ignore[comparison-overlap]
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 # 6. classify_post_category function
 def classify_post_category(
     title: str,
@@ -202,7 +222,15 @@ def classify_post_category(
         - secondary_cat_confidence: float
     """
     # Create a searchable string from inputs
-    inputs = filter(None, [title, smpd_category, smpd_subcategory, smpd_concept])
+    inputs = filter(
+        None,
+        (
+            _clean_optional_text(title),
+            _clean_optional_text(smpd_category),
+            _clean_optional_text(smpd_subcategory),
+            _clean_optional_text(smpd_concept),
+        ),
+    )
     text_to_search = " ".join(inputs).lower()
     
     primary_match = None

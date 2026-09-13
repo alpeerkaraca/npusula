@@ -29,9 +29,19 @@ import time
 import numpy as np
 import pandas as pd
 
-from backend.schemas.post import OPTIONAL_UNWRITTEN_FIELDS, PostRecord
-from pydantic import StrictInt
 from backend.services.history_feature import compute_leakage_free_history
+from backend.services.post_contract import (
+    DEMO_USER_IDS,
+    OUTPUT_COLUMNS,
+    SCHEMA_SAMPLE_SIZE,
+    assert_column_contract,
+    assert_dataset_guardrails as _assert_dataset_guardrails,
+    media_file_is_readable as _media_file_is_readable,
+    optional_float as _optional_float,
+    pythonize as _pythonize,
+    validate_against_schema,
+)
+from backend.services.post_contract import SMPD_SOURCE_ID as SOURCE_ID
 from backend.services.provenance import file_sha256, git_commit_sha, utc_now_iso, write_json_with_provenance
 from backend.services.time_features import resolve_post_local_time
 
@@ -45,58 +55,10 @@ REPORT_PATH = Path("data/reports/data_quality.json")
 # reported truthfully.
 MEDIA_ROOT = Path(os.getenv("SMPD_MEDIA_ROOT", "data/raw/media"))
 
-SOURCE_ID = "smpd_real"
-DEMO_USER_IDS = frozenset({"demo_user_01", "demo_user_02", "demo_user_03"})
-
-# Deterministic sample size for full-model validation of individual rows.
-SCHEMA_SAMPLE_SIZE = 500
-
-# Columns written by this script, in output order. Kept as an explicit list so
-# the schema alignment check is a real check and not a tautology.
-OUTPUT_COLUMNS = [
-    "schema_version",
-    "source",
-    "post_id",
-    "user_id",
-    "published_at_utc",
-    "timezone_offset",
-    "timezone_id",
-    "local_datetime",
-    "local_hour",
-    "local_weekday",
-    "timezone_basis",
-    "title",
-    "description",
-    "tags",
-    "media_type",
-    "media_path",
-    "media_available",
-    "category_l1",
-    "category_l2",
-    "concept",
-    "latitude",
-    "longitude",
-    "source_user_photo_count",
-    "popularity_score",
-    "ingested_at_utc",
-    "user_post_count_prior",
-    "user_popularity_mean_prior",
-]
-
 
 def media_file_is_readable(media_ref: str | None, media_root: Path = MEDIA_ROOT) -> bool:
     """True only when the referenced media file exists and can be opened."""
-    if not media_ref:
-        return False
-    candidate = Path(media_ref)
-    if not candidate.is_absolute():
-        candidate = media_root / candidate
-    try:
-        with open(candidate, "rb") as handle:
-            handle.read(1)
-        return True
-    except OSError:
-        return False
+    return _media_file_is_readable(media_ref, media_root)
 
 
 def normalize_record(obj: dict, ingested_at_utc: datetime) -> dict | None:
@@ -169,100 +131,17 @@ def normalize_record(obj: dict, ingested_at_utc: datetime) -> dict | None:
     }
 
 
-def _optional_float(value: object) -> float | None:
-    if value is None:
-        return None
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
-        return None
-    return parsed if np.isfinite(parsed) else None
-
-
-def _pythonize(value: object) -> object:
-    """Converts numpy/pandas scalars and NaN into JSON-native Python values."""
-    if isinstance(value, np.generic):
-        value = value.item()
-    if isinstance(value, np.ndarray):
-        return [_pythonize(item) for item in value.tolist()]
-    if isinstance(value, list):
-        return [_pythonize(item) for item in value]
-    if isinstance(value, float) and not np.isfinite(value):
-        return None
-    return value
-
-
-def _strict_int_fields() -> set[str]:
-    """Names of PostRecord fields typed StrictInt (optionally nullable)."""
-    names: set[str] = set()
-    for name, field in PostRecord.model_fields.items():
-        annotation = field.annotation
-        candidates = (annotation, *getattr(annotation, "__args__", ()))
-        if any(candidate is StrictInt for candidate in candidates):
-            names.add(name)
-    return names
-
-
-STRICT_INT_FIELDS = _strict_int_fields()
-
-
-def _coerce_row_types(row: dict) -> dict:
-    """Restores StrictInt fields that pandas widened to float (int column + NaN)."""
-    coerced = dict(row)
-    for name in STRICT_INT_FIELDS:
-        value = coerced.get(name)
-        if isinstance(value, float) and value.is_integer():
-            coerced[name] = int(value)
-    return coerced
-
-
-def validate_against_schema(df: pd.DataFrame, sample_size: int = SCHEMA_SAMPLE_SIZE) -> dict:
-    """Validates a deterministic sample of *final* rows against the PostRecord model.
-
-    Running this after the history computation means the leakage-free prior
-    columns are validated too, not just the raw-derived ones.
-    """
-    if df.empty:
-        return {"validated_rows": 0, "sample_step": 1}
-    step = max(1, len(df) // sample_size)
-    errors: list[str] = []
-    validated = 0
-    for position in range(0, len(df), step):
-        row = _coerce_row_types(
-            {key: _pythonize(value) for key, value in df.iloc[position].to_dict().items()}
-        )
-        try:
-            PostRecord.model_validate(row)
-        except Exception as exc:  # pydantic ValidationError reported with its row index
-            errors.append(f"row {position}: {exc}")
-            if len(errors) >= 5:
-                break
-        validated += 1
-    if errors:
-        raise ValueError("PostRecord schema validation failed:\n" + "\n".join(errors))
-    return {"validated_rows": validated, "sample_step": step}
-
-
-def assert_column_contract(columns: list[str]) -> None:
-    """Asserts the written columns are exactly what the PostRecord schema declares."""
-    schema_fields = set(PostRecord.model_fields.keys())
-    written = set(columns)
-    unknown = written - schema_fields
-    if unknown:
-        raise ValueError(f"normalizer wrote columns absent from PostRecord: {sorted(unknown)}")
-    missing = schema_fields - written - set(OPTIONAL_UNWRITTEN_FIELDS)
-    if missing:
-        raise ValueError(f"PostRecord fields missing from the normalized output: {sorted(missing)}")
-
-
 def assert_dataset_guardrails(df: pd.DataFrame, expected_raw_valid_row_count: int) -> None:
-    """Fails the run when demo rows or row-count drift sneak into the dataset."""
-    assert (df["source"] == SOURCE_ID).all(), "non-smpd_real source rows present"
-    assert not df["user_id"].isin(DEMO_USER_IDS).any(), "demo user rows present in training dataset"
-    assert len(df) == expected_raw_valid_row_count, (
-        f"row count drift: {len(df)} != {expected_raw_valid_row_count} valid raw rows"
+    """Fails the run when demo rows, foreign sources or row-count drift appear.
+
+    The SMPD path pins the allowed source to its own id, so a mixed-source frame
+    is a bug here even though the shared contract knows about both sources.
+    """
+    _assert_dataset_guardrails(
+        df,
+        expected_raw_valid_row_count=expected_raw_valid_row_count,
+        allowed_sources=frozenset({SOURCE_ID}),
     )
-    assert df["post_id"].is_unique, "duplicate post_id rows present"
 
 
 def build_quality_report(
