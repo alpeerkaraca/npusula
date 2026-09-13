@@ -65,11 +65,15 @@ services:
       GEMMA_API_URL: ${GEMMA_API_URL:-http://ollama:11434}
       GEMMA_MODEL_NAME: ${GEMMA_MODEL_NAME:-google/gemma-4-E4B-it}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Set to 1 for an offline demo once ./models is populated.
+      HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-0}
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
       - ./data:/app/data
       - ./artifacts:/app/artifacts
+      # CLIP weights for uploaded-media analysis (never baked into the image).
+      - ./models:/app/models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
       interval: 30s
@@ -91,6 +95,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./artifacts:/app/artifacts
+      - ./models:/app/models
     entrypoint: ["/bin/bash", "-c"]
     command: ["python scripts/02_normalize_smp.py && python scripts/07_index_qdrant.py && python scripts/05_train_lgbm.py"]
 

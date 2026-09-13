@@ -1,0 +1,2 @@
+# CLIP weights are bind-mounted here (see scripts/download_clip_model.py).
+# Contents are gitignored; this file only keeps the directory in the repo.

@@ -12,6 +12,9 @@ etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 - `GET /api/recommend/quick/{user_id}` — kullanıcının aktif konusuna göre
   hızlı ilk-3 öneri
 - `GET /api/profile/{user_id}` — beyan edilen vs davranışsal profil + drift
+- `POST /api/media/analyze` — yüklenen fotoğraf/videoyu CLIP ile analiz eder
+  (konu, kanonik kategori, etiketler); dönen `media_id` advisor isteğine
+  eklenince görsel kanıt öneriye girer
 - Tüm advisor istekleri içerik güvenliği guardrail'inden geçer
   (lexicon + hafif ML + LLM hakem; fail-open eşikler)
 
@@ -26,6 +29,7 @@ etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 | Vektör arama | `backend/services/retrieval.py` + Qdrant | benzer postlar + etiket ağırlıklandırma (benzerlik eşikli) |
 | Konu/kategori | `backend/services/profile.py`, `backend/services/canonical_taxonomy.py` | char n-gram TF-IDF + kelime-sınırı eşleme; belirsizde Gemma yargıcı |
 | Guardrail | `backend/services/moderation.py`, `moderation_data.py` | lexicon + TF-IDF/LogReg + Gemma hakem |
+| Medya analizi | `backend/services/media_analysis.py`, `models/` | CLIP ViT-B/32 zero-shot: konu, kanonik kategori, etiketler (video: 8 kare ortalaması) |
 | LLM | `backend/services/gemma_advisor.py` | Ollama üzerinden Gemma 4 (konu, açıklama, hakemlik) |
 
 ## Veri durumu (önemli)
@@ -61,6 +65,49 @@ etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 - Cold start (geçmişi olmayan hesap) modelin bilinen en zayıf grubudur
   (MAE ~1.94); bu grupta kazanç, veri/sinyal eksikliğinden kapalı bir kapıdır
   (bkz. deneysel sonuçlar).
+- Medya analizi yalnızca **yüklenen dosya** üzerinde çalışır; korpustaki
+  görsellerle karşılaştırma yapılmaz (veri paketinde görsel dosyası yok).
+  Etiketler küratörlü bir bankadan gelir ve yalnızca görsel olarak ayırt
+  edilebilir kavramları içerir (#kahve, #fitness); finans veya girişimcilik
+  gibi soyut konular görselden çıkarılmaz, Gemma yargıcına bırakılır.
+
+## Medya analizi (fotoğraf / video)
+
+`POST /api/media/analyze` (multipart `file`) yüklenen dosyayı CLIP ViT-B/32 ile
+analiz eder ve bir `media_id` döner; bu id `POST /api/recommend/advisor`
+gövdesine eklendiğinde görsel kanıt öneriye karışır.
+
+| Adım | Davranış |
+|---|---|
+| Doğrulama | Görsel: jpeg/png/webp ≤ 10 MB · Video: mp4/mov/webm ≤ 50 MB ve ≤ 60 sn |
+| Görsel | RGB → CLIP → L2 normalleştirilmiş 512-D vektör |
+| Video | 8 eşit dilimin **merkezinden** kare (ilk/son siyah kare sorunu yapısal olarak oluşmaz) → embeddinglerin ortalaması → yeniden normalleştirme |
+| Çıktı | konu, kanonik kategori (11), etiketler (≤3), güven ve marj |
+| Konu merdiveni | Güvenli metin → güvenli görsel → Gemma yargıcı → kullanıcı profili |
+| Kategori kuralı | Yalnızca metin hiçbir kelimeyle eşleşmediyse (güven 0.30) görsel kategorisi geçersiz kılar |
+| Etiketler | Görsel etiketleri listenin başına geçer; mevcut 3'lük sınır korunur |
+
+Ölçülen süreler (CPU): görsel ~0.06 sn, 8 kareli video ~0.5 sn, model yükleme
+~7 sn (açılışta bir kez).
+
+**Eşik altındaysa "belirsiz" denir:** `topic` / `canonical_category` `null`
+döner ve karar bir üst katmana bırakılır — argmax'ın sessizce ilk sınıfı
+seçmesi HIKAYE.md Bölüm 9'da kayıtlı bir hataydı.
+
+**Model feature sözleşmesi değişmez:** SMPD paketi medya dosyası dağıtmadığı
+için (`flickr_smpd_dataset.md`) görsel feature'ı eğitim korpusuna eklenemez;
+36 kolonluk sözleşme ve `artifacts/lgbm_popularity.txt` aynı kalır, yeniden
+eğitim gerekmez. Görsel analizi mevcut girdileri besler: kategori kolonları
+(doğrudan uygulanır) ve etiketler.
+
+**Ağırlıklar yoksa:** `/api/media/analyze` 503 döner, `/api/health` içinde
+`media_analyzer_ready: false` görünür; advisor metin-only çalışmaya devam eder
+— yani demo medyaya bağımlı değildir.
+
+**Not (GPU):** CLIP varsayılan olarak CPU'da koşar. `MEDIA_DEVICE=auto`
+DirectML'i dener, ancak bu makinede torch-directml bu modeli çalıştıramıyor
+(`Cannot set version_counter for inference tensor`) ve CPU'ya düşer; CPU
+süreleri demo için fazlasıyla yeterlidir.
 
 ## Çalıştırma
 
@@ -95,6 +142,7 @@ python scripts/download_dataset.py    # ham veri (yalnız ilk kez)
 python scripts/02_normalize_smp.py
 python scripts/07_index_qdrant.py     # Qdrant'a yazar -> QDRANT_HOST'u host'a çevirin
 python scripts/05_train_lgbm.py
+python scripts/download_clip_model.py # medya analizi ağırlıkları (~600 MB, bir kez)
 
 # B) Ya da tools profiliyle container içinde (Qdrant'a compose ağından bağlanır)
 docker compose --profile tools run --rm trainer
@@ -131,6 +179,12 @@ python scripts/sync_artifacts.py upload     # güncel artifacts/ + parquet yükl
 | `GEMMA_API_URL` | `http://ollama:11434` | LLM uç noktası |
 | `GEMMA_MODEL_NAME` | `google/gemma-4-E4B-it` | Ollama model adı |
 | `LOG_LEVEL` | INFO | Uygulama log seviyesi |
+| `CLIP_MODEL_NAME` | `openai/clip-vit-base-patch32` | Medya analizi modeli |
+| `MEDIA_CACHE_DIR` | `./models/hf` | Ağırlık önbelleği (bind-mount edilir) |
+| `MEDIA_DEVICE` | `cpu` | `cpu` \| `auto` \| `cuda` \| `directml` (bkz. aşağıdaki not) |
+| `MAX_IMAGE_MB` / `MAX_VIDEO_MB` | 10 / 50 | Yükleme boyut sınırları |
+| `MAX_VIDEO_SECONDS` | 60 | Video süre sınırı |
+| `HF_HUB_OFFLINE` | `0` | Çevrimdışı demo için `1` |
 
 **Notlar**
 

@@ -1,7 +1,8 @@
 # Production image for the EnPusula API.
-# Dependencies are installed from the uv lockfile; the CPU-only PyTorch build
-# is added separately because the Windows DirectML variant cannot install on
-# Linux (the device manager degrades to CPU when DirectML is unavailable).
+# Dependencies are installed from the uv lockfile. torch resolves from the
+# CPU wheel index declared in pyproject.toml (the default PyPI wheel is the
+# CUDA build), and the Windows DirectML plugin is excluded by its platform
+# marker, so the device manager degrades to CPU on Linux as intended.
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -15,10 +16,6 @@ WORKDIR /app
 # Dependency layer (cached unless pyproject.toml / uv.lock change)
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
-
-# CPU-only torch: required by the backend import chain on Linux
-RUN uv pip install --python /app/.venv/bin/python \
-    torch --index-url https://download.pytorch.org/whl/cpu
 
 # OpenMP runtime required by LightGBM (not present in debian-slim)
 RUN apt-get update \
