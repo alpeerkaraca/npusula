@@ -1,0 +1,2934 @@
+{
+  "model_kind": "base_potential_lgbm (Layer A, no time features)",
+  "production_variant": "A3",
+  "objective": {
+    "name": "quantile",
+    "alpha": 0.6
+  },
+  "hyperparameters": {
+    "n_estimators": 800,
+    "learning_rate": 0.05,
+    "num_leaves": 127,
+    "min_child_samples": 20,
+    "subsample": 0.85,
+    "colsample_bytree": 0.8,
+    "reg_alpha": 0.0,
+    "reg_lambda": 5.0
+  },
+  "feature_contract": {
+    "production_features": [
+      "primary_cat_code",
+      "primary_subcat_code",
+      "primary_cat_confidence",
+      "has_secondary_cat",
+      "context_source_code",
+      "aligned_tag_count",
+      "mismatched_tag_count",
+      "unknown_tag_count",
+      "generic_tag_count",
+      "nsfw_tag_count",
+      "semantic_tag_ratio",
+      "unknown_tag_ratio",
+      "tag_category_entropy",
+      "text_svd_0",
+      "text_svd_1",
+      "text_svd_2",
+      "text_svd_3",
+      "text_svd_4",
+      "text_svd_5",
+      "text_svd_6",
+      "text_svd_7",
+      "history_depth_code",
+      "timezone_basis_fallback",
+      "media_type_code"
+    ],
+    "a2_features": [
+      "primary_cat_code",
+      "primary_subcat_code",
+      "primary_cat_confidence",
+      "has_secondary_cat",
+      "context_source_code",
+      "aligned_tag_count",
+      "mismatched_tag_count",
+      "unknown_tag_count",
+      "generic_tag_count",
+      "nsfw_tag_count",
+      "semantic_tag_ratio",
+      "unknown_tag_ratio",
+      "tag_category_entropy",
+      "text_svd_0",
+      "text_svd_1",
+      "text_svd_2",
+      "text_svd_3",
+      "text_svd_4",
+      "text_svd_5",
+      "text_svd_6",
+      "text_svd_7",
+      "history_depth_code",
+      "timezone_basis_fallback"
+    ],
+    "a3_features": [
+      "primary_cat_code",
+      "primary_subcat_code",
+      "primary_cat_confidence",
+      "has_secondary_cat",
+      "context_source_code",
+      "aligned_tag_count",
+      "mismatched_tag_count",
+      "unknown_tag_count",
+      "generic_tag_count",
+      "nsfw_tag_count",
+      "semantic_tag_ratio",
+      "unknown_tag_ratio",
+      "tag_category_entropy",
+      "text_svd_0",
+      "text_svd_1",
+      "text_svd_2",
+      "text_svd_3",
+      "text_svd_4",
+      "text_svd_5",
+      "text_svd_6",
+      "text_svd_7",
+      "history_depth_code",
+      "timezone_basis_fallback",
+      "media_type_code"
+    ],
+    "time_features_present": false,
+    "note": "hour/weekday/month/cyclical encodings/cat_x_hour/cat_x_weekday/history_x_hour are absent from the model; account_baseline is the residual offset, not an input."
+  },
+  "split": {
+    "strategy": "chronological_70_15_15",
+    "train_rows": 213929,
+    "validation_rows": 45842,
+    "test_rows": 45842,
+    "train_end_utc": "2015-12-27 05:53:31+00:00",
+    "validation_end_utc": "2016-01-31 06:50:47+00:00",
+    "test_start_utc": "2016-01-31 06:50:51+00:00"
+  },
+  "global_train_mean": 6.419046365850352,
+  "category_train_medians": {
+    "0": 6.67,
+    "1": 5.88,
+    "2": 7.24,
+    "3": 6.19,
+    "4": 6.09,
+    "5": 6.15,
+    "6": 8.22,
+    "7": 4.64,
+    "8": 6.92,
+    "9": 6.615,
+    "10": 6.04
+  },
+  "ablations": {
+    "A0": {
+      "description": "category/global baseline only",
+      "feature_count": 0,
+      "target": "category_baseline",
+      "validation": {
+        "count": 45842,
+        "mae": 1.903264,
+        "median_ae": 1.61,
+        "spearman": 0.083046,
+        "pinball_loss": 0.95517,
+        "pinball_alpha": 0.6,
+        "prediction_bias": -0.035384,
+        "calibration": {
+          "prediction_mean": 6.276602,
+          "target_mean": 6.311986,
+          "bias": -0.035384
+        },
+        "tail": {
+          "percentile": 80.0,
+          "threshold": 8.37,
+          "count": 9184,
+          "tail_mae": 3.537209,
+          "tail_bias": -3.537209
+        }
+      },
+      "subgroups": {
+        "history_depth:cold_start": {
+          "count": 5313,
+          "mae": 2.178455,
+          "median_ae": 1.9,
+          "spearman": 0.07046,
+          "pinball_loss": 1.164889,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.756618,
+          "calibration": {
+            "prediction_mean": 6.271007,
+            "target_mean": 7.027625,
+            "bias": -0.756618
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.27,
+            "count": 1065,
+            "tail_mae": 4.300085,
+            "tail_bias": -4.300085
+          }
+        },
+        "history_depth:very_low_history": {
+          "count": 9086,
+          "mae": 2.153914,
+          "median_ae": 1.85,
+          "spearman": 0.065053,
+          "pinball_loss": 1.138045,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.610884,
+          "calibration": {
+            "prediction_mean": 6.265484,
+            "target_mean": 6.876368,
+            "bias": -0.610884
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.16,
+            "count": 1825,
+            "tail_mae": 4.246441,
+            "tail_bias": -4.246441
+          }
+        },
+        "history_depth:low_history": {
+          "count": 9396,
+          "mae": 1.92347,
+          "median_ae": 1.61,
+          "spearman": 0.084093,
+          "pinball_loss": 0.969994,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.08259,
+          "calibration": {
+            "prediction_mean": 6.242909,
+            "target_mean": 6.325499,
+            "bias": -0.08259
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.35,
+            "count": 1887,
+            "tail_mae": 3.676301,
+            "tail_bias": -3.676301
+          }
+        },
+        "history_depth:medium_history": {
+          "count": 11999,
+          "mae": 1.77957,
+          "median_ae": 1.49,
+          "spearman": 0.043247,
+          "pinball_loss": 0.865485,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.242998,
+          "calibration": {
+            "prediction_mean": 6.257674,
+            "target_mean": 6.014676,
+            "bias": 0.242998
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.86,
+            "count": 2422,
+            "tail_mae": 3.036301,
+            "tail_bias": -3.036301
+          }
+        },
+        "history_depth:high_history": {
+          "count": 10048,
+          "mae": 1.659918,
+          "median_ae": 1.46,
+          "spearman": 0.211785,
+          "pinball_loss": 0.77215,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.578087,
+          "calibration": {
+            "prediction_mean": 6.343723,
+            "target_mean": 5.765636,
+            "bias": 0.578087
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.43,
+            "count": 2014,
+            "tail_mae": 2.312552,
+            "tail_bias": -2.312552
+          }
+        },
+        "timezone:source_offset": {
+          "count": 29870,
+          "mae": 1.903858,
+          "median_ae": 1.65,
+          "spearman": 0.102982,
+          "pinball_loss": 0.968338,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.164092,
+          "calibration": {
+            "prediction_mean": 6.27982,
+            "target_mean": 6.443912,
+            "bias": -0.164092
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.54,
+            "count": 6017,
+            "tail_mae": 3.626664,
+            "tail_bias": -3.626664
+          }
+        },
+        "timezone:utc_fallback": {
+          "count": 15972,
+          "mae": 1.902153,
+          "median_ae": 1.54,
+          "spearman": 0.04075,
+          "pinball_loss": 0.930544,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.205319,
+          "calibration": {
+            "prediction_mean": 6.270583,
+            "target_mean": 6.065264,
+            "bias": 0.205319
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.95,
+            "count": 3214,
+            "tail_mae": 3.307474,
+            "tail_bias": -3.307474
+          }
+        },
+        "media:photo": {
+          "count": 45708,
+          "mae": 1.904171,
+          "median_ae": 1.62,
+          "spearman": 0.083135,
+          "pinball_loss": 0.955286,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.032001,
+          "calibration": {
+            "prediction_mean": 6.276833,
+            "target_mean": 6.308834,
+            "bias": -0.032001
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.37,
+            "count": 9151,
+            "tail_mae": 3.536747,
+            "tail_bias": -3.536747
+          }
+        },
+        "media:video": {
+          "count": 134,
+          "mae": 1.593806,
+          "median_ae": 1.14,
+          "spearman": 0.246508,
+          "pinball_loss": 0.915836,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -1.189328,
+          "calibration": {
+            "prediction_mean": 6.197687,
+            "target_mean": 7.387015,
+            "bias": -1.189328
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.7,
+            "count": 29,
+            "tail_mae": 3.95931,
+            "tail_bias": -3.95931
+          }
+        },
+        "category:technology": {
+          "count": 72,
+          "mae": 1.420139,
+          "median_ae": 0.51,
+          "spearman": 0.0,
+          "pinball_loss": 0.621333,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.887361,
+          "calibration": {
+            "prediction_mean": 6.67,
+            "target_mean": 5.782639,
+            "bias": 0.887361
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 6.75,
+            "count": 16,
+            "tail_mae": 1.16875,
+            "tail_bias": -1.16875
+          }
+        },
+        "category:automotive": {
+          "count": 858,
+          "mae": 2.380653,
+          "median_ae": 2.21,
+          "spearman": 0.0,
+          "pinball_loss": 1.308741,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -1.184149,
+          "calibration": {
+            "prediction_mean": 5.88,
+            "target_mean": 7.064149,
+            "bias": -1.184149
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.45,
+            "count": 174,
+            "tail_mae": 4.123506,
+            "tail_bias": -4.123506
+          }
+        },
+        "category:fashion_beauty": {
+          "count": 8024,
+          "mae": 2.002527,
+          "median_ae": 1.72,
+          "spearman": 0.0,
+          "pinball_loss": 0.963458,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.378056,
+          "calibration": {
+            "prediction_mean": 7.24,
+            "target_mean": 6.861944,
+            "bias": 0.378056
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.8,
+            "count": 1609,
+            "tail_mae": 3.299385,
+            "tail_bias": -3.299385
+          }
+        },
+        "category:travel_tourism": {
+          "count": 7197,
+          "mae": 1.908431,
+          "median_ae": 1.61,
+          "spearman": 0.0,
+          "pinball_loss": 0.970364,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.161484,
+          "calibration": {
+            "prediction_mean": 6.19,
+            "target_mean": 6.351484,
+            "bias": -0.161484
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.42,
+            "count": 1444,
+            "tail_mae": 3.672985,
+            "tail_bias": -3.672985
+          }
+        },
+        "category:food_dining": {
+          "count": 2605,
+          "mae": 1.779716,
+          "median_ae": 1.52,
+          "spearman": 0.0,
+          "pinball_loss": 0.908617,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.187593,
+          "calibration": {
+            "prediction_mean": 6.09,
+            "target_mean": 6.277593,
+            "bias": -0.187593
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.182,
+            "count": 521,
+            "tail_mae": 3.550998,
+            "tail_bias": -3.550998
+          }
+        },
+        "category:entertainment_gaming": {
+          "count": 2439,
+          "mae": 1.725937,
+          "median_ae": 1.34,
+          "spearman": 0.0,
+          "pinball_loss": 0.855158,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.078106,
+          "calibration": {
+            "prediction_mean": 6.15,
+            "target_mean": 6.071894,
+            "bias": 0.078106
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.58,
+            "count": 490,
+            "tail_mae": 3.599327,
+            "tail_bias": -3.599327
+          }
+        },
+        "category:sports_fitness": {
+          "count": 41,
+          "mae": 1.199756,
+          "median_ae": 1.0,
+          "spearman": 0.0,
+          "pinball_loss": 0.661854,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.619756,
+          "calibration": {
+            "prediction_mean": 8.22,
+            "target_mean": 8.839756,
+            "bias": -0.619756
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.34,
+            "count": 9,
+            "tail_mae": 1.45,
+            "tail_bias": -1.45
+          }
+        },
+        "category:nature_wildlife": {
+          "count": 355,
+          "mae": 1.752338,
+          "median_ae": 0.79,
+          "spearman": 0.0,
+          "pinball_loss": 1.029532,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -1.533634,
+          "calibration": {
+            "prediction_mean": 4.64,
+            "target_mean": 6.173634,
+            "bias": -1.533634
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.772,
+            "count": 71,
+            "tail_mae": 5.248028,
+            "tail_bias": -5.248028
+          }
+        },
+        "category:art_design": {
+          "count": 265,
+          "mae": 2.066906,
+          "median_ae": 1.92,
+          "spearman": 0.0,
+          "pinball_loss": 0.958091,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.753623,
+          "calibration": {
+            "prediction_mean": 6.92,
+            "target_mean": 6.166377,
+            "bias": 0.753623
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.792,
+            "count": 53,
+            "tail_mae": 3.041321,
+            "tail_bias": -3.041321
+          }
+        },
+        "category:business_economy": {
+          "count": 10,
+          "mae": 2.356,
+          "median_ae": 2.525,
+          "spearman": 0.0,
+          "pinball_loss": 1.0217,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 1.563,
+          "calibration": {
+            "prediction_mean": 6.615,
+            "target_mean": 5.052,
+            "bias": 1.563
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 5.798,
+            "count": 2,
+            "tail_mae": 2.195,
+            "tail_bias": -1.77
+          }
+        },
+        "category:social_lifestyle": {
+          "count": 23976,
+          "mae": 1.885762,
+          "median_ae": 1.58,
+          "spearman": 0.0,
+          "pinball_loss": 0.950758,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.07877,
+          "calibration": {
+            "prediction_mean": 6.04,
+            "target_mean": 6.11877,
+            "bias": -0.07877
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.16,
+            "count": 4820,
+            "tail_mae": 3.575898,
+            "tail_bias": -3.575898
+          }
+        }
+      }
+    },
+    "A1": {
+      "description": "account offset only (shrunk user history prior)",
+      "feature_count": 1,
+      "target": "account_offset",
+      "validation": {
+        "count": 45842,
+        "mae": 1.120847,
+        "median_ae": 0.751766,
+        "spearman": 0.802352,
+        "pinball_loss": 0.574813,
+        "pinball_alpha": 0.6,
+        "prediction_bias": -0.143889,
+        "calibration": {
+          "prediction_mean": 6.168096,
+          "target_mean": 6.311986,
+          "bias": -0.143889
+        },
+        "tail": {
+          "percentile": 80.0,
+          "threshold": 8.37,
+          "count": 9184,
+          "tail_mae": 2.191739,
+          "tail_bias": -2.142591
+        }
+      },
+      "subgroups": {
+        "history_depth:cold_start": {
+          "count": 5313,
+          "mae": 2.178455,
+          "median_ae": 1.9,
+          "spearman": 0.07046,
+          "pinball_loss": 1.164889,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.756618,
+          "calibration": {
+            "prediction_mean": 6.271007,
+            "target_mean": 7.027625,
+            "bias": -0.756618
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.27,
+            "count": 1065,
+            "tail_mae": 4.300085,
+            "tail_bias": -4.300085
+          }
+        },
+        "history_depth:very_low_history": {
+          "count": 9086,
+          "mae": 1.760682,
+          "median_ae": 1.511988,
+          "spearman": 0.892187,
+          "pinball_loss": 0.917668,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.373272,
+          "calibration": {
+            "prediction_mean": 6.503096,
+            "target_mean": 6.876368,
+            "bias": -0.373272
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.16,
+            "count": 1825,
+            "tail_mae": 3.424103,
+            "tail_bias": -3.424103
+          }
+        },
+        "history_depth:low_history": {
+          "count": 9396,
+          "mae": 1.049079,
+          "median_ae": 0.855474,
+          "spearman": 0.940506,
+          "pinball_loss": 0.519594,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.049454,
+          "calibration": {
+            "prediction_mean": 6.374954,
+            "target_mean": 6.325499,
+            "bias": 0.049454
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.35,
+            "count": 1887,
+            "tail_mae": 1.84479,
+            "tail_bias": -1.84454
+          }
+        },
+        "history_depth:medium_history": {
+          "count": 11999,
+          "mae": 0.61093,
+          "median_ae": 0.431512,
+          "spearman": 0.929877,
+          "pinball_loss": 0.297911,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.075538,
+          "calibration": {
+            "prediction_mean": 6.090214,
+            "target_mean": 6.014676,
+            "bias": 0.075538
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.86,
+            "count": 2422,
+            "tail_mae": 0.826733,
+            "tail_bias": -0.721081
+          }
+        },
+        "history_depth:high_history": {
+          "count": 10048,
+          "mae": 0.659086,
+          "median_ae": 0.465675,
+          "spearman": 0.874739,
+          "pinball_loss": 0.335074,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.055311,
+          "calibration": {
+            "prediction_mean": 5.710325,
+            "target_mean": 5.765636,
+            "bias": -0.055311
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.43,
+            "count": 2014,
+            "tail_mae": 0.898553,
+            "tail_bias": -0.616033
+          }
+        },
+        "timezone:source_offset": {
+          "count": 29870,
+          "mae": 1.108501,
+          "median_ae": 0.742668,
+          "spearman": 0.811513,
+          "pinball_loss": 0.576586,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.223352,
+          "calibration": {
+            "prediction_mean": 6.220561,
+            "target_mean": 6.443912,
+            "bias": -0.223352
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.54,
+            "count": 6017,
+            "tail_mae": 2.209644,
+            "tail_bias": -2.156475
+          }
+        },
+        "timezone:utc_fallback": {
+          "count": 15972,
+          "mae": 1.143936,
+          "median_ae": 0.768898,
+          "spearman": 0.782903,
+          "pinball_loss": 0.571496,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.004717,
+          "calibration": {
+            "prediction_mean": 6.069981,
+            "target_mean": 6.065264,
+            "bias": 0.004717
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.95,
+            "count": 3214,
+            "tail_mae": 2.128782,
+            "tail_bias": -2.082446
+          }
+        },
+        "media:photo": {
+          "count": 45708,
+          "mae": 1.120366,
+          "median_ae": 0.75123,
+          "spearman": 0.802645,
+          "pinball_loss": 0.574303,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.141204,
+          "calibration": {
+            "prediction_mean": 6.16763,
+            "target_mean": 6.308834,
+            "bias": -0.141204
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.37,
+            "count": 9151,
+            "tail_mae": 2.190353,
+            "tail_bias": -2.141028
+          }
+        },
+        "media:video": {
+          "count": 134,
+          "mae": 1.285083,
+          "median_ae": 0.925038,
+          "spearman": 0.681607,
+          "pinball_loss": 0.74853,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -1.059882,
+          "calibration": {
+            "prediction_mean": 6.327133,
+            "target_mean": 7.387015,
+            "bias": -1.059882
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.7,
+            "count": 29,
+            "tail_mae": 2.727764,
+            "tail_bias": -2.727764
+          }
+        },
+        "category:technology": {
+          "count": 72,
+          "mae": 0.552573,
+          "median_ae": 0.209937,
+          "spearman": 0.72333,
+          "pinball_loss": 0.278552,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.022655,
+          "calibration": {
+            "prediction_mean": 5.759984,
+            "target_mean": 5.782639,
+            "bias": -0.022655
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 6.75,
+            "count": 16,
+            "tail_mae": 1.139969,
+            "tail_bias": -1.139969
+          }
+        },
+        "category:automotive": {
+          "count": 858,
+          "mae": 1.155968,
+          "median_ae": 0.730548,
+          "spearman": 0.800131,
+          "pinball_loss": 0.616592,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.386082,
+          "calibration": {
+            "prediction_mean": 6.678067,
+            "target_mean": 7.064149,
+            "bias": -0.386082
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.45,
+            "count": 174,
+            "tail_mae": 1.45581,
+            "tail_bias": -1.452158
+          }
+        },
+        "category:fashion_beauty": {
+          "count": 8024,
+          "mae": 1.152593,
+          "median_ae": 0.763971,
+          "spearman": 0.789227,
+          "pinball_loss": 0.604369,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.28072,
+          "calibration": {
+            "prediction_mean": 6.581224,
+            "target_mean": 6.861944,
+            "bias": -0.28072
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.8,
+            "count": 1609,
+            "tail_mae": 2.244022,
+            "tail_bias": -2.094532
+          }
+        },
+        "category:travel_tourism": {
+          "count": 7197,
+          "mae": 1.069632,
+          "median_ae": 0.709433,
+          "spearman": 0.826802,
+          "pinball_loss": 0.548252,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.134364,
+          "calibration": {
+            "prediction_mean": 6.21712,
+            "target_mean": 6.351484,
+            "bias": -0.134364
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.42,
+            "count": 1444,
+            "tail_mae": 2.038302,
+            "tail_bias": -2.020565
+          }
+        },
+        "category:food_dining": {
+          "count": 2605,
+          "mae": 1.182256,
+          "median_ae": 0.845076,
+          "spearman": 0.730227,
+          "pinball_loss": 0.590942,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.001853,
+          "calibration": {
+            "prediction_mean": 6.279446,
+            "target_mean": 6.277593,
+            "bias": 0.001853
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.182,
+            "count": 521,
+            "tail_mae": 2.166441,
+            "tail_bias": -2.017375
+          }
+        },
+        "category:entertainment_gaming": {
+          "count": 2439,
+          "mae": 0.959174,
+          "median_ae": 0.621063,
+          "spearman": 0.815829,
+          "pinball_loss": 0.492533,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.129455,
+          "calibration": {
+            "prediction_mean": 5.942439,
+            "target_mean": 6.071894,
+            "bias": -0.129455
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.58,
+            "count": 490,
+            "tail_mae": 2.028584,
+            "tail_bias": -1.951834
+          }
+        },
+        "category:sports_fitness": {
+          "count": 41,
+          "mae": 0.393158,
+          "median_ae": 0.190149,
+          "spearman": 0.190049,
+          "pinball_loss": 0.214848,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.182687,
+          "calibration": {
+            "prediction_mean": 8.657069,
+            "target_mean": 8.839756,
+            "bias": -0.182687
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.34,
+            "count": 9,
+            "tail_mae": 0.642564,
+            "tail_bias": -0.642564
+          }
+        },
+        "category:nature_wildlife": {
+          "count": 355,
+          "mae": 1.006591,
+          "median_ae": 0.475112,
+          "spearman": 0.443866,
+          "pinball_loss": 0.534243,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.309473,
+          "calibration": {
+            "prediction_mean": 5.86416,
+            "target_mean": 6.173634,
+            "bias": -0.309473
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.772,
+            "count": 71,
+            "tail_mae": 2.454488,
+            "tail_bias": -2.454488
+          }
+        },
+        "category:art_design": {
+          "count": 265,
+          "mae": 0.702577,
+          "median_ae": 0.398224,
+          "spearman": 0.862257,
+          "pinball_loss": 0.349754,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.015348,
+          "calibration": {
+            "prediction_mean": 6.181726,
+            "target_mean": 6.166377,
+            "bias": 0.015348
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.792,
+            "count": 53,
+            "tail_mae": 1.154661,
+            "tail_bias": -0.881496
+          }
+        },
+        "category:business_economy": {
+          "count": 10,
+          "mae": 1.633608,
+          "median_ae": 1.59387,
+          "spearman": 0.696202,
+          "pinball_loss": 0.735148,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.816556,
+          "calibration": {
+            "prediction_mean": 5.868556,
+            "target_mean": 5.052,
+            "bias": 0.816556
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 5.798,
+            "count": 2,
+            "tail_mae": 1.969147,
+            "tail_bias": -1.544147
+          }
+        },
+        "category:social_lifestyle": {
+          "count": 23976,
+          "mae": 1.143166,
+          "median_ae": 0.774502,
+          "spearman": 0.79788,
+          "pinball_loss": 0.582543,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.109599,
+          "calibration": {
+            "prediction_mean": 6.009171,
+            "target_mean": 6.11877,
+            "bias": -0.109599
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.16,
+            "count": 4820,
+            "tail_mae": 2.258668,
+            "tail_bias": -2.235144
+          }
+        }
+      }
+    },
+    "A2": {
+      "description": "account offset + content (category/tag/text/history/context)",
+      "feature_count": 23,
+      "target": "residual",
+      "validation": {
+        "count": 45842,
+        "mae": 1.042188,
+        "median_ae": 0.710281,
+        "spearman": 0.800357,
+        "pinball_loss": 0.495251,
+        "pinball_alpha": 0.6,
+        "prediction_bias": 0.258428,
+        "calibration": {
+          "prediction_mean": 6.570413,
+          "target_mean": 6.311986,
+          "bias": 0.258428
+        },
+        "tail": {
+          "percentile": 80.0,
+          "threshold": 8.37,
+          "count": 9184,
+          "tail_mae": 1.376374,
+          "tail_bias": -1.187167
+        }
+      },
+      "subgroups": {
+        "history_depth:cold_start": {
+          "count": 5313,
+          "mae": 1.969768,
+          "median_ae": 1.685505,
+          "spearman": 0.393801,
+          "pinball_loss": 0.917198,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.67686,
+          "calibration": {
+            "prediction_mean": 7.704485,
+            "target_mean": 7.027625,
+            "bias": 0.67686
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.27,
+            "count": 1065,
+            "tail_mae": 2.328319,
+            "tail_bias": -2.298934
+          }
+        },
+        "history_depth:very_low_history": {
+          "count": 9086,
+          "mae": 1.583882,
+          "median_ae": 1.387887,
+          "spearman": 0.689105,
+          "pinball_loss": 0.752077,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.398644,
+          "calibration": {
+            "prediction_mean": 7.275012,
+            "target_mean": 6.876368,
+            "bias": 0.398644
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.16,
+            "count": 1825,
+            "tail_mae": 2.069959,
+            "tail_bias": -2.011272
+          }
+        },
+        "history_depth:low_history": {
+          "count": 9396,
+          "mae": 0.961081,
+          "median_ae": 0.792591,
+          "spearman": 0.900868,
+          "pinball_loss": 0.456106,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.244346,
+          "calibration": {
+            "prediction_mean": 6.569845,
+            "target_mean": 6.325499,
+            "bias": 0.244346
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.35,
+            "count": 1887,
+            "tail_mae": 1.309013,
+            "tail_bias": -1.232849
+          }
+        },
+        "history_depth:medium_history": {
+          "count": 11999,
+          "mae": 0.608436,
+          "median_ae": 0.425161,
+          "spearman": 0.926232,
+          "pinball_loss": 0.289433,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.147847,
+          "calibration": {
+            "prediction_mean": 6.162523,
+            "target_mean": 6.014676,
+            "bias": 0.147847
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.86,
+            "count": 2422,
+            "tail_mae": 0.71889,
+            "tail_bias": -0.422537
+          }
+        },
+        "history_depth:high_history": {
+          "count": 10048,
+          "mae": 0.655701,
+          "median_ae": 0.442863,
+          "spearman": 0.88227,
+          "pinball_loss": 0.32229,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.055604,
+          "calibration": {
+            "prediction_mean": 5.82124,
+            "target_mean": 5.765636,
+            "bias": 0.055604
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.43,
+            "count": 2014,
+            "tail_mae": 0.888802,
+            "tail_bias": -0.244212
+          }
+        },
+        "timezone:source_offset": {
+          "count": 29870,
+          "mae": 1.02518,
+          "median_ae": 0.705129,
+          "spearman": 0.811838,
+          "pinball_loss": 0.489823,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.227674,
+          "calibration": {
+            "prediction_mean": 6.671586,
+            "target_mean": 6.443912,
+            "bias": 0.227674
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.54,
+            "count": 6017,
+            "tail_mae": 1.343041,
+            "tail_bias": -1.154125
+          }
+        },
+        "timezone:utc_fallback": {
+          "count": 15972,
+          "mae": 1.073993,
+          "median_ae": 0.720644,
+          "spearman": 0.773407,
+          "pinball_loss": 0.505402,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.315942,
+          "calibration": {
+            "prediction_mean": 6.381206,
+            "target_mean": 6.065264,
+            "bias": 0.315942
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.95,
+            "count": 3214,
+            "tail_mae": 1.444332,
+            "tail_bias": -1.259539
+          }
+        },
+        "media:photo": {
+          "count": 45708,
+          "mae": 1.042099,
+          "median_ae": 0.709075,
+          "spearman": 0.800599,
+          "pinball_loss": 0.494992,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.260572,
+          "calibration": {
+            "prediction_mean": 6.569406,
+            "target_mean": 6.308834,
+            "bias": 0.260572
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.37,
+            "count": 9151,
+            "tail_mae": 1.375941,
+            "tail_bias": -1.186456
+          }
+        },
+        "media:video": {
+          "count": 134,
+          "mae": 1.072397,
+          "median_ae": 0.833211,
+          "spearman": 0.727619,
+          "pinball_loss": 0.583498,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.472992,
+          "calibration": {
+            "prediction_mean": 6.914023,
+            "target_mean": 7.387015,
+            "bias": -0.472992
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.7,
+            "count": 29,
+            "tail_mae": 1.603672,
+            "tail_bias": -1.525679
+          }
+        },
+        "category:technology": {
+          "count": 72,
+          "mae": 0.495506,
+          "median_ae": 0.207293,
+          "spearman": 0.819995,
+          "pinball_loss": 0.224058,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.236946,
+          "calibration": {
+            "prediction_mean": 6.019585,
+            "target_mean": 5.782639,
+            "bias": 0.236946
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 6.75,
+            "count": 16,
+            "tail_mae": 0.757309,
+            "tail_bias": -0.214766
+          }
+        },
+        "category:automotive": {
+          "count": 858,
+          "mae": 0.958227,
+          "median_ae": 0.551683,
+          "spearman": 0.848084,
+          "pinball_loss": 0.47563,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.034835,
+          "calibration": {
+            "prediction_mean": 7.098984,
+            "target_mean": 7.064149,
+            "bias": 0.034835
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.45,
+            "count": 174,
+            "tail_mae": 0.898017,
+            "tail_bias": -0.835604
+          }
+        },
+        "category:fashion_beauty": {
+          "count": 8024,
+          "mae": 1.090479,
+          "median_ae": 0.777521,
+          "spearman": 0.786452,
+          "pinball_loss": 0.511495,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.337444,
+          "calibration": {
+            "prediction_mean": 7.199389,
+            "target_mean": 6.861944,
+            "bias": 0.337444
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.8,
+            "count": 1609,
+            "tail_mae": 1.232014,
+            "tail_bias": -0.810372
+          }
+        },
+        "category:travel_tourism": {
+          "count": 7197,
+          "mae": 0.991071,
+          "median_ae": 0.662311,
+          "spearman": 0.823812,
+          "pinball_loss": 0.472259,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.232766,
+          "calibration": {
+            "prediction_mean": 6.58425,
+            "target_mean": 6.351484,
+            "bias": 0.232766
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.42,
+            "count": 1444,
+            "tail_mae": 1.332855,
+            "tail_bias": -1.195337
+          }
+        },
+        "category:food_dining": {
+          "count": 2605,
+          "mae": 1.119832,
+          "median_ae": 0.806264,
+          "spearman": 0.739384,
+          "pinball_loss": 0.524881,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.350355,
+          "calibration": {
+            "prediction_mean": 6.627948,
+            "target_mean": 6.277593,
+            "bias": 0.350355
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.182,
+            "count": 521,
+            "tail_mae": 1.542915,
+            "tail_bias": -1.160322
+          }
+        },
+        "category:entertainment_gaming": {
+          "count": 2439,
+          "mae": 0.955926,
+          "median_ae": 0.633192,
+          "spearman": 0.779291,
+          "pinball_loss": 0.464696,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.132672,
+          "calibration": {
+            "prediction_mean": 6.204567,
+            "target_mean": 6.071894,
+            "bias": 0.132672
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.58,
+            "count": 490,
+            "tail_mae": 1.453645,
+            "tail_bias": -1.278437
+          }
+        },
+        "category:sports_fitness": {
+          "count": 41,
+          "mae": 0.466945,
+          "median_ae": 0.443006,
+          "spearman": 0.402492,
+          "pinball_loss": 0.20991,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.235621,
+          "calibration": {
+            "prediction_mean": 9.075377,
+            "target_mean": 8.839756,
+            "bias": 0.235621
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.34,
+            "count": 9,
+            "tail_mae": 0.45563,
+            "tail_bias": -0.116325
+          }
+        },
+        "category:nature_wildlife": {
+          "count": 355,
+          "mae": 0.849124,
+          "median_ae": 0.435549,
+          "spearman": 0.683624,
+          "pinball_loss": 0.440665,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.161034,
+          "calibration": {
+            "prediction_mean": 6.012599,
+            "target_mean": 6.173634,
+            "bias": -0.161034
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.772,
+            "count": 71,
+            "tail_mae": 1.937937,
+            "tail_bias": -1.934953
+          }
+        },
+        "category:art_design": {
+          "count": 265,
+          "mae": 0.723627,
+          "median_ae": 0.513125,
+          "spearman": 0.869726,
+          "pinball_loss": 0.358358,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.034553,
+          "calibration": {
+            "prediction_mean": 6.20093,
+            "target_mean": 6.166377,
+            "bias": 0.034553
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.792,
+            "count": 53,
+            "tail_mae": 1.00444,
+            "tail_bias": -0.204254
+          }
+        },
+        "category:business_economy": {
+          "count": 10,
+          "mae": 2.575592,
+          "median_ae": 2.856858,
+          "spearman": 0.38906,
+          "pinball_loss": 1.095421,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 1.923748,
+          "calibration": {
+            "prediction_mean": 6.975748,
+            "target_mean": 5.052,
+            "bias": 1.923748
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 5.798,
+            "count": 2,
+            "tail_mae": 2.856858,
+            "tail_bias": -0.070731
+          }
+        },
+        "category:social_lifestyle": {
+          "count": 23976,
+          "mae": 1.053079,
+          "median_ae": 0.720284,
+          "spearman": 0.794799,
+          "pinball_loss": 0.500681,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.258587,
+          "calibration": {
+            "prediction_mean": 6.377357,
+            "target_mean": 6.11877,
+            "bias": 0.258587
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.16,
+            "count": 4820,
+            "tail_mae": 1.418144,
+            "tail_bias": -1.286814
+          }
+        }
+      },
+      "best_iteration": 157
+    },
+    "A3": {
+      "description": "A2 + media type",
+      "feature_count": 24,
+      "target": "residual",
+      "validation": {
+        "count": 45842,
+        "mae": 1.037218,
+        "median_ae": 0.70052,
+        "spearman": 0.801723,
+        "pinball_loss": 0.492352,
+        "pinball_alpha": 0.6,
+        "prediction_bias": 0.262574,
+        "calibration": {
+          "prediction_mean": 6.57456,
+          "target_mean": 6.311986,
+          "bias": 0.262574
+        },
+        "tail": {
+          "percentile": 80.0,
+          "threshold": 8.37,
+          "count": 9184,
+          "tail_mae": 1.353492,
+          "tail_bias": -1.150267
+        }
+      },
+      "subgroups": {
+        "history_depth:cold_start": {
+          "count": 5313,
+          "mae": 1.964774,
+          "median_ae": 1.690026,
+          "spearman": 0.398838,
+          "pinball_loss": 0.914753,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.676343,
+          "calibration": {
+            "prediction_mean": 7.703968,
+            "target_mean": 7.027625,
+            "bias": 0.676343
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.27,
+            "count": 1065,
+            "tail_mae": 2.30175,
+            "tail_bias": -2.264857
+          }
+        },
+        "history_depth:very_low_history": {
+          "count": 9086,
+          "mae": 1.574006,
+          "median_ae": 1.360414,
+          "spearman": 0.685619,
+          "pinball_loss": 0.747664,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.393388,
+          "calibration": {
+            "prediction_mean": 7.269756,
+            "target_mean": 6.876368,
+            "bias": 0.393388
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.16,
+            "count": 1825,
+            "tail_mae": 2.047286,
+            "tail_bias": -1.97048
+          }
+        },
+        "history_depth:low_history": {
+          "count": 9396,
+          "mae": 0.950903,
+          "median_ae": 0.780214,
+          "spearman": 0.897505,
+          "pinball_loss": 0.451066,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.243849,
+          "calibration": {
+            "prediction_mean": 6.569349,
+            "target_mean": 6.325499,
+            "bias": 0.243849
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.35,
+            "count": 1887,
+            "tail_mae": 1.268748,
+            "tail_bias": -1.18031
+          }
+        },
+        "history_depth:medium_history": {
+          "count": 11999,
+          "mae": 0.60496,
+          "median_ae": 0.424787,
+          "spearman": 0.926656,
+          "pinball_loss": 0.287049,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.154304,
+          "calibration": {
+            "prediction_mean": 6.16898,
+            "target_mean": 6.014676,
+            "bias": 0.154304
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.86,
+            "count": 2422,
+            "tail_mae": 0.703445,
+            "tail_bias": -0.387766
+          }
+        },
+        "history_depth:high_history": {
+          "count": 10048,
+          "mae": 0.658269,
+          "median_ae": 0.450488,
+          "spearman": 0.885642,
+          "pinball_loss": 0.321904,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.072302,
+          "calibration": {
+            "prediction_mean": 5.837938,
+            "target_mean": 5.765636,
+            "bias": 0.072302
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.43,
+            "count": 2014,
+            "tail_mae": 0.873132,
+            "tail_bias": -0.222178
+          }
+        },
+        "timezone:source_offset": {
+          "count": 29870,
+          "mae": 1.017071,
+          "median_ae": 0.693865,
+          "spearman": 0.813387,
+          "pinball_loss": 0.484671,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.238642,
+          "calibration": {
+            "prediction_mean": 6.682555,
+            "target_mean": 6.443912,
+            "bias": 0.238642
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.54,
+            "count": 6017,
+            "tail_mae": 1.304567,
+            "tail_bias": -1.104961
+          }
+        },
+        "timezone:utc_fallback": {
+          "count": 15972,
+          "mae": 1.074896,
+          "median_ae": 0.716223,
+          "spearman": 0.774467,
+          "pinball_loss": 0.506715,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.30733,
+          "calibration": {
+            "prediction_mean": 6.372594,
+            "target_mean": 6.065264,
+            "bias": 0.30733
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.95,
+            "count": 3214,
+            "tail_mae": 1.453247,
+            "tail_bias": -1.261354
+          }
+        },
+        "media:photo": {
+          "count": 45708,
+          "mae": 1.037513,
+          "median_ae": 0.700645,
+          "spearman": 0.801744,
+          "pinball_loss": 0.492401,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.263557,
+          "calibration": {
+            "prediction_mean": 6.572391,
+            "target_mean": 6.308834,
+            "bias": 0.263557
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.37,
+            "count": 9151,
+            "tail_mae": 1.353499,
+            "tail_bias": -1.150171
+          }
+        },
+        "media:video": {
+          "count": 134,
+          "mae": 0.936631,
+          "median_ae": 0.635858,
+          "spearman": 0.714501,
+          "pinball_loss": 0.475581,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.072655,
+          "calibration": {
+            "prediction_mean": 7.31436,
+            "target_mean": 7.387015,
+            "bias": -0.072655
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.7,
+            "count": 29,
+            "tail_mae": 1.419906,
+            "tail_bias": -1.306366
+          }
+        },
+        "category:technology": {
+          "count": 72,
+          "mae": 0.479294,
+          "median_ae": 0.168846,
+          "spearman": 0.795638,
+          "pinball_loss": 0.22195,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.176972,
+          "calibration": {
+            "prediction_mean": 5.959611,
+            "target_mean": 5.782639,
+            "bias": 0.176972
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 6.75,
+            "count": 16,
+            "tail_mae": 0.794087,
+            "tail_bias": -0.276335
+          }
+        },
+        "category:automotive": {
+          "count": 858,
+          "mae": 0.944661,
+          "median_ae": 0.521102,
+          "spearman": 0.84986,
+          "pinball_loss": 0.465576,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.067543,
+          "calibration": {
+            "prediction_mean": 7.131692,
+            "target_mean": 7.064149,
+            "bias": 0.067543
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.45,
+            "count": 174,
+            "tail_mae": 0.863497,
+            "tail_bias": -0.67789
+          }
+        },
+        "category:fashion_beauty": {
+          "count": 8024,
+          "mae": 1.093172,
+          "median_ae": 0.790655,
+          "spearman": 0.788279,
+          "pinball_loss": 0.512434,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.341522,
+          "calibration": {
+            "prediction_mean": 7.203466,
+            "target_mean": 6.861944,
+            "bias": 0.341522
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.8,
+            "count": 1609,
+            "tail_mae": 1.232499,
+            "tail_bias": -0.779455
+          }
+        },
+        "category:travel_tourism": {
+          "count": 7197,
+          "mae": 0.981171,
+          "median_ae": 0.635044,
+          "spearman": 0.824279,
+          "pinball_loss": 0.469483,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.211022,
+          "calibration": {
+            "prediction_mean": 6.562506,
+            "target_mean": 6.351484,
+            "bias": 0.211022
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.42,
+            "count": 1444,
+            "tail_mae": 1.326925,
+            "tail_bias": -1.173148
+          }
+        },
+        "category:food_dining": {
+          "count": 2605,
+          "mae": 1.108076,
+          "median_ae": 0.816241,
+          "spearman": 0.73776,
+          "pinball_loss": 0.521041,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.329968,
+          "calibration": {
+            "prediction_mean": 6.607561,
+            "target_mean": 6.277593,
+            "bias": 0.329968
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.182,
+            "count": 521,
+            "tail_mae": 1.486804,
+            "tail_bias": -1.210276
+          }
+        },
+        "category:entertainment_gaming": {
+          "count": 2439,
+          "mae": 0.947364,
+          "median_ae": 0.607516,
+          "spearman": 0.789102,
+          "pinball_loss": 0.456837,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.168443,
+          "calibration": {
+            "prediction_mean": 6.240337,
+            "target_mean": 6.071894,
+            "bias": 0.168443
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.58,
+            "count": 490,
+            "tail_mae": 1.38375,
+            "tail_bias": -1.214349
+          }
+        },
+        "category:sports_fitness": {
+          "count": 41,
+          "mae": 0.414987,
+          "median_ae": 0.345162,
+          "spearman": 0.368944,
+          "pinball_loss": 0.190619,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.168742,
+          "calibration": {
+            "prediction_mean": 9.008499,
+            "target_mean": 8.839756,
+            "bias": 0.168742
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.34,
+            "count": 9,
+            "tail_mae": 0.504248,
+            "tail_bias": -0.141306
+          }
+        },
+        "category:nature_wildlife": {
+          "count": 355,
+          "mae": 0.817653,
+          "median_ae": 0.369444,
+          "spearman": 0.688881,
+          "pinball_loss": 0.432214,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.233879,
+          "calibration": {
+            "prediction_mean": 5.939754,
+            "target_mean": 6.173634,
+            "bias": -0.233879
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.772,
+            "count": 71,
+            "tail_mae": 1.926344,
+            "tail_bias": -1.919363
+          }
+        },
+        "category:art_design": {
+          "count": 265,
+          "mae": 0.681137,
+          "median_ae": 0.489395,
+          "spearman": 0.885035,
+          "pinball_loss": 0.3394,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.011684,
+          "calibration": {
+            "prediction_mean": 6.178062,
+            "target_mean": 6.166377,
+            "bias": 0.011684
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.792,
+            "count": 53,
+            "tail_mae": 0.997581,
+            "tail_bias": -0.10837
+          }
+        },
+        "category:business_economy": {
+          "count": 10,
+          "mae": 2.544813,
+          "median_ae": 2.808922,
+          "spearman": 0.547115,
+          "pinball_loss": 1.087171,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 1.852353,
+          "calibration": {
+            "prediction_mean": 6.904353,
+            "target_mean": 5.052,
+            "bias": 1.852353
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 5.798,
+            "count": 2,
+            "tail_mae": 2.808922,
+            "tail_bias": -0.235483
+          }
+        },
+        "category:social_lifestyle": {
+          "count": 23976,
+          "mae": 1.049367,
+          "median_ae": 0.711068,
+          "spearman": 0.795955,
+          "pinball_loss": 0.49761,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.270739,
+          "calibration": {
+            "prediction_mean": 6.389509,
+            "target_mean": 6.11877,
+            "bias": 0.270739
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.16,
+            "count": 4820,
+            "tail_mae": 1.391137,
+            "tail_bias": -1.239436
+          }
+        }
+      },
+      "best_iteration": 281
+    },
+    "A4": {
+      "description": "legacy M5 vector (time features + baseline as input)",
+      "feature_count": 36,
+      "target": "residual",
+      "validation": {
+        "count": 45842,
+        "mae": 0.824094,
+        "median_ae": 0.505793,
+        "spearman": 0.865529,
+        "pinball_loss": 0.391512,
+        "pinball_alpha": 0.6,
+        "prediction_bias": 0.205351,
+        "calibration": {
+          "prediction_mean": 6.517337,
+          "target_mean": 6.311986,
+          "bias": 0.205351
+        },
+        "tail": {
+          "percentile": 80.0,
+          "threshold": 8.37,
+          "count": 9184,
+          "tail_mae": 1.026927,
+          "tail_bias": -0.584849
+        }
+      },
+      "subgroups": {
+        "history_depth:cold_start": {
+          "count": 5313,
+          "mae": 2.008739,
+          "median_ae": 1.720831,
+          "spearman": 0.378352,
+          "pinball_loss": 0.930111,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.74259,
+          "calibration": {
+            "prediction_mean": 7.770214,
+            "target_mean": 7.027625,
+            "bias": 0.74259
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.27,
+            "count": 1065,
+            "tail_mae": 2.348205,
+            "tail_bias": -2.345202
+          }
+        },
+        "history_depth:very_low_history": {
+          "count": 9086,
+          "mae": 0.934147,
+          "median_ae": 0.700093,
+          "spearman": 0.895461,
+          "pinball_loss": 0.441538,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.255358,
+          "calibration": {
+            "prediction_mean": 7.131726,
+            "target_mean": 6.876368,
+            "bias": 0.255358
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.16,
+            "count": 1825,
+            "tail_mae": 1.138106,
+            "tail_bias": -0.832623
+          }
+        },
+        "history_depth:low_history": {
+          "count": 9396,
+          "mae": 0.60085,
+          "median_ae": 0.420525,
+          "spearman": 0.941341,
+          "pinball_loss": 0.286818,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.136067,
+          "calibration": {
+            "prediction_mean": 6.461566,
+            "target_mean": 6.325499,
+            "bias": 0.136067
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.35,
+            "count": 1887,
+            "tail_mae": 0.756078,
+            "tail_bias": -0.24356
+          }
+        },
+        "history_depth:medium_history": {
+          "count": 11999,
+          "mae": 0.547098,
+          "median_ae": 0.353903,
+          "spearman": 0.92935,
+          "pinball_loss": 0.264753,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.087956,
+          "calibration": {
+            "prediction_mean": 6.102632,
+            "target_mean": 6.014676,
+            "bias": 0.087956
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.86,
+            "count": 2422,
+            "tail_mae": 0.649105,
+            "tail_bias": -0.108422
+          }
+        },
+        "history_depth:high_history": {
+          "count": 10048,
+          "mae": 0.637722,
+          "median_ae": 0.458138,
+          "spearman": 0.886234,
+          "pinball_loss": 0.310757,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.08104,
+          "calibration": {
+            "prediction_mean": 5.846675,
+            "target_mean": 5.765636,
+            "bias": 0.08104
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.43,
+            "count": 2014,
+            "tail_mae": 0.810152,
+            "tail_bias": -0.27735
+          }
+        },
+        "timezone:source_offset": {
+          "count": 29870,
+          "mae": 0.805823,
+          "median_ae": 0.50546,
+          "spearman": 0.875343,
+          "pinball_loss": 0.384587,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.183247,
+          "calibration": {
+            "prediction_mean": 6.627159,
+            "target_mean": 6.443912,
+            "bias": 0.183247
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.54,
+            "count": 6017,
+            "tail_mae": 1.005677,
+            "tail_bias": -0.563317
+          }
+        },
+        "timezone:utc_fallback": {
+          "count": 15972,
+          "mae": 0.858263,
+          "median_ae": 0.506598,
+          "spearman": 0.843175,
+          "pinball_loss": 0.404463,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.246689,
+          "calibration": {
+            "prediction_mean": 6.311952,
+            "target_mean": 6.065264,
+            "bias": 0.246689
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.95,
+            "count": 3214,
+            "tail_mae": 1.086607,
+            "tail_bias": -0.64484
+          }
+        },
+        "media:photo": {
+          "count": 45708,
+          "mae": 0.823927,
+          "median_ae": 0.505839,
+          "spearman": 0.86563,
+          "pinball_loss": 0.391346,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.206175,
+          "calibration": {
+            "prediction_mean": 6.515009,
+            "target_mean": 6.308834,
+            "bias": 0.206175
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.37,
+            "count": 9151,
+            "tail_mae": 1.027223,
+            "tail_bias": -0.584359
+          }
+        },
+        "media:video": {
+          "count": 134,
+          "mae": 0.881126,
+          "median_ae": 0.502082,
+          "spearman": 0.766354,
+          "pinball_loss": 0.448136,
+          "pinball_alpha": 0.6,
+          "prediction_bias": -0.075728,
+          "calibration": {
+            "prediction_mean": 7.311287,
+            "target_mean": 7.387015,
+            "bias": -0.075728
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.7,
+            "count": 29,
+            "tail_mae": 1.003847,
+            "tail_bias": -0.751092
+          }
+        },
+        "category:technology": {
+          "count": 72,
+          "mae": 0.517725,
+          "median_ae": 0.239631,
+          "spearman": 0.810577,
+          "pinball_loss": 0.2517,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.07162,
+          "calibration": {
+            "prediction_mean": 5.854259,
+            "target_mean": 5.782639,
+            "bias": 0.07162
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 6.75,
+            "count": 16,
+            "tail_mae": 0.703266,
+            "tail_bias": -0.195177
+          }
+        },
+        "category:automotive": {
+          "count": 858,
+          "mae": 0.834009,
+          "median_ae": 0.502064,
+          "spearman": 0.884636,
+          "pinball_loss": 0.401525,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.154795,
+          "calibration": {
+            "prediction_mean": 7.218944,
+            "target_mean": 7.064149,
+            "bias": 0.154795
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.45,
+            "count": 174,
+            "tail_mae": 0.701041,
+            "tail_bias": -0.066834
+          }
+        },
+        "category:fashion_beauty": {
+          "count": 8024,
+          "mae": 0.882555,
+          "median_ae": 0.566788,
+          "spearman": 0.854902,
+          "pinball_loss": 0.419454,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.218237,
+          "calibration": {
+            "prediction_mean": 7.080181,
+            "target_mean": 6.861944,
+            "bias": 0.218237
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.8,
+            "count": 1609,
+            "tail_mae": 1.05071,
+            "tail_bias": -0.46203
+          }
+        },
+        "category:travel_tourism": {
+          "count": 7197,
+          "mae": 0.77996,
+          "median_ae": 0.468226,
+          "spearman": 0.874475,
+          "pinball_loss": 0.373675,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.163048,
+          "calibration": {
+            "prediction_mean": 6.514532,
+            "target_mean": 6.351484,
+            "bias": 0.163048
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.42,
+            "count": 1444,
+            "tail_mae": 0.937722,
+            "tail_bias": -0.616646
+          }
+        },
+        "category:food_dining": {
+          "count": 2605,
+          "mae": 0.903043,
+          "median_ae": 0.573234,
+          "spearman": 0.813088,
+          "pinball_loss": 0.417855,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.336662,
+          "calibration": {
+            "prediction_mean": 6.614255,
+            "target_mean": 6.277593,
+            "bias": 0.336662
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.182,
+            "count": 521,
+            "tail_mae": 1.074615,
+            "tail_bias": -0.539046
+          }
+        },
+        "category:entertainment_gaming": {
+          "count": 2439,
+          "mae": 0.724024,
+          "median_ae": 0.456278,
+          "spearman": 0.862255,
+          "pinball_loss": 0.343501,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.185107,
+          "calibration": {
+            "prediction_mean": 6.257001,
+            "target_mean": 6.071894,
+            "bias": 0.185107
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.58,
+            "count": 490,
+            "tail_mae": 0.948674,
+            "tail_bias": -0.489579
+          }
+        },
+        "category:sports_fitness": {
+          "count": 41,
+          "mae": 0.772355,
+          "median_ae": 0.821921,
+          "spearman": 0.115371,
+          "pinball_loss": 0.317491,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.686868,
+          "calibration": {
+            "prediction_mean": 9.526624,
+            "target_mean": 8.839756,
+            "bias": 0.686868
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 9.34,
+            "count": 9,
+            "tail_mae": 0.652917,
+            "tail_bias": 0.346798
+          }
+        },
+        "category:nature_wildlife": {
+          "count": 355,
+          "mae": 0.584638,
+          "median_ae": 0.388048,
+          "spearman": 0.753265,
+          "pinball_loss": 0.287727,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.045924,
+          "calibration": {
+            "prediction_mean": 6.219558,
+            "target_mean": 6.173634,
+            "bias": 0.045924
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.772,
+            "count": 71,
+            "tail_mae": 1.053681,
+            "tail_bias": -0.53553
+          }
+        },
+        "category:art_design": {
+          "count": 265,
+          "mae": 0.649381,
+          "median_ae": 0.445868,
+          "spearman": 0.87303,
+          "pinball_loss": 0.315425,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.092655,
+          "calibration": {
+            "prediction_mean": 6.259033,
+            "target_mean": 6.166377,
+            "bias": 0.092655
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 7.792,
+            "count": 53,
+            "tail_mae": 0.795482,
+            "tail_bias": 0.156032
+          }
+        },
+        "category:business_economy": {
+          "count": 10,
+          "mae": 2.026382,
+          "median_ae": 1.629946,
+          "spearman": 0.723408,
+          "pinball_loss": 0.852135,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 1.610563,
+          "calibration": {
+            "prediction_mean": 6.662563,
+            "target_mean": 5.052,
+            "bias": 1.610563
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 5.798,
+            "count": 2,
+            "tail_mae": 1.863404,
+            "tail_bias": 0.73292
+          }
+        },
+        "category:social_lifestyle": {
+          "count": 23976,
+          "mae": 0.825008,
+          "median_ae": 0.501156,
+          "spearman": 0.863183,
+          "pinball_loss": 0.39191,
+          "pinball_alpha": 0.6,
+          "prediction_bias": 0.205937,
+          "calibration": {
+            "prediction_mean": 6.324707,
+            "target_mean": 6.11877,
+            "bias": 0.205937
+          },
+          "tail": {
+            "percentile": 80.0,
+            "threshold": 8.16,
+            "count": 4820,
+            "tail_mae": 1.05378,
+            "tail_bias": -0.620049
+          }
+        }
+      },
+      "best_iteration": 113
+    }
+  },
+  "selection_rule": "validation pinball loss first, validation MAE as tie-break, candidates ('A2', 'A3'); test split not read in this script",
+  "feature_importance": [
+    {
+      "feature": "unknown_tag_count",
+      "importance": 3551
+    },
+    {
+      "feature": "unknown_tag_ratio",
+      "importance": 3177
+    },
+    {
+      "feature": "text_svd_3",
+      "importance": 2554
+    },
+    {
+      "feature": "text_svd_0",
+      "importance": 2356
+    },
+    {
+      "feature": "text_svd_4",
+      "importance": 2222
+    },
+    {
+      "feature": "text_svd_2",
+      "importance": 2173
+    },
+    {
+      "feature": "text_svd_5",
+      "importance": 2160
+    },
+    {
+      "feature": "text_svd_7",
+      "importance": 2157
+    },
+    {
+      "feature": "text_svd_6",
+      "importance": 2098
+    },
+    {
+      "feature": "text_svd_1",
+      "importance": 1955
+    },
+    {
+      "feature": "semantic_tag_ratio",
+      "importance": 1816
+    },
+    {
+      "feature": "history_depth_code",
+      "importance": 1777
+    },
+    {
+      "feature": "tag_category_entropy",
+      "importance": 1498
+    },
+    {
+      "feature": "mismatched_tag_count",
+      "importance": 1203
+    },
+    {
+      "feature": "primary_cat_code",
+      "importance": 1029
+    },
+    {
+      "feature": "generic_tag_count",
+      "importance": 891
+    },
+    {
+      "feature": "primary_subcat_code",
+      "importance": 621
+    },
+    {
+      "feature": "aligned_tag_count",
+      "importance": 536
+    },
+    {
+      "feature": "timezone_basis_fallback",
+      "importance": 505
+    },
+    {
+      "feature": "primary_cat_confidence",
+      "importance": 496
+    },
+    {
+      "feature": "nsfw_tag_count",
+      "importance": 330
+    },
+    {
+      "feature": "context_source_code",
+      "importance": 191
+    },
+    {
+      "feature": "has_secondary_cat",
+      "importance": 73
+    },
+    {
+      "feature": "media_type_code",
+      "importance": 37
+    }
+  ],
+  "base_potential": {
+    "count": 45842,
+    "mae": 1.037218,
+    "median_ae": 0.70052,
+    "spearman": 0.801723,
+    "pinball_loss": 0.492352,
+    "pinball_alpha": 0.6,
+    "prediction_bias": 0.262574,
+    "calibration": {
+      "prediction_mean": 6.57456,
+      "target_mean": 6.311986,
+      "bias": 0.262574
+    },
+    "tail": {
+      "percentile": 80.0,
+      "threshold": 8.37,
+      "count": 9184,
+      "tail_mae": 1.353492,
+      "tail_bias": -1.150267
+    }
+  },
+  "base_potential_subgroups": {
+    "history_depth:cold_start": {
+      "count": 5313,
+      "mae": 1.964774,
+      "median_ae": 1.690026,
+      "spearman": 0.398838,
+      "pinball_loss": 0.914753,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.676343,
+      "calibration": {
+        "prediction_mean": 7.703968,
+        "target_mean": 7.027625,
+        "bias": 0.676343
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 9.27,
+        "count": 1065,
+        "tail_mae": 2.30175,
+        "tail_bias": -2.264857
+      }
+    },
+    "history_depth:very_low_history": {
+      "count": 9086,
+      "mae": 1.574006,
+      "median_ae": 1.360414,
+      "spearman": 0.685619,
+      "pinball_loss": 0.747664,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.393388,
+      "calibration": {
+        "prediction_mean": 7.269756,
+        "target_mean": 6.876368,
+        "bias": 0.393388
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 9.16,
+        "count": 1825,
+        "tail_mae": 2.047286,
+        "tail_bias": -1.97048
+      }
+    },
+    "history_depth:low_history": {
+      "count": 9396,
+      "mae": 0.950903,
+      "median_ae": 0.780214,
+      "spearman": 0.897505,
+      "pinball_loss": 0.451066,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.243849,
+      "calibration": {
+        "prediction_mean": 6.569349,
+        "target_mean": 6.325499,
+        "bias": 0.243849
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.35,
+        "count": 1887,
+        "tail_mae": 1.268748,
+        "tail_bias": -1.18031
+      }
+    },
+    "history_depth:medium_history": {
+      "count": 11999,
+      "mae": 0.60496,
+      "median_ae": 0.424787,
+      "spearman": 0.926656,
+      "pinball_loss": 0.287049,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.154304,
+      "calibration": {
+        "prediction_mean": 6.16898,
+        "target_mean": 6.014676,
+        "bias": 0.154304
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.86,
+        "count": 2422,
+        "tail_mae": 0.703445,
+        "tail_bias": -0.387766
+      }
+    },
+    "history_depth:high_history": {
+      "count": 10048,
+      "mae": 0.658269,
+      "median_ae": 0.450488,
+      "spearman": 0.885642,
+      "pinball_loss": 0.321904,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.072302,
+      "calibration": {
+        "prediction_mean": 5.837938,
+        "target_mean": 5.765636,
+        "bias": 0.072302
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.43,
+        "count": 2014,
+        "tail_mae": 0.873132,
+        "tail_bias": -0.222178
+      }
+    },
+    "timezone:source_offset": {
+      "count": 29870,
+      "mae": 1.017071,
+      "median_ae": 0.693865,
+      "spearman": 0.813387,
+      "pinball_loss": 0.484671,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.238642,
+      "calibration": {
+        "prediction_mean": 6.682555,
+        "target_mean": 6.443912,
+        "bias": 0.238642
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.54,
+        "count": 6017,
+        "tail_mae": 1.304567,
+        "tail_bias": -1.104961
+      }
+    },
+    "timezone:utc_fallback": {
+      "count": 15972,
+      "mae": 1.074896,
+      "median_ae": 0.716223,
+      "spearman": 0.774467,
+      "pinball_loss": 0.506715,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.30733,
+      "calibration": {
+        "prediction_mean": 6.372594,
+        "target_mean": 6.065264,
+        "bias": 0.30733
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.95,
+        "count": 3214,
+        "tail_mae": 1.453247,
+        "tail_bias": -1.261354
+      }
+    },
+    "media:photo": {
+      "count": 45708,
+      "mae": 1.037513,
+      "median_ae": 0.700645,
+      "spearman": 0.801744,
+      "pinball_loss": 0.492401,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.263557,
+      "calibration": {
+        "prediction_mean": 6.572391,
+        "target_mean": 6.308834,
+        "bias": 0.263557
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.37,
+        "count": 9151,
+        "tail_mae": 1.353499,
+        "tail_bias": -1.150171
+      }
+    },
+    "media:video": {
+      "count": 134,
+      "mae": 0.936631,
+      "median_ae": 0.635858,
+      "spearman": 0.714501,
+      "pinball_loss": 0.475581,
+      "pinball_alpha": 0.6,
+      "prediction_bias": -0.072655,
+      "calibration": {
+        "prediction_mean": 7.31436,
+        "target_mean": 7.387015,
+        "bias": -0.072655
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.7,
+        "count": 29,
+        "tail_mae": 1.419906,
+        "tail_bias": -1.306366
+      }
+    },
+    "category:technology": {
+      "count": 72,
+      "mae": 0.479294,
+      "median_ae": 0.168846,
+      "spearman": 0.795638,
+      "pinball_loss": 0.22195,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.176972,
+      "calibration": {
+        "prediction_mean": 5.959611,
+        "target_mean": 5.782639,
+        "bias": 0.176972
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 6.75,
+        "count": 16,
+        "tail_mae": 0.794087,
+        "tail_bias": -0.276335
+      }
+    },
+    "category:automotive": {
+      "count": 858,
+      "mae": 0.944661,
+      "median_ae": 0.521102,
+      "spearman": 0.84986,
+      "pinball_loss": 0.465576,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.067543,
+      "calibration": {
+        "prediction_mean": 7.131692,
+        "target_mean": 7.064149,
+        "bias": 0.067543
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 9.45,
+        "count": 174,
+        "tail_mae": 0.863497,
+        "tail_bias": -0.67789
+      }
+    },
+    "category:fashion_beauty": {
+      "count": 8024,
+      "mae": 1.093172,
+      "median_ae": 0.790655,
+      "spearman": 0.788279,
+      "pinball_loss": 0.512434,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.341522,
+      "calibration": {
+        "prediction_mean": 7.203466,
+        "target_mean": 6.861944,
+        "bias": 0.341522
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.8,
+        "count": 1609,
+        "tail_mae": 1.232499,
+        "tail_bias": -0.779455
+      }
+    },
+    "category:travel_tourism": {
+      "count": 7197,
+      "mae": 0.981171,
+      "median_ae": 0.635044,
+      "spearman": 0.824279,
+      "pinball_loss": 0.469483,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.211022,
+      "calibration": {
+        "prediction_mean": 6.562506,
+        "target_mean": 6.351484,
+        "bias": 0.211022
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.42,
+        "count": 1444,
+        "tail_mae": 1.326925,
+        "tail_bias": -1.173148
+      }
+    },
+    "category:food_dining": {
+      "count": 2605,
+      "mae": 1.108076,
+      "median_ae": 0.816241,
+      "spearman": 0.73776,
+      "pinball_loss": 0.521041,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.329968,
+      "calibration": {
+        "prediction_mean": 6.607561,
+        "target_mean": 6.277593,
+        "bias": 0.329968
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.182,
+        "count": 521,
+        "tail_mae": 1.486804,
+        "tail_bias": -1.210276
+      }
+    },
+    "category:entertainment_gaming": {
+      "count": 2439,
+      "mae": 0.947364,
+      "median_ae": 0.607516,
+      "spearman": 0.789102,
+      "pinball_loss": 0.456837,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.168443,
+      "calibration": {
+        "prediction_mean": 6.240337,
+        "target_mean": 6.071894,
+        "bias": 0.168443
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.58,
+        "count": 490,
+        "tail_mae": 1.38375,
+        "tail_bias": -1.214349
+      }
+    },
+    "category:sports_fitness": {
+      "count": 41,
+      "mae": 0.414987,
+      "median_ae": 0.345162,
+      "spearman": 0.368944,
+      "pinball_loss": 0.190619,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.168742,
+      "calibration": {
+        "prediction_mean": 9.008499,
+        "target_mean": 8.839756,
+        "bias": 0.168742
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 9.34,
+        "count": 9,
+        "tail_mae": 0.504248,
+        "tail_bias": -0.141306
+      }
+    },
+    "category:nature_wildlife": {
+      "count": 355,
+      "mae": 0.817653,
+      "median_ae": 0.369444,
+      "spearman": 0.688881,
+      "pinball_loss": 0.432214,
+      "pinball_alpha": 0.6,
+      "prediction_bias": -0.233879,
+      "calibration": {
+        "prediction_mean": 5.939754,
+        "target_mean": 6.173634,
+        "bias": -0.233879
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.772,
+        "count": 71,
+        "tail_mae": 1.926344,
+        "tail_bias": -1.919363
+      }
+    },
+    "category:art_design": {
+      "count": 265,
+      "mae": 0.681137,
+      "median_ae": 0.489395,
+      "spearman": 0.885035,
+      "pinball_loss": 0.3394,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.011684,
+      "calibration": {
+        "prediction_mean": 6.178062,
+        "target_mean": 6.166377,
+        "bias": 0.011684
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 7.792,
+        "count": 53,
+        "tail_mae": 0.997581,
+        "tail_bias": -0.10837
+      }
+    },
+    "category:business_economy": {
+      "count": 10,
+      "mae": 2.544813,
+      "median_ae": 2.808922,
+      "spearman": 0.547115,
+      "pinball_loss": 1.087171,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 1.852353,
+      "calibration": {
+        "prediction_mean": 6.904353,
+        "target_mean": 5.052,
+        "bias": 1.852353
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 5.798,
+        "count": 2,
+        "tail_mae": 2.808922,
+        "tail_bias": -0.235483
+      }
+    },
+    "category:social_lifestyle": {
+      "count": 23976,
+      "mae": 1.049367,
+      "median_ae": 0.711068,
+      "spearman": 0.795955,
+      "pinball_loss": 0.49761,
+      "pinball_alpha": 0.6,
+      "prediction_bias": 0.270739,
+      "calibration": {
+        "prediction_mean": 6.389509,
+        "target_mean": 6.11877,
+        "bias": 0.270739
+      },
+      "tail": {
+        "percentile": 80.0,
+        "threshold": 8.16,
+        "count": 4820,
+        "tail_mae": 1.391137,
+        "tail_bias": -1.239436
+      }
+    }
+  },
+  "dataset": {
+    "rows": 305613,
+    "raw_file_sha256": "b5a918bddc0171ac291c48c31ef36f56076a7c86642133faa32e28faee6c08ce",
+    "valid_row_count": 305613,
+    "demo_row_count": 0,
+    "timezone_basis_distribution": {
+      "source_offset": 195418,
+      "utc_fallback": 110195
+    }
+  },
+  "tuning_source": "artifacts\\tuning_results.json",
+  "elapsed_seconds": 76.15,
+  "provenance": {
+    "git_commit": "e1c0e68d2e433a82a202db83c09492efa366d7ab",
+    "git_dirty": true,
+    "trained_at_utc": "2026-09-13T11:00:01.022767+00:00",
+    "dataset_parquet": "data\\processed\\posts.parquet",
+    "dataset_sha256": "ed5b7fc3bbe188a88dc6a1e2beada3491af681adca615a6884ceeaa49b4d6aec",
+    "raw_file_sha256": "b5a918bddc0171ac291c48c31ef36f56076a7c86642133faa32e28faee6c08ce",
+    "model_output": "artifacts\\base_potential_lgbm.txt",
+    "model_output_sha256": "c518fcfb122c613d187e88f296e24408397cf31c25bd0c9d4497be966c2e6f4f",
+    "split_protocol": "chronological_train_validation_locked_test",
+    "tuning_data": "validation_only",
+    "test_touched_before_final": false
+  }
+}
