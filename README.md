@@ -64,9 +64,95 @@ etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 
 ## Çalıştırma
 
+### Docker Compose ile (önerilen / production)
+
+Gereksinimler: Docker Desktop veya Podman + compose sağlayıcısı. Veri seti ve
+model çıktıları container'a **bind-mount** edilir (`./data`, `./artifacts`);
+ilk çalıştırmadan önce bir kez üretilmeleri gerekir (aşağıdaki "Veri ve model
+üretimi" bölümü).
+
 ```bash
-uvicorn backend.app:app                   # API (Qdrant ve Ollama opsiyonel; yoksa fallback)
-pytest tests/                             # test paketi
+docker compose up -d --build     # qdrant + ollama (+ model indirme) + api
+docker compose logs -f api       # uygulama logları (LOG_LEVEL ile seviye)
+```
+
+İlk açılışta `ollama-init` hizmeti `GEMMA_MODEL_NAME` modelini (varsayılan
+`google/gemma-4-E4B-it`) otomatik indirir. İndirme tamamlanana kadar
+LLM'e bağlı yollar (konu yargıcı, açıklama üretimi) deterministik
+fallback'lerine düşer; API bu sırada da çalışır.
+
+| Servis | Port | Not |
+|---|---|---|
+| `api` | 8000 (`API_PORT`) | `/api/health` healthcheck'i tanımlı |
+| `qdrant` | 6333 (REST/dashboard), 6334 (gRPC) | `qdrant_storage` volume |
+| `ollama` | 11434 | `ollama_models` volume; container'da CPU'da koşar |
+
+**Veri ve model üretimi** (bir kez; sonuçlar `./data` ve `./artifacts`'a yazılır):
+
+```bash
+# A) Host'ta (GPU'lu makinede önerilir)
+python scripts/download_dataset.py    # ham veri (yalnız ilk kez)
+python scripts/02_normalize_smp.py
+python scripts/07_index_qdrant.py     # Qdrant'a yazar -> QDRANT_HOST'u host'a çevirin
+python scripts/05_train_lgbm.py
+
+# B) Ya da tools profiliyle container içinde (Qdrant'a compose ağından bağlanır)
+docker compose --profile tools run --rm trainer
+```
+
+**Hazır ağırlıklarla hızlı başlangıç (eğitim gerekmez):**
+
+Takım arkadaşları eğitilmiş ağırlıkları Nextcloud'dan doğrudan indirip
+sıfırdan eğitim yapmadan çalıştırabilir (~73 MB; kesintide kaldığı yerden
+devam eder, tamamlanmış dosyaları atlar):
+
+```bash
+python scripts/sync_artifacts.py download   # 7 dosya: ağırlıklar + parquet
+python scripts/07_index_qdrant.py           # (bir kez) Qdrant indeksini kur
+docker compose up -d --build                # ya da yerel: uvicorn backend.app:app
+```
+
+İndirilenler: `artifacts/` (LightGBM modeli, metin SVD, guardrail modeli,
+retrieval encoder'ı, metrikler) ve `data/processed/posts.parquet`. Kimlik
+bilgileri `.env`'den (`WEBDAV_URL`, `WEBDAV_USER`, `WEBDAV_PASSWORD`) veya
+ortam değişkeninden okunur — `download_dataset.py` ile aynı sözleşme.
+
+Yeni ağırlık yayınlamak için (bakım):
+
+```bash
+python scripts/sync_artifacts.py upload     # güncel artifacts/ + parquet yüklenir
+```
+
+**Ortam değişkenleri** (compose'da varsayılanlarıyla hazır):
+
+| Değişken | Varsayılan | Açıklama |
+|---|---|---|
+| `API_PORT` | 8000 | API'nin host portu |
+| `GEMMA_API_URL` | `http://ollama:11434` | LLM uç noktası |
+| `GEMMA_MODEL_NAME` | `google/gemma-4-E4B-it` | Ollama model adı |
+| `LOG_LEVEL` | INFO | Uygulama log seviyesi |
+
+**Notlar**
+
+- Bu makinede **8081–8280 portları Windows tarafından rezerve**; API için 8000
+  gibi aralık dışı bir port kullanın (`WinError 10013` bind hatası verir).
+- Podman'da yayınlanan portlar bu makinede host `localhost` yerine **podman VM
+  IP'sinden** erişilebilir (örn. `http://172.17.78.187:8000`; Qdrant da aynı
+  şekilde `172.17.78.187:6333`). Docker Desktop'ta `localhost` çalışır.
+- GPU'lu Ollama'yı host'ta çalıştırmak isterseniz (Windows'ta DirectML ile daha
+  hızlı): compose'daki `ollama`'yı kaldırıp `GEMMA_API_URL`'i host'a çevirin —
+  Docker Desktop'ta `http://host.docker.internal:11434`, Podman'da
+  `http://host.containers.internal:11434`.
+- Linux host'ta bind-mount edilen `./artifacts` container kullanıcısı
+  (UID 10001) tarafından yazılabilir olmalı: `sudo chown -R 10001 ./artifacts`.
+
+### Yerel (geliştirme)
+
+```bash
+uvicorn backend.app:app        # API (Qdrant/Ollama opsiyonel; yoksa fallback)
+pytest tests/                  # test paketi (66 test)
+LOG_LEVEL=DEBUG uvicorn backend.app:app   # ayrıntılı loglar
+python scripts/idea_battery.py --base-url http://127.0.0.1:8000  # canlı API bataryası
 python scripts/05_train_lgbm.py           # popülerlik modelini yeniden eğit
 python scripts/train_guardrail_model.py   # guardrail modelini yeniden eğit
 ```
