@@ -32,7 +32,10 @@ etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 
 - Kaynak: **SMPD-Image (Flickr) train split** — 305.613 gerçek satır
 - Dil: **%100 İngilizce** (305.613 başlığın tamamı ASCII; 0 Türkçe karakter)
-- Zaman aralığı: 2015-02-28 – 2016-02-29 (55 demo fixture satırı 2026 tarihli)
+- Zaman aralığı: 2015-02-28 – 2016-02-29 (tamamı gerçek kayıt)
+- **Sentetik demo verisi kaldırıldı:** demo_user_* hesapları ve 55 fixture
+  satırı veri setinden çıkarıldı; sistem yalnız gerçek SMPD kayıtlarıyla
+  çalışır (`/api/demo-users` boş liste döner).
 - **EnSosyal veri API'si talep edildi; sağlanması belirsiz.** Bu nedenle model ve
   demo SMPD benchmark'ı ile devam etmektedir. API sağlanırsa:
   1. `scripts/02_normalize_smp.py` → yeni veriyi normalize et
@@ -41,7 +44,9 @@ etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 
   Guardrail korpusu bağımsızdır (troff + teamgzg), bu adımlardan etkilenmez.
 - Türkçe fikirler için telafiler: Gemma konu yargıcı, retrieval benzerlik
-  eşikleri ve etiket fallback'leri (bkz. `backend/services/retrieval.py`)
+  eşikleri ve etiket fallback'leri (bkz. `backend/services/retrieval.py`).
+  Veri setinde Türkçe post bulunmadığından benzer-post listesi birçok Türkçe
+  fikirde boş dönebilir; etiketler topic varsayılanlarına düşer.
 
 ## Çalıştırma
 
@@ -57,15 +62,16 @@ python scripts/train_guardrail_model.py   # guardrail modelini yeniden eğit
 | | Değer |
 |---|---|
 | LightGBM M5 (quantile α=0.55) | MAE 0.847, Spearman 0.870 |
-| Kuyruk — en popüler %20 (viral) | MAE 1.093, sapma −0.75 |
-| Baseline (B1) | MAE 1.147, Spearman 0.803 |
-| Cold start (bilinen zayıf nokta) | MAE 1.93, Spearman 0.36 |
+| Kuyruk — en popüler %20 (viral) | MAE 1.104, sapma −0.82 |
+| Baseline (B1) | MAE 1.148, Spearman 0.803 |
+| Cold start (bilinen zayıf nokta) | MAE 1.94, Spearman 0.36 |
 | Guardrail | holdout macro-F1 0.70; FP bataryası 25/25, unsafe bataryası 14/14 |
 
-> Eğitim hedefi **quantile (α=0.55)**: viral içeriklerde (üst %20) tahmin sapması
-> belirgin azalıyor (kuyruk MAE 1.177 → 1.093, sapma −0.92 → −0.75); karşılığında
-> genel MAE ~%1.5 artıyor (0.834 → 0.847, kabul eşiği içinde) — bilinçli ödünleşim.
-> Ayrıntı: `artifacts/metrics.json` → `objective`, `tail`.
+> Eğitim hedefi **quantile (α=0.55)**: viral içeriklerde (üst %20) tahmin sapmasını
+> düşürüyor, karşılığında genel MAE ~%1.5 artıyor — bilinçli ödünleşim. Karar aynı
+> kronolojik split'teki l1/q0.55/q0.60 karşılaştırmasıyla verildi; tablodaki tüm
+> sayılar temiz veri (305.613 kayıt) üzerindendir. Ayrıntı: `artifacts/metrics.json`
+> → `objective`, `tail`.
 
 ## Üçüncü taraf veriler
 

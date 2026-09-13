@@ -41,7 +41,7 @@ class AdvisorRequest(StrictSchema):
         **StrictSchema.model_config,
         "json_schema_extra": {
             "example": {
-                "user_id": "demo_user_01",
+                "user_id": "31253@N15",
                 "idea": "Yapay zeka modelleri ve mobil cihazlarda yerel LLM optimizasyonu",
                 "media_type": "video",
                 "horizon": "next_7_days",

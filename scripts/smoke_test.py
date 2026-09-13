@@ -16,22 +16,21 @@ def run_smoke_test():
         print(f"[1/6] Health check: {health}")
         assert health["status"] == "ok"
 
-        # 2. Demo users
+        # 2. Registered accounts (synthetic demo fixtures were removed)
         users = client.get("/api/demo-users").json()
-        print(f"[2/6] Demo users loaded: {[u['user_id'] for u in users]}")
-        assert len(users) == 3
+        print(f"[2/6] Registered accounts: {len(users)}")
 
-        # 3. Quick recommendation for aligned user
-        quick = client.get("/api/recommend/quick/demo_user_01").json()
-        print(f"[3/6] Quick recommendation for demo_user_01 (aligned):")
+        # 3. Quick recommendation for a real user with posting history
+        quick = client.get("/api/recommend/quick/31253@N15").json()
+        print(f"[3/6] Quick recommendation for 31253@N15 (real SMPD user):")
         print(f"      Active topic: {quick['active_topic']}")
         for s in quick["slots"]:
             print(f"      - {s['datetime_utc'][:16]} | {s['predicted_popularity']} | {s['label']}")
         print(f"      Explanation: {quick['explanation']}")
 
-        # 4. Profile drift check for drift user
-        profile = client.get("/api/profile/demo_user_02").json()
-        print(f"[4/6] Profile drift check for demo_user_02 (drift):")
+        # 4. Profile drift check for a real user concentrated in one topic
+        profile = client.get("/api/profile/36743@N91").json()
+        print(f"[4/6] Profile drift check for 36743@N91 (real SMPD user):")
         print(f"      Declared: {profile['declared_topics']}")
         print(f"      Behavioral top: {profile['behavioral_topics'][0]['topic']} ({profile['behavioral_topics'][0]['weight']})")
         print(f"      Drift detected: {profile['drift_detected']}")
@@ -39,7 +38,7 @@ def run_smoke_test():
         assert profile["drift_detected"] is True
 
         # 5. User accepts drift update
-        decision = client.post("/api/profile/demo_user_02/decision", json={"accept": True}).json()
+        decision = client.post("/api/profile/36743@N91/decision", json={"accept": True}).json()
         print(f"[5/6] Decision accepted. Updated active recommendation topics:")
         for t in decision["active_recommendation_topics"][:3]:
             print(f"      - {t['topic']}: {t['weight']}")
@@ -47,7 +46,7 @@ def run_smoke_test():
 
         # 6. Advisor query
         idea_payload = {
-            "user_id": "demo_user_01",
+            "user_id": "31253@N15",
             "idea": "Büyük dil modellerinde prompt mühendisliği ve dikkat mekanizmaları",
             "media_type": "photo",
             "horizon": "next_7_days",
