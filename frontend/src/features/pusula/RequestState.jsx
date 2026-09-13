@@ -3,13 +3,14 @@ export default function RequestState({
   task,
   retry,
   empty = "Henüz bir sonuç yok.",
+  loading = "Sonuç hazırlanıyor…",
   children,
 }) {
   if (task.status === "loading")
     return (
       <div className="request-state" role="status" aria-live="polite">
         <span className="request-spinner" />
-        Sonuç hazırlanıyor…
+        {loading}
       </div>
     );
   if (task.status === "error")

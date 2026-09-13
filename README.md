@@ -8,7 +8,7 @@ ve önerilen etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
 
 Son Stitch tasarımlarına göre geliştirilen React/Vite uygulaması `frontend/` klasöründedir. Kurulum ve çalıştırma için [frontend/README.md](frontend/README.md) belgesine bakın. Arayüz varsayılan olarak mock modunda çalışır.
 
-Arayüzün `/v1/pusula/*` sözleşmesi ile bu backend'in `/api/recommend/*` ve `/api/profile/*` uçları henüz eşlenmemiştir. HTTP modunu açmak tek başına entegrasyonu tamamlamaz; adaptör ve proxy yol eşlemesi uygulanmalıdır. Ayrıntılar: [entegrasyon belgesi](frontend/docs/backend-integration.md).
+`VITE_API_MODE=backend` ile arayüz doğrudan bu servise bağlanır: paylaşım pencereleri `/api/recommend/quick/{user_id}`'den, fikir analizi `/api/recommend/advisor`'dan gelir; kurulum ekranında seçilen ilgi alanları `/api/profile/{user_id}/interests` ile kaydedilir ve `active_topic`'i belirler. Dönüşüm `frontend/src/services/pusula/backendAdapter.js` içindedir. Backend'in üretmediği metrikler (erişim, kaydedilme katsayısı, yorum ihtimali) arayüzden kaldırılmış, yerlerine gerçek metrikler konmuştur. Ayrıntılar: [entegrasyon belgesi](frontend/docs/backend-integration.md).
 
 > **Dil sözleşmesi.** Sistem "kesin en iyi saat" iddia etmez. Çıktı, kanıt
 > seviyesiyle birlikte bir **zaman penceresidir** ("Teknoloji içeriği için Salı

@@ -2,17 +2,43 @@ import { ApiError } from "../apiClient.js";
 const string = (value) => typeof value === "string" && value.trim().length > 0;
 const number = (value) => typeof value === "number" && Number.isFinite(value);
 const percent = (value) => number(value) && value >= 0 && value <= 100;
+const unit = (value) => number(value) && value >= 0 && value <= 1;
+const count = (value) => number(value) && value >= 0;
+const nullableNumber = (value) => value === null || number(value);
+const flag = (value) => typeof value === "boolean";
 const date = (value) => string(value) && !Number.isNaN(Date.parse(value));
 const texts = (value) => Array.isArray(value) && value.every(string);
+// The backend models confidence as a level plus a Turkish label, not as a
+// 0-100 percentage, so the contract validates the level verbatim.
+const LEVELS = ["high", "medium", "low"];
+const level = (value) => LEVELS.includes(value);
 const slot = (value) =>
   value &&
-  ["id", "day", "time", "timeZone", "format", "label"].every((key) =>
-    string(value[key]),
+  ["id", "day", "time", "timeZone", "confidenceLabel", "evidenceLevel"].every(
+    (key) => string(value[key]),
   ) &&
   date(value.startsAt) &&
-  percent(value.onlinePercent) &&
-  number(value.reach) &&
-  value.reach >= 0;
+  level(value.confidence) &&
+  // Both of these are signed popularity-score residuals, so neither is bounded
+  // to 0-1; only the derived rank is a percentage.
+  number(value.relativePotential) &&
+  percent(value.rankPercent) &&
+  count(value.supportPostCount) &&
+  count(value.supportUserCount) &&
+  number(value.observationalTimeLift) &&
+  nullableNumber(value.liftCiLow) &&
+  nullableNumber(value.liftCiHigh);
+const similarPost = (value) =>
+  value &&
+  string(value.postId) &&
+  typeof value.title === "string" &&
+  // The backend sends a numeric weekday index here, not a day name.
+  count(value.weekdayIndex) &&
+  value.weekdayIndex <= 6 &&
+  count(value.hour) &&
+  number(value.popularityScore) &&
+  number(value.similarity) &&
+  texts(value.tags);
 const validators = {
   profile: (v) =>
     v &&
@@ -27,8 +53,13 @@ const validators = {
     typeof v.message === "string",
   recommendations: (v) =>
     v &&
-    percent(v.confidence) &&
+    level(v.confidence) &&
+    string(v.confidenceLabel) &&
     date(v.updatedAt) &&
+    string(v.activeTopic) &&
+    flag(v.coldStart) &&
+    string(v.timezoneBasis) &&
+    typeof v.explanation === "string" &&
     Array.isArray(v.slots) &&
     v.slots.length <= 3 &&
     v.slots.every(slot),
@@ -36,20 +67,23 @@ const validators = {
     v &&
     string(v.id) &&
     string(v.modelVersion) &&
-    percent(v.confidence) &&
-    number(v.reachMin) &&
-    v.reachMin >= 0 &&
-    number(v.reachMax) &&
-    v.reachMax >= v.reachMin &&
-    number(v.saveMultiplier) &&
-    v.saveMultiplier >= 0 &&
-    percent(v.commentProbability) &&
-    number(v.liftPercent) &&
+    string(v.topic) &&
+    string(v.primaryCategory) &&
+    unit(v.primaryCategoryConfidence) &&
+    level(v.confidence) &&
+    string(v.confidenceLabel) &&
     string(v.bestTime) &&
     string(v.alternativeTime) &&
     texts(v.hashtags) &&
     string(v.tip) &&
-    string(v.draft),
+    string(v.historyDepth) &&
+    flag(v.isTieOrBroadWindow) &&
+    string(v.timezoneBasis) &&
+    Array.isArray(v.windows) &&
+    v.windows.length <= 3 &&
+    v.windows.every(slot) &&
+    Array.isArray(v.similarPosts) &&
+    v.similarPosts.every(similarPost),
   plan: (v) =>
     v &&
     string(v.id) &&

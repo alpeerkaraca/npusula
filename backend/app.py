@@ -3,15 +3,31 @@ from contextlib import asynccontextmanager
 import logging
 import time
 from typing import Any
+from uuid import uuid4
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.adapters.repository import PostRepository, UserRepository
+from backend.adapters.repository import (
+    PostRepository,
+    SavedContentRepository,
+    UserRepository,
+)
 from backend.adapters.storage import QdrantPostStore
 from backend.config import settings
 from backend.logging_setup import setup_logging
 from backend.schemas.media import MediaAnalysisResponse
-from backend.schemas.profile import ProfileDecisionRequest, ProfileStatus
+from backend.schemas.profile import (
+    DeclaredProfile,
+    DeclaredTopicsRequest,
+    ProfileDecisionRequest,
+    ProfileStatus,
+)
+from backend.schemas.saved import (
+    DraftRequest,
+    DraftResponse,
+    PlanRequest,
+    PlanResponse,
+)
 from backend.schemas.recommendation import (
     AdvisorRequest,
     AdvisorResponse,
@@ -38,6 +54,7 @@ logger = logging.getLogger("backend.app")
 # Initialize repositories and services
 post_repo = PostRepository()
 user_repo = UserRepository()
+saved_repo = SavedContentRepository()
 profile_service = ProfileService()
 retrieval_service = RetrievalService()
 recommendation_service = RecommendationService()
@@ -143,6 +160,51 @@ def record_profile_decision(user_id: str, payload: ProfileDecisionRequest) -> Pr
     user_posts = post_repo.get_user_history(user_id)
     behavioral = profile_service.compute_behavioral_profile(user_id, user_posts)
     return profile_service.get_profile_status(declared, behavioral)
+
+
+@app.put("/api/profile/{user_id}/interests", response_model=DeclaredProfile)
+def put_user_interests(
+    user_id: str, payload: DeclaredTopicsRequest
+) -> DeclaredProfile:
+    """Stores the interest topics the setup wizard collected for this user.
+
+    Topics arrive already mapped to the canonical vocabulary. Like every other
+    profile route this trusts the caller-supplied `user_id`, because the service
+    has no authentication; exposing it publicly requires adding one first.
+    """
+    user_repo.update_user_declared_topics(user_id, payload.topics)
+    logger.info(
+        "declared topics stored: user_id=%s topics=%s", user_id, payload.topics
+    )
+    return user_repo.get_declared_profile(user_id)
+
+
+@app.post("/api/plans", response_model=PlanResponse)
+def create_plan(payload: PlanRequest) -> PlanResponse:
+    """Records content the user attached to a recommended window.
+
+    This stores intent only: there is no scheduler, publish permission or
+    notification behind it, so the response reports `status="saved"` and never
+    claims the post was scheduled or published.
+    """
+    plan_id = f"plan-{uuid4().hex[:12]}"
+    saved_repo.put(plan_id, {"kind": "plan", **payload.model_dump()})
+    logger.info("plan saved: id=%s slot_id=%s", plan_id, payload.slot_id)
+    return PlanResponse(
+        id=plan_id,
+        slot_id=payload.slot_id,
+        starts_at=payload.starts_at,
+        status="saved",
+    )
+
+
+@app.post("/api/drafts", response_model=DraftResponse)
+def save_draft(payload: DraftRequest) -> DraftResponse:
+    """Stores text the user wants carried into the composer. Does not post it."""
+    draft_id = f"draft-{uuid4().hex[:12]}"
+    saved_repo.put(draft_id, {"kind": "draft", **payload.model_dump()})
+    logger.info("draft saved: id=%s chars=%d", draft_id, len(payload.text))
+    return DraftResponse(id=draft_id, text=payload.text, format=payload.format)
 
 
 @app.get("/api/recommend/quick/{user_id}", response_model=QuickRecommendationResponse)

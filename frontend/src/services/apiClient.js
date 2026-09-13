@@ -11,11 +11,11 @@ export class ApiError extends Error {
 export function createApiClient({
   baseUrl = "/api",
   fetchImpl = globalThis.fetch,
-  timeoutMs = 20000,
+  timeoutMs: defaultTimeoutMs = 20000,
 } = {}) {
   return async function request(
     path,
-    { method = "GET", body, signal, requestId } = {},
+    { method = "GET", body, signal, requestId, timeoutMs = defaultTimeoutMs } = {},
   ) {
     const controller = new AbortController();
     const abort = () => controller.abort(signal?.reason);

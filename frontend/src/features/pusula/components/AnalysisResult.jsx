@@ -1,5 +1,6 @@
 import React from "react";
 import DesignIcon from "../DesignIcon.jsx";
+import { evidenceLabel, scoreInterval, signedScore } from "../format.js";
 export default function AnalysisResult({
   result,
   onCopy,
@@ -7,6 +8,29 @@ export default function AnalysisResult({
   onDraft,
   busy,
 }) {
+  // Every tile below reads a metric the backend actually computes for the
+  // strongest window. Nothing here is a client-side prediction.
+  const best = result.windows?.[0];
+  const tiles = best
+    ? [
+        [
+          "Destek Gönderisi",
+          `${best.supportPostCount.toLocaleString("tr-TR")} gönderi`,
+          `${best.supportUserCount.toLocaleString("tr-TR")} kullanıcı`,
+        ],
+        [
+          "Gözlemsel Zaman Etkisi",
+          signedScore(best.observationalTimeLift),
+          scoreInterval(best.liftCiLow, best.liftCiHigh) ||
+            `${best.confidenceLabel} güven`,
+        ],
+        [
+          "Göreli Potansiyel",
+          signedScore(best.relativePotential),
+          evidenceLabel(best.evidenceLevel),
+        ],
+      ]
+    : [];
   return (
     <section className="p-space-lg rounded-xl bg-surface-container-low shadow-2xl relative overflow-hidden">
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary-container via-secondary-container to-tertiary" />
@@ -18,41 +42,37 @@ export default function AnalysisResult({
           <h2 className="text-headline-sm font-bold">
             N-Pusula Fikir Değerlendirmesi
           </h2>
+          {/* primary_category_confidence is a match-density score, not a
+              trained-model probability, so it is captioned as a match score. */}
+          <span className="text-code-sm text-on-surface-variant">
+            {result.topic} · {result.primaryCategory} · eşleşme{" "}
+            {result.primaryCategoryConfidence.toFixed(2)}
+          </span>
         </div>
         <span className="self-start px-space-md py-1.5 rounded-full bg-tertiary-container/20 text-tertiary text-label-md font-bold">
-          %{result.confidence} Rezonans
+          {result.confidenceLabel} Güven
         </span>
       </header>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-md pb-space-lg">
-        {[
-          [
-            "Tahmini Erişim",
-            `${result.reachMin.toLocaleString("tr-TR")} – ${result.reachMax.toLocaleString("tr-TR")}`,
-            `%${result.liftPercent} benchmark`,
-          ],
-          [
-            "Kaydedilme Katsayısı",
-            `${result.saveMultiplier}x`,
-            "Referans niteliğinde",
-          ],
-          [
-            "Yorum İhtimali",
-            `%${result.commentProbability}`,
-            "Tahmini etkileşim",
-          ],
-        ].map(([label, value, detail]) => (
-          <div
-            className="p-space-md rounded-xl bg-surface-container flex flex-col gap-1"
-            key={label}
-          >
-            <span className="text-label-sm text-on-surface-variant">
-              {label}
-            </span>
-            <strong className="text-headline-sm text-primary">{value}</strong>
-            <span className="text-code-sm text-tertiary">{detail}</span>
-          </div>
-        ))}
-      </div>
+      {tiles.length ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-md pb-space-lg">
+          {tiles.map(([label, value, detail]) => (
+            <div
+              className="p-space-md rounded-xl bg-surface-container flex flex-col gap-1"
+              key={label}
+            >
+              <span className="text-label-sm text-on-surface-variant">
+                {label}
+              </span>
+              <strong className="text-headline-sm text-primary">{value}</strong>
+              <span className="text-code-sm text-tertiary">{detail}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="request-state pb-space-lg">
+          Bu fikir için desteklenen bir paylaşım penceresi bulunamadı.
+        </div>
+      )}
       <section className="p-space-lg rounded-xl bg-gradient-to-br from-surface-container to-surface-container-high mb-space-lg">
         <div className="flex items-start gap-space-md">
           <span className="w-12 h-12 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
@@ -114,7 +134,7 @@ export default function AnalysisResult({
           className="flex-1 rounded-full bg-gradient-to-r from-primary-container to-secondary-container text-on-primary-container px-space-lg py-space-sm font-bold"
           onClick={onDraft}
         >
-          <DesignIcon name="edit_document" /> Bu Öneriyle Gönderi Taslağı Aç
+          <DesignIcon name="edit_document" /> Fikri Gönderi Alanına Aktar
         </button>
       </div>
     </section>

@@ -4,17 +4,23 @@ Arayüzün son tasarım kaynağı `design-reference/latest/` altındaki dört ek
 
 ## Çalışma modları
 
-Varsayılan mod `mock` değeridir. Model çağrıları taklit edilir; ekranda Demo etiketi görünür. Mock plan kaydı gerçek yayın veya bildirim oluşturmaz.
+`VITE_API_MODE` üç değer alır:
 
-Gerçek backend için proje kökünde `.env.local` oluşturun:
+- **`backend`** — gerçek NPusula FastAPI servisi. Yanıtlar `backendAdapter.js` içinde arayüz sözleşmesine çevrilir. Örnek veriye **düşülmez**.
+- **`contract`** — `/v1/pusula/*` sözleşmesini doğrudan uygulayan bir backend için `httpAdapter.js`. Bugün bunu sunan bir servis yok; sözleşme referansı olarak duruyor.
+- **`mock`** (varsayılan) — örnek yanıtlar; ekranda Demo etiketi görünür. Mock plan kaydı gerçek yayın veya bildirim oluşturmaz.
+
+`frontend/.env.local` içinde (Vite `frontend/` dizininden çalışır):
 
 ```dotenv
-VITE_API_MODE=http
+VITE_API_MODE=backend
 VITE_API_BASE_URL=/api
 API_PROXY_TARGET=http://127.0.0.1:8000
 ```
 
-Vite sunucusunu yeniden başlatın. Tarayıcının `/api/v1/pusula/...` istekleri geliştirme proxy'si tarafından backend'in `/v1/pusula/...` yoluna iletilir. Üretimde `/api` için aynı yönlendirme web sunucusunda yapılmalıdır; Vite proxy ayarı üretim derlemesine taşınmaz.
+Vite sunucusunu yeniden başlatın. Proxy `/api` önekini **olduğu gibi** iletir; backend zaten tüm rotalarını `/api` altında sunar. Adaptör de backend'in kendi yollarını (`/recommend/advisor`, `/profile/{id}/interests`) çağırır, dolayısıyla `baseUrl` ile birlikte tam yol oluşur. Üretimde `/api` için aynı yönlendirme web sunucusunda yapılmalıdır; Vite proxy ayarı üretim derlemesine taşınmaz.
+
+Konteynerleştirilmiş backend'e Windows localhost'tan erişilemez (Podman VM'i 8000'i yayınlar ama ana makineye iletmez). Podman VM IP'sini kullanın — `podman machine ssh <vm> "ip -4 addr show eth0"` — örn. `http://172.17.78.187:8000`.
 
 HTTP modunda bağlantı, yetki veya şema hatası örnek veriyle gizlenmez. Hata ve yeniden deneme arayüzü gösterilir. HTTP modunda gerçek backend hazır olmadan sonuç görüntülenmez.
 
@@ -140,4 +146,39 @@ POST istekleri `Idempotency-Key` taşır. Sunucu bu anahtarı oturum/kullanıcı
 `pnpm test`: API sözleşmesi, iptal, zaman aşımı, HTTP hataları ve UI testleri. Gerçek model dosyaları, Qdrant veya yayın sağlayıcısı henüz bağlanmadı. Bu çalışma frontend entegrasyon altyapısını sağlar; backend/model yürütücüsünü içermez. `.joblib` dosyaları tarayıcıda yüklenmez; backend uygun Python ortamında model sürümü ve bağımlılıklarıyla çalıştırmalıdır.
 # Bu repository ile entegrasyon durumu
 
-Bu arayüz repository'ye `frontend/` altında taşındı. Kök dizindeki FastAPI backend `/api/recommend/advisor`, `/api/recommend/quick/{user_id}` ve `/api/profile/{user_id}` uçlarını sunar. Aşağıdaki arayüz sözleşmesi `/v1/pusula/*` kullanır; mevcut backend ile henüz eşlenmemiştir. Backend bağlantısı için HTTP adaptörünün istek/yanıt dönüşümleri, kullanıcı kimliği ve Vite proxy yol eşlemesi tamamlanmalıdır. Mevcut proxy `/api` önekini kaldırır; FastAPI uçlarına doğrudan bağlanırken bu önek korunmalıdır. Kurulum işleri, plan ve taslak saklama uçları da backend tarafında ayrıca uygulanmalıdır. Varsayılan mock modu bu taşıma sırasında korunmuştur.
+`backend` modu kök dizindeki FastAPI servisine bağlanır. Dönüşüm `src/services/pusula/backendAdapter.js` içindedir; `httpAdapter.js` yalnızca `/v1/pusula/*` sözleşmesini doğrudan uygulayan bir backend için referans olarak durur.
+
+## Eşleme
+
+| Ekran verisi | Backend kaynağı |
+|---|---|
+| Paylaşım pencereleri | `GET /api/recommend/quick/{user_id}` (`windows[]`) |
+| Fikir analizi | `POST /api/recommend/advisor` |
+| İlgi alanları | `PUT /api/profile/{user_id}/interests` |
+| Plan / taslak kaydı | `POST /api/plans`, `POST /api/drafts` |
+
+Eşlenen alanlar: `day`←`weekday`, `time`←`time_range_local`, `startsAt`←`window_start_utc`, `tip`←`explanation`, `hashtags`←`suggested_tags` (`#` kırpılır), `bestTime`/`alternativeTime`←`windows[0..1]`, `modelVersion`←`model_version`.
+
+## Karşılığı olmayan alanlar
+
+Backend'in üretmediği alanlar arayüzden **kaldırıldı**; yerlerine gerçek metrikler kondu, uydurma sayı üretilmedi:
+
+| Kaldırılan | Yerine gelen |
+|---|---|
+| `reach`, `reachMin/Max` | `support_post_count`, `support_user_count` |
+| `saveMultiplier` | `observational_time_lift` + güven aralığı |
+| `commentProbability` | `relative_potential` |
+| `onlinePercent` | pencereler arası konum (döndürülen küme içinde sıra) |
+| `confidence` (0-100) | `confidence_label` + `confidence` (high/medium/low) |
+| `draft` | yok — buton kullanıcının kendi fikrini gönderi alanına taşır |
+| `slot.format`, `slot.label` | `evidence_level` |
+
+`observational_time_lift` ve `relative_potential` **popülerlik-skoru biriminde işaretli artıklardır** (`backend/services/recommendation.py`), yüzde değildir; bu yüzden `+0.04` gibi işaretli sayı olarak gösterilirler.
+
+## Gecikme
+
+`POST /api/recommend/advisor` CPU'da Gemma çalıştırdığı için 30–45 sn sürer. Varsayılan 20 sn istemci zaman aşımı bu çağrı için `backendAdapter.js` içinde 120 sn'ye çıkarılır; yükleniyor ekranı gerçek süreyi ve aşama mesajlarını gösterir. Yüzde çubuğu **yoktur** — backend aşama sınırı bildirmediği için yüzde uydurma olurdu. Bu çağrı hâlâ bir iş/kuyruk sözleşmesine taşınmayı hak ediyor; eşik 20 sn değil, kullanıcı deneyimidir.
+
+## Kimlik ve yetki
+
+`user_id` tarayıcıda üretilip `localStorage`'da saklanır; backend'de kimlik doğrulama yoktur, dolayısıyla her istemci herhangi bir `user_id` için ilgi alanı yazabilir. Bu uç halka açılmadan önce kimlik doğrulama eklenmelidir. `GET /api/demo-users` küratörlü demo listesi eksik olduğu için boş döner; runtime'da yazılan ilgi alanları `data/state/declared_topics.json` altında ayrı tutulur ve demo listesine sızmaz.

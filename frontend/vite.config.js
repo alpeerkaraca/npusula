@@ -5,10 +5,12 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: env.API_PROXY_TARGET
         ? {
+            // The FastAPI backend mounts every route under /api, so the prefix
+            // is forwarded as-is. Stripping it here sent /api/health to a
+            // nonexistent /health and broke every request.
             "/api": {
               target: env.API_PROXY_TARGET,
               changeOrigin: true,
-              rewrite: (path) => path.replace(/^\/api/, ""),
             },
           }
         : undefined,

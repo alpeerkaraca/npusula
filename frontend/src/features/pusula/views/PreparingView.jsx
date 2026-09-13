@@ -18,15 +18,17 @@ export default function PreparingView() {
               <div className="flex items-center gap-space-sm">
                 <span className="inline-flex w-2.5 h-2.5 rounded-full bg-secondary-container animate-ping"></span>
                 <span className="font-code-sm text-code-sm uppercase tracking-widest text-secondary font-semibold">
-                  {"NPusula Core // Model: v4.2-DeepStream"}
+                  {/* The model name is only known once an analysis runs, so no
+                      version is asserted here. */}
+                  {ui.mode === "mock" ? "NPusula Core // Örnek" : "NPusula Core"}
                 </span>
               </div>
               <div className="flex items-center gap-space-xs font-code-sm text-code-sm text-on-surface-variant bg-surface-container-lowest/80 px-space-sm py-1 rounded-full">
                 <DesignIcon name="hub" className=" text-[14px] text-tertiary" />
                 <span>
-                  {"Qdrant Vector Cluster: "}
+                  {"Hazırlık: "}
                   <strong className="text-on-surface font-semibold">
-                    {"Aktif"}
+                    {ui.job?.status === "completed" ? "Tamam" : "Sürüyor"}
                   </strong>
                 </span>
               </div>
@@ -290,8 +292,8 @@ export default function PreparingView() {
               </div>
 
               <div className="flex items-center justify-between text-on-surface-variant font-code-sm text-code-sm px-1 pt-1">
-                <span>{"LAT: 41.0082° N · LON: 28.9784° E"}</span>
-                <span>{"İşlenen Vektör: 14.820 / 21.000"}</span>
+                <span>{ui.mode === "mock" ? "Örnek veri" : "Canlı backend"}</span>
+                <span>{ui.job?.message || "İş durumu bekleniyor"}</span>
               </div>
             </div>
 
@@ -353,9 +355,9 @@ export default function PreparingView() {
             <div className="flex items-center gap-2 mt-space-lg text-on-surface-variant font-body-sm text-body-sm">
               <DesignIcon name="info" className=" text-[18px] text-primary" />
               <span>
-                {
-                  "İlerleme servis tarafından bildiriliyor. Hazırlık tamamlandığında rotanızı görüntüleyebilirsiniz."
-                }
+                {ui.mode === "mock"
+                  ? "İlerleme örnek veriyle canlandırılıyor. Hazırlık tamamlandığında rotanızı görüntüleyebilirsiniz."
+                  : "Profil kaydedildi ve öneri servisi çağrıldı. Rotanız hazır olduğunda görüntüleyebilirsiniz."}
               </span>
             </div>
           </div>

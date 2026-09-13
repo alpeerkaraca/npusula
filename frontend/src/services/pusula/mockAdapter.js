@@ -31,52 +31,82 @@ export function createMockPusulaApi({
     await delay(latency, signal);
     return validate(kind, value);
   };
-  const recommendations = () => ({
-    confidence: 94,
-    updatedAt: new Date(now()).toISOString(),
-    slots: [
+  // Mirrors the backend window contract field-for-field, so the mock and http
+  // adapters stay interchangeable and the views render either one unchanged.
+  const buildSlots = () =>
+    [
       {
         id: "slot-1",
         day: "Salı",
-        time: "20:30",
-        onlinePercent: 85,
-        reach: 45000,
-        format: "Kısa Video / Medya Gönderisi",
-        label: "En Yüksek Etkileşim (Peak Slot)",
+        time: "20.00–23.00",
+        // Score-unit residuals, mirroring the backend's own scale.
+        relativePotential: 0.16,
+        rankPercent: 100,
+        supportPostCount: 2615,
+        supportUserCount: 739,
+        observationalTimeLift: 0.0412,
+        liftCiLow: -0.081,
+        liftCiHigh: 0.164,
+        confidence: "medium",
+        confidenceLabel: "Orta",
+        evidenceLevel: "category_weekday_bucket",
       },
       {
         id: "slot-2",
         day: "Perşembe",
-        time: "19:00",
-        onlinePercent: 72,
-        reach: 32000,
-        format: "Bilgi Seli / Görsel",
-        label: "İkincil Zirve (Yüksek Paylaşım Hızı)",
+        time: "19.00–22.00",
+        relativePotential: 0.06,
+        rankPercent: 50,
+        supportPostCount: 1800,
+        supportUserCount: 625,
+        observationalTimeLift: 0.0188,
+        liftCiLow: -0.121,
+        liftCiHigh: 0.103,
+        confidence: "medium",
+        confidenceLabel: "Orta",
+        evidenceLevel: "category_weekday_bucket",
       },
       {
         id: "slot-3",
         day: "Cumartesi",
-        time: "14:30",
-        onlinePercent: 68,
-        reach: 28500,
-        format: "İnteraktif Tartışma",
-        label: "Hafta Sonu Keşif Penceresi",
+        time: "14.00–17.00",
+        relativePotential: -0.04,
+        rankPercent: 0,
+        supportPostCount: 1402,
+        supportUserCount: 508,
+        observationalTimeLift: 0.0071,
+        liftCiLow: -0.142,
+        liftCiHigh: 0.091,
+        confidence: "low",
+        confidenceLabel: "Düşük",
+        evidenceLevel: "global_weekday_bucket",
       },
     ].map((slot, index) => {
       const date = new Date(now());
       const desired = [2, 4, 6][index];
       const today = new Date(now() + 3 * 3600000).getUTCDay();
-      let offset = (desired - today + 7) % 7;
-      const [hours, minutes] = slot.time.split(":").map(Number);
+      const offset = (desired - today + 7) % 7;
+      const hours = Number(slot.time.slice(0, 2));
       date.setUTCDate(date.getUTCDate() + offset);
-      date.setUTCHours(hours - 3, minutes, 0, 0);
+      // Istanbul is UTC+3; the window starts at the local hour shown.
+      date.setUTCHours(hours - 3, 0, 0, 0);
       if (date.getTime() <= now()) date.setUTCDate(date.getUTCDate() + 7);
       return {
         ...slot,
         startsAt: date.toISOString(),
         timeZone: "Europe/Istanbul",
       };
-    }),
+    });
+  const recommendations = () => ({
+    confidence: "medium",
+    confidenceLabel: "Orta",
+    updatedAt: new Date(now()).toISOString(),
+    activeTopic: "Teknoloji",
+    coldStart: false,
+    timezoneBasis: "user_timezone",
+    explanation:
+      "Örnek veri: seçili konularda akşam saatleri daha yüksek etkileşim gösteriyor. Gerçek açıklama backend'den gelir.",
+    slots: buildSlots(),
   });
   return {
     mode: "mock",
@@ -125,14 +155,13 @@ export function createMockPusulaApi({
         {
           id: crypto.randomUUID(),
           modelVersion: "Demo",
-          confidence: 88,
-          reachMin: 34500,
-          reachMax: 52000,
-          saveMultiplier: 4.8,
-          commentProbability: 76,
-          liftPercent: 38,
-          bestTime: "Cuma 21:00",
-          alternativeTime: "Cumartesi 11:30–13:00",
+          topic: "Yapay Zeka",
+          primaryCategory: "technology",
+          primaryCategoryConfidence: 0.65,
+          confidence: "medium",
+          confidenceLabel: "Orta",
+          bestTime: "Salı 20.00–23.00",
+          alternativeTime: "Perşembe 19.00–22.00",
           hashtags: [
             "YapayZeka",
             "Teknoloji",
@@ -141,7 +170,21 @@ export function createMockPusulaApi({
             "ÜretkenYapayZeka",
           ],
           tip: "İlk 3 saniyede ana fikri gösterin. İzleyiciye bir soru sorarak yorum etkileşimini destekleyin.",
-          draft: body.text.trim(),
+          historyDepth: "cold_start",
+          isTieOrBroadWindow: true,
+          timezoneBasis: "user_timezone",
+          windows: buildSlots(),
+          similarPosts: [
+            {
+              postId: "237695",
+              title: "Örnek benzer gönderi başlığı",
+              weekdayIndex: 2,
+              hour: 20,
+              popularityScore: 8.5,
+              similarity: 0.16,
+              tags: ["technology"],
+            },
+          ],
         },
         options,
       );

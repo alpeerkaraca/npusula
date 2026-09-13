@@ -25,15 +25,17 @@ pnpm dev
 
 ## Backend bağlantısı
 
-Varsayılan mod `mock`: ekranlar örnek yanıtlarla çalışır. HTTP modunda sonuçlar yalnızca backend'den gelir; hata durumunda mock veriye dönülmez. Model anahtarları tarayıcıya konmaz.
+Varsayılan mod `mock`: ekranlar örnek yanıtlarla çalışır. `backend` modunda sonuçlar yalnızca gerçek NPusula API'sinden gelir; hata durumunda mock veriye dönülmez. Model anahtarları tarayıcıya konmaz.
 
-`.env.local` örneği:
+`frontend/.env.local` örneği:
 
 ```dotenv
-VITE_API_MODE=http
+VITE_API_MODE=backend
 VITE_API_BASE_URL=/api
 API_PROXY_TARGET=http://127.0.0.1:8000
 ```
+
+Konteynerleştirilmiş backend'e Windows localhost'tan erişilemez; `API_PROXY_TARGET` için Podman VM IP'sini kullanın.
 
 Değişiklikten sonra geliştirme sunucusunu yeniden başlatın. Ayrıntılı endpoint sözleşmeleri ve entegrasyon adımları: [docs/backend-integration.md](docs/backend-integration.md).
 

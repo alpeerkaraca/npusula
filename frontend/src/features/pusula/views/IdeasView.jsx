@@ -3,8 +3,10 @@ import { usePusula } from "../PusulaProvider.jsx";
 import DesignIcon from "../DesignIcon.jsx";
 import RequestState from "../RequestState.jsx";
 import AnalysisResult from "../components/AnalysisResult.jsx";
+import { useAnalysisStage } from "../useAnalysisStage.js";
 export default function IdeasView() {
   const ui = usePusula();
+  const stage = useAnalysisStage(ui.analysis.status === "loading");
   return (
     <div className="pusula-view">
       <header className="flex justify-between gap-space-md pb-space-md mb-space-lg">
@@ -93,6 +95,7 @@ export default function IdeasView() {
           <RequestState
             task={ui.analysis}
             retry={ui.analyze}
+            loading={stage || undefined}
             empty="Fikrinizi yazıp analiz başlattığınızda değerlendirme burada görünecek."
           >
             {ui.analysis.data && (

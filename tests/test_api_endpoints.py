@@ -223,3 +223,112 @@ def test_model_metrics_endpoint(client):
     assert "baseline_spearman" in data
     assert "model_spearman" in data
     assert len(data["feature_importance"]) > 0
+
+
+@pytest.fixture
+def isolated_state(tmp_path, monkeypatch):
+    """Points the runtime stores at a temp dir so tests never write real state."""
+    import backend.app as app_module
+
+    monkeypatch.setattr(
+        app_module.user_repo, "state_path", tmp_path / "declared_topics.json"
+    )
+    monkeypatch.setattr(
+        app_module.saved_repo, "state_path", tmp_path / "saved_content.json"
+    )
+    # The stores are module-level singletons, so drop anything already loaded
+    # to keep these tests from leaking state into each other.
+    monkeypatch.setattr(app_module.user_repo, "_declared", {})
+    monkeypatch.setattr(app_module.saved_repo, "_data", {})
+    return tmp_path
+
+
+def test_declared_topics_round_trip(client, isolated_state):
+    """Topics written by the setup wizard surface on the profile."""
+    response = client.put(
+        "/api/profile/web-test-1/interests",
+        json={"topics": ["Yapay Zeka", "Yazılım"]},
+    )
+    assert response.status_code == 200
+    assert response.json()["declared_topics"] == ["Yapay Zeka", "Yazılım"]
+    profile = client.get("/api/profile/web-test-1").json()
+    assert profile["declared_topics"] == ["Yapay Zeka", "Yazılım"]
+
+
+def test_declared_topics_survive_a_reload(client, isolated_state):
+    """The declaration is persisted, so a fresh repository reads it back."""
+    from backend.adapters.repository import UserRepository
+
+    client.put("/api/profile/web-test-2/interests", json={"topics": ["Oyun"]})
+    reloaded = UserRepository(
+        demo_path=isolated_state / "absent.json",
+        state_path=isolated_state / "declared_topics.json",
+    )
+    assert reloaded.get_declared_profile("web-test-2").declared_topics == ["Oyun"]
+
+
+def test_declared_topics_never_create_demo_accounts(client, isolated_state):
+    """Runtime declarations must stay out of the curated demo roster."""
+    client.put("/api/profile/web-test-3/interests", json={"topics": ["Spor"]})
+    assert client.get("/api/demo-users").json() == []
+    assert not (isolated_state / "demo_accounts.json").exists()
+
+
+def test_declared_topics_accepts_one_topic_after_client_dedupe(client, isolated_state):
+    """Two wizard ids can collapse onto one topic, so a single topic is valid."""
+    response = client.put(
+        "/api/profile/web-test-4/interests", json={"topics": ["Teknoloji Trendleri"]}
+    )
+    assert response.status_code == 200
+    assert response.json()["declared_topics"] == ["Teknoloji Trendleri"]
+
+
+def test_declared_topics_rejects_bad_payloads(client, isolated_state):
+    url = "/api/profile/web-test-5/interests"
+    # Not in the canonical vocabulary: would otherwise become the active topic.
+    assert client.put(url, json={"topics": ["araba"]}).status_code == 422
+    assert client.put(url, json={"topics": []}).status_code == 422
+    assert (
+        client.put(
+            url, json={"topics": ["Oyun", "Yaşam", "Spor", "Finans", "Eğitim", "Yazılım"]}
+        ).status_code
+        == 422
+    )
+    # extra="forbid" catches a client that sends its own interest ids.
+    assert (
+        client.put(url, json={"topics": ["Oyun"], "interests": ["oyun"]}).status_code
+        == 422
+    )
+
+
+def test_plans_and_drafts_are_recorded_without_claiming_publication(
+    client, isolated_state
+):
+    plan = client.post(
+        "/api/plans",
+        json={
+            "slot_id": "3-5",
+            "starts_at": "2026-09-17T12:00:00Z",
+            "time_zone": "Europe/Istanbul",
+            "text": "Taslak metin",
+            "format": "video",
+        },
+    )
+    assert plan.status_code == 200
+    # This service records intent only; it never claims to have scheduled a post.
+    assert plan.json()["status"] == "saved"
+    assert plan.json()["slot_id"] == "3-5"
+
+    draft = client.post("/api/drafts", json={"text": "Fikir", "format": "thread"})
+    assert draft.status_code == 200
+    assert draft.json()["text"] == "Fikir"
+
+
+def test_plans_and_drafts_reject_malformed_payloads(client, isolated_state):
+    assert client.post("/api/plans", json={"slot_id": "x"}).status_code == 422
+    assert (
+        client.post(
+            "/api/drafts", json={"text": "x", "format": "audio"}
+        ).status_code
+        == 422
+    )

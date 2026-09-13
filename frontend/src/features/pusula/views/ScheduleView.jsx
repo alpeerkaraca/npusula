@@ -25,11 +25,17 @@ export default function ScheduleView() {
           </div>
           <div className="bg-surface-container-high rounded-xl px-space-md py-space-sm self-start shrink-0">
             <span className="text-code-sm uppercase text-on-surface-variant">
-              Algoritmik Doğruluk
+              Sinyal Güveni
             </span>
             <div className="text-tertiary text-title-md font-bold">
-              {data ? `Aktif Sinyal: %${data.confidence}` : "Sinyal bekleniyor"}
+              {data ? data.confidenceLabel : "Sinyal bekleniyor"}
             </div>
+            {data ? (
+              <span className="text-code-sm text-on-surface-variant">
+                {data.activeTopic}
+                {data.coldStart ? " · yeni profil" : ""}
+              </span>
+            ) : null}
           </div>
         </div>
       </section>
@@ -47,7 +53,7 @@ export default function ScheduleView() {
           task={ui.recommendations}
           retry={ui.reloadRecommendations}
         >
-          {data?.slots.length ? (
+          {data?.slots?.length ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md">
               {data.slots.map((slot, index) => (
                 <SlotCard

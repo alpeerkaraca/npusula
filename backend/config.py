@@ -40,6 +40,16 @@ class Settings:
     ARTIFACTS_DIR: Path = BASE_DIR / "artifacts"
     DEMO_ACCOUNTS_PATH: Path = ARTIFACTS_DIR / "demo_accounts.json"
 
+    # --- Runtime state -------------------------------------------------------
+    # Interests and saved content written while the app runs. `data/` is
+    # gitignored while `artifacts/` is tracked (see .gitignore), so runtime
+    # state lives here and never shows up as repository dirt or provenance.
+    # Kept deliberately separate from DEMO_ACCOUNTS_PATH: the curated demo
+    # roster must stay untouched, so /api/demo-users keeps answering [].
+    STATE_DIR: Path = Path(os.getenv("NPUSULA_STATE_DIR", str(DATA_DIR / "state")))
+    DECLARED_TOPICS_PATH: Path = STATE_DIR / "declared_topics.json"
+    SAVED_CONTENT_PATH: Path = STATE_DIR / "saved_content.json"
+
     # --- Layer A / Layer B artifacts (plan §4, §5) ---------------------------
     # The pre-rework artifacts (metrics.json, lgbm_popularity.txt,
     # tuning_results.json, pytorch_popularity_gpu.pt) live in artifacts/legacy/

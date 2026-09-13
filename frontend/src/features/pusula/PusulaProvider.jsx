@@ -144,22 +144,25 @@ export function PusulaProvider({
     }
   }
   async function openDraft() {
-    if (!analysis.data) return;
-    const payload = { text: analysis.data.draft, format };
+    // The backend does not generate draft copy, so the user's own idea text is
+    // carried into the composer rather than a synthesised "AI draft".
+    const text = draft.trim();
+    if (!analysis.data || !text) return;
+    const payload = { text, format };
     const result = await mutation.run((signal) =>
       api.saveDraft(payload, { signal, requestId: requestKey(payload) }),
     );
     if (result) {
       setDraft(result.text);
       navigate("home");
-      setNotice("Taslak gönderi alanına aktarıldı.");
+      setNotice("Fikriniz gönderi alanına aktarıldı.");
     }
   }
   async function copyAnalysis() {
     if (!analysis.data) return;
     try {
       await navigator.clipboard.writeText(
-        `${analysis.data.draft}\n${analysis.data.hashtags.map((tag) => `#${tag}`).join(" ")}`,
+        `${draft.trim()}\n${analysis.data.hashtags.map((tag) => `#${tag}`).join(" ")}`,
       );
       setNotice("Öneriler kopyalandı.");
     } catch {
