@@ -24,6 +24,7 @@ import pandas as pd
 
 from backend.services.provenance import (
     file_sha256,
+    git_code_is_dirty,
     git_commit_sha,
     git_is_dirty,
     utc_now_iso,
@@ -427,7 +428,8 @@ def tune(limit_rows: int | None = None, max_configs: int = N_RANDOM_CONFIGS) -> 
     }
     provenance = {
         "git_commit": git_commit_sha(),
-        "git_dirty": git_is_dirty(),
+        "git_dirty": git_code_is_dirty(),
+        "git_worktree_dirty": git_is_dirty(),
         "tuned_at_utc": utc_now_iso(),
         "dataset_parquet": str(PARQUET_FILE),
         "dataset_parquet_sha256": file_sha256(PARQUET_FILE),

@@ -25,7 +25,14 @@ import pandas as pd
 from backend.config import settings
 from backend.services.canonical_taxonomy import canonical_name
 from backend.services.legacy_m5_features import build_legacy_m5_frame
-from backend.services.provenance import file_sha256, git_commit_sha, git_is_dirty, utc_now_iso, write_json_with_provenance
+from backend.services.provenance import (
+    file_sha256,
+    git_code_is_dirty,
+    git_commit_sha,
+    git_is_dirty,
+    utc_now_iso,
+    write_json_with_provenance,
+)
 from backend.services.recommendation import A2_FEATURES, A3_FEATURES, RecommendationService
 from backend.services.time_lift import TimeLiftConfig, TimeLiftTable
 from backend.services.time_lift_eval import evaluate_windows
@@ -323,7 +330,8 @@ def evaluate(limit_rows: int | None = None) -> dict:
     }
     provenance = {
         "git_commit": git_commit_sha(),
-        "git_dirty": git_is_dirty(),
+        "git_dirty": git_code_is_dirty(),
+        "git_worktree_dirty": git_is_dirty(),
         "evaluated_at_utc": utc_now_iso(),
         "dataset_sha256": file_sha256(PARQUET_FILE),
         "model_path": str(service.model_path),

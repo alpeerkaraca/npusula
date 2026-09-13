@@ -32,20 +32,40 @@ def git_commit_sha(default: str = "unknown") -> str:
         return default
 
 
+CODE_PATHS = ("backend", "scripts", "tests")
+
+
 def git_is_dirty() -> bool:
-    """True when the working tree has uncommitted changes."""
+    """True when the working tree has any uncommitted change."""
+    return bool(_git_status_lines())
+
+
+def git_code_is_dirty() -> bool:
+    """True when tracked *code* differs from HEAD.
+
+    A pipeline run necessarily rewrites the artifacts it produces, so a plain
+    "worktree is dirty" flag would be true for every step after the first and
+    would tell an auditor nothing. This flag answers the question that matters:
+    was the code that produced this artifact exactly the committed code?
+    """
+    lines = _git_status_lines(*CODE_PATHS)
+    return bool(lines)
+
+
+def _git_status_lines(*paths: str) -> list[str]:
+    command = ["git", "status", "--porcelain", *paths]
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain"],
+            command,
             cwd=settings.BASE_DIR,
             capture_output=True,
             text=True,
             timeout=10,
             check=False,
         )
-        return bool(result.stdout.strip())
     except (OSError, subprocess.SubprocessError):
-        return False
+        return []
+    return [line for line in result.stdout.splitlines() if line.strip()]
 
 
 def file_sha256(path: Path, chunk_size: int = 1 << 20) -> str:
