@@ -12,6 +12,7 @@ import uuid
 from fastapi import HTTPException
 
 from backend.adapters.repository import PostRepository, UserRepository
+from backend.config import settings
 from backend.schemas.post import MediaTypeEnum
 from backend.schemas.recommendation import (
     AdvisorRequest,
@@ -365,7 +366,7 @@ class AdvisorService:
             is_tie_or_broad_window=recommendation.is_tie_or_broad_window,
             timezone_basis=recommendation.timezone_basis,
             timezone_fallback=recommendation.timezone_fallback,
-            model_version="base-potential-lgbm + time-lift-table + google/gemma-4-E4B-it",
+            model_version=f"base-potential-lgbm + time-lift-table + {settings.GEMMA_MODEL_NAME}",
             data_source="SMPD benchmark (observational) & NSosyal demo",
             service_mode="deep_advisor",
             media_analysis=media,

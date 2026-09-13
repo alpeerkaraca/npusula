@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from backend.app import app
+from backend.config import settings
 
 TR_WEEKDAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
 
@@ -35,7 +36,7 @@ def test_health_endpoint(client):
     assert "qdrant_connected" in data
     assert "gpu" in data
     assert "advisor_model" in data
-    assert data["advisor_model"] == "google/gemma-4-E4B-it"
+    assert data["advisor_model"] == settings.GEMMA_MODEL_NAME
 
 
 def test_demo_users_endpoint(client):

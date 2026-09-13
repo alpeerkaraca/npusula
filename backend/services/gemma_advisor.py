@@ -1,4 +1,4 @@
-"""Gemma 4 Strategic Advisor Engine for NPusula (google/gemma-4-E4B-it).
+"""Gemma 4 Strategic Advisor Engine for NPusula (Ollama id `gemma4:e4b`).
 
 Produces the Turkish explanation that sits on top of the two-layer output:
 Layer A (base potential) plus Layer B (observational time windows).
