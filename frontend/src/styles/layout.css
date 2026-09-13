@@ -1,0 +1,177 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+button {
+  touch-action: manipulation;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #00a3ff;
+  outline-offset: 3px;
+}
+.app-shell {
+  isolation: isolate;
+  min-height: 100vh;
+  background: var(--app-bg);
+  display: grid;
+  grid-template-columns: 240px minmax(0, 760px) 300px;
+  gap: 40px;
+  max-width: 1440px;
+  padding: 24px 20px 0;
+  margin-inline: auto;
+  align-items: start;
+}
+/* Paint the full viewport with the active theme without restricting the columns. */
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--app-bg);
+  z-index: -1;
+}
+.sidebar {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 12px 24px;
+}
+.sidebar > nav {
+  margin-top: 20px;
+}
+.sidebar-preferences {
+  border-top: 1px solid var(--app-border);
+  padding-top: 20px;
+}
+.main-content {
+  min-width: 0;
+  min-height: calc(100vh - 24px);
+  border-inline: 1px solid var(--app-border);
+  overflow-wrap: anywhere;
+}
+.main-content input,
+.main-content textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.right-sidebar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  position: sticky;
+  top: 24px;
+  padding-top: 12px;
+}
+.right-sidebar input {
+  min-width: 0;
+}
+.messages-bar {
+  width: 300px;
+  right: max(20px, calc((100vw - 1400px) / 2));
+  z-index: 10;
+}
+.composer-toolbar {
+  padding-left: 52px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.composer-toolbar > div {
+  flex-wrap: wrap;
+}
+.post-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1199px) {
+  .app-shell {
+    max-width: 1020px;
+    grid-template-columns: 220px minmax(0, 760px);
+    gap: 24px;
+  }
+  .right-sidebar,
+  .messages-bar {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .app-shell {
+    display: block;
+    padding: 0;
+  }
+  .sidebar {
+    position: relative;
+    top: 0;
+    max-height: none;
+    overflow: visible;
+    padding: 16px 12px 12px;
+    gap: 12px;
+    border-bottom: 1px solid var(--app-border);
+  }
+  .sidebar > nav {
+    flex-direction: row !important;
+    overflow-x: auto;
+    gap: 8px !important;
+    margin-top: 4px;
+    padding: 4px 0 8px;
+  }
+  .sidebar > nav > button {
+    width: auto !important;
+    flex-shrink: 0;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .sidebar > nav > div {
+    display: none;
+  }
+  .sidebar > button {
+    align-self: flex-start;
+  }
+  .sidebar-preferences {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px !important;
+    padding-top: 12px;
+  }
+  .sidebar-preferences > div {
+    gap: 8px;
+  }
+  .main-content {
+    border: 0;
+    min-height: 60vh;
+  }
+  .recommendation-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .composer-toolbar {
+    padding-left: 0;
+  }
+  .post-card > div {
+    gap: 8px !important;
+  }
+  .post-card > div > div:first-child {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .post-card,
+  .post-composer {
+    padding: 16px 12px !important;
+  }
+}

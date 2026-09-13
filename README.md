@@ -1,5 +1,11 @@
 # N-Pusula (EnPusula)
 
+## Web arayüzü
+
+Son Stitch tasarımlarına göre geliştirilen React/Vite uygulaması `frontend/` klasöründedir. Kurulum ve çalıştırma için [frontend/README.md](frontend/README.md) belgesine bakın. Arayüz varsayılan olarak mock modunda çalışır.
+
+Arayüzün `/v1/pusula/*` sözleşmesi ile bu backend'in `/api/recommend/*` ve `/api/profile/*` uçları henüz eşlenmemiştir. HTTP modunu açmak tek başına entegrasyonu tamamlamaz; adaptör ve proxy yol eşlemesi uygulanmalıdır. Ayrıntılar: [entegrasyon belgesi](frontend/docs/backend-integration.md).
+
 EnSosyal için akıllı paylaşım zamanı danışmanı: bir içerik fikri verildiğinde
 haftanın en iyi paylaşım pencerelerini, göreli potansiyelini ve önerilen
 etiketleri üretir; ayrıca içerik güvenliği denetimi yapar.
