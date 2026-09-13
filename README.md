@@ -214,7 +214,8 @@ python scripts/evaluate_final.py
 python scripts/07_index_qdrant.py
 
 # 7) Doğrulama
-pytest tests/                                     # 155 test
+python scripts/verify_acceptance.py               # planın 12 kabul maddesi, artifact'lardan
+pytest tests/                                     # 156 test
 python scripts/smoke_test.py                      # canlı API uçtan uca
 python scripts/idea_battery.py --base-url http://127.0.0.1:8000
 ```
