@@ -22,7 +22,13 @@ import time
 import numpy as np
 import pandas as pd
 
-from backend.services.provenance import git_commit_sha, utc_now_iso, write_json_with_provenance
+from backend.services.provenance import (
+    file_sha256,
+    git_commit_sha,
+    git_is_dirty,
+    utc_now_iso,
+    write_json_with_provenance,
+)
 from backend.services.recommendation import A3_FEATURES
 from backend.services.time_lift import TimeLiftConfig, TimeLiftTable
 from backend.services.time_lift_eval import evaluate_windows
@@ -421,8 +427,10 @@ def tune(limit_rows: int | None = None, max_configs: int = N_RANDOM_CONFIGS) -> 
     }
     provenance = {
         "git_commit": git_commit_sha(),
+        "git_dirty": git_is_dirty(),
         "tuned_at_utc": utc_now_iso(),
         "dataset_parquet": str(PARQUET_FILE),
+        "dataset_parquet_sha256": file_sha256(PARQUET_FILE),
         "test_touched_before_final": False,
     }
     write_json_with_provenance(TUNING_OUTPUT, payload, provenance)
