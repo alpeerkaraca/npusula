@@ -15,6 +15,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.pipeline import Pipeline
 
 from backend.config import settings
+from backend.schemas.media import MediaAnalysis
 from backend.schemas.post import MediaTypeEnum
 from backend.schemas.recommendation import CandidateSlot, FeatureImportanceEntry, ModelMetricsResponse
 from backend.services.candidate_generator import (
@@ -22,7 +23,7 @@ from backend.services.candidate_generator import (
     extract_time_features,
     select_top_non_overlapping_slots,
 )
-from backend.services.canonical_taxonomy import classify_post_category
+from backend.services.canonical_taxonomy import CATEGORY_CODE_MAP, classify_post_category
 from backend.services.tag_taxonomy import align_tags
 
 logger = logging.getLogger(__name__)
@@ -381,6 +382,28 @@ class RecommendationService:
             feature_importance=fi_entries,
         )
 
+    @staticmethod
+    def _apply_media_category(X: pd.DataFrame, media_context: MediaAnalysis | None) -> bool:
+        """Overrides the text-derived category columns with a confident image category.
+
+        The canonical label is applied directly instead of being fed through
+        `classify_post_category`'s keyword mapper: 2 of the 11 canonical names
+        (`entertainment_gaming`, `art_design`) do not survive that mapper's
+        word-boundary rules and would silently collapse to the social_lifestyle
+        fallback. Derived interaction features are recomputed so the row stays
+        internally consistent.
+        """
+        if media_context is None or media_context.canonical_category is None:
+            return False
+        code = CATEGORY_CODE_MAP.get(media_context.canonical_category)
+        if code is None:
+            return False
+        X["primary_cat_code"] = float(code)
+        X["primary_cat_confidence"] = float(media_context.category_confidence)
+        X["cat_x_hour"] = X["primary_cat_code"] * 100 + X["hour"]
+        X["cat_x_weekday"] = X["primary_cat_code"] * 10 + X["weekday"]
+        return True
+
     def recommend_slots(
         self,
         user_prior_mean: float,
@@ -392,6 +415,7 @@ class RecommendationService:
         days_ahead: int = 7,
         top_k: int = 3,
         model_mode: str = "auto",
+        media_context: MediaAnalysis | None = None,
     ) -> list[CandidateSlot]:
         """Scores 7x24 candidate slots (next 7 days x every hour) with semantic taxonomy and SVD embedding."""
         now = datetime.now(timezone.utc)
@@ -411,6 +435,7 @@ class RecommendationService:
 
         cand_df = pd.DataFrame(rows)
         X_cand = self._prepare_features(cand_df)
+        self._apply_media_category(X_cand, media_context)
 
         has_lgbm = self.model is not None
 

@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import Field, StrictBool, StrictFloat, StrictInt, StrictStr
 
 from backend.schemas.base import StrictSchema
+from backend.schemas.media import MediaAnalysisResponse
 from backend.schemas.post import MediaType, MediaTypeEnum
 
 
@@ -36,6 +37,9 @@ class AdvisorRequest(StrictSchema):
     idea: StrictStr = Field(..., min_length=1, max_length=500)
     media_type: MediaType = Field(default=MediaTypeEnum.PHOTO)
     horizon: StrictStr = Field(default="next_7_days")
+    # Optional handle returned by POST /api/media/analyze. Absent, expired or
+    # unknown ids simply leave the request on the text-only path.
+    media_id: StrictStr | None = Field(default=None)
 
     model_config = {
         **StrictSchema.model_config,
@@ -45,6 +49,7 @@ class AdvisorRequest(StrictSchema):
                 "idea": "Yapay zeka modelleri ve mobil cihazlarda yerel LLM optimizasyonu",
                 "media_type": "video",
                 "horizon": "next_7_days",
+                "media_id": "a1b2c3d4e5f6",
             }
         },
     }
@@ -79,6 +84,11 @@ class AdvisorResponse(StrictSchema):
     model_version: StrictStr
     data_source: StrictStr
     service_mode: StrictStr = Field(default="quick", description="'quick' or 'deep_advisor'")
+    # Present only when the request referenced an analysed upload; carries the
+    # evidence behind any topic/category that came from the image. Typed as the
+    # *Response* model on purpose: declaring the parent would narrow the value
+    # and silently drop media_id/created_at_utc during validation.
+    media_analysis: MediaAnalysisResponse | None = Field(default=None)
 
 
 class FeatureImportanceEntry(StrictSchema):

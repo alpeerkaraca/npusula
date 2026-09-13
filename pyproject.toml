@@ -17,7 +17,33 @@ dependencies = [
     "lightgbm>=4.3.0",
     "httpx>=0.27.0",
     "pytest>=8.2.0",
+    # Uploaded-media analysis (photo/video -> CLIP zero-shot).
+    # Declared here rather than installed by hand: `uv sync`/`uv run` reconciles
+    # the environment against this lockfile and would otherwise remove them
+    # (torch is imported at module scope by backend/services/device.py, so a
+    # pruned torch takes the whole API down).
+    "python-multipart>=0.0.9",
+    "pillow>=10.0.0",
+    "imageio>=2.34.0",
+    "imageio-ffmpeg>=0.5.1",
+    # transformers 5.x requires torch>=2.5, but the DirectML plugin that drives
+    # the local RX 9070 XT pins torch==2.4.1. 4.x supports CLIP fully, so the
+    # ceiling keeps the GPU path (backend/services/device.py) alive.
+    "transformers>=4.44.0,<5",
+    # CPU build on every platform; the Windows DirectML plugin is added below.
+    "torch==2.4.1",
+    "torch-directml==0.2.5.dev240914; sys_platform == 'win32'",
 ]
+
+# torch must resolve from the CPU wheel index: the default PyPI wheel is the
+# CUDA build, which is far larger and useless on this CPU/DirectML deployment.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
 
 [build-system]
 requires = ["setuptools>=61.0"]

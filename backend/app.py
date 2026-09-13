@@ -3,12 +3,13 @@ from contextlib import asynccontextmanager
 import logging
 import time
 from typing import Any
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.adapters.repository import PostRepository, UserRepository
 from backend.adapters.storage import QdrantPostStore
 from backend.logging_setup import setup_logging
+from backend.schemas.media import MediaAnalysisResponse
 from backend.schemas.profile import ProfileDecisionRequest, ProfileStatus
 from backend.schemas.recommendation import (
     AdvisorRequest,
@@ -18,6 +19,14 @@ from backend.schemas.recommendation import (
 )
 from backend.services.advisor import AdvisorService
 from backend.services.device import device_manager
+from backend.services.media_analysis import (
+    MediaAnalysisStore,
+    MediaAnalyzer,
+    MediaError,
+    detect_media_kind,
+    read_upload_capped,
+    size_limit_bytes,
+)
 from backend.services.profile import ProfileService
 from backend.services.recommendation import RecommendationService
 from backend.services.retrieval import RetrievalService
@@ -31,6 +40,8 @@ user_repo = UserRepository()
 profile_service = ProfileService()
 retrieval_service = RetrievalService()
 recommendation_service = RecommendationService()
+media_analyzer = MediaAnalyzer()
+media_store = MediaAnalysisStore()
 
 advisor_service = AdvisorService(
     recommendation_service=recommendation_service,
@@ -38,6 +49,7 @@ advisor_service = AdvisorService(
     profile_service=profile_service,
     user_repo=user_repo,
     post_repo=post_repo,
+    media_store=media_store,
 )
 
 
@@ -50,6 +62,13 @@ async def lifespan(app: FastAPI):
         logger.info("startup complete: recommendation service ready (rows=%d)", len(df))
     else:
         logger.warning("startup: processed dataset is empty; model is unavailable")
+    # Media analysis is optional by design: a missing checkpoint logs a warning
+    # and /api/media/analyze answers 503, while the text-only advisor path (and
+    # therefore the demo) keeps working.
+    if media_analyzer.warm_up():
+        logger.info("startup complete: media analyzer ready")
+    else:
+        logger.warning("startup: media analyzer unavailable; /api/media/analyze will answer 503")
     yield
     logger.info("shutdown complete")
 
@@ -94,6 +113,7 @@ def get_health() -> dict[str, Any]:
         "version": "0.1.0",
         "qdrant_connected": qdrant_healthy,
         "model_ready": recommendation_service.model is not None,
+        "media_analyzer_ready": media_analyzer.is_ready,
         "gpu": gpu_info,
         "advisor_model": "google/gemma-4-E4B-it",
     }
@@ -140,3 +160,35 @@ def get_advisor_recommendation(payload: AdvisorRequest) -> AdvisorResponse:
 def get_model_metrics() -> ModelMetricsResponse:
     """Returns offline test evaluation metrics and top feature importances."""
     return recommendation_service.get_metrics()
+
+
+@app.post("/api/media/analyze", response_model=MediaAnalysisResponse)
+def analyze_media(file: UploadFile = File(...)) -> MediaAnalysisResponse:
+    """Analyses an uploaded photo or video: topic, canonical category, hashtags.
+
+    This lives on its own endpoint because `/api/recommend/advisor` is a strict
+    JSON contract that rejects unexpected fields; the returned `media_id` is
+    passed back on the advisor request instead. Uncertain analyses carry
+    `topic`/`canonical_category` as null rather than a guessed label.
+    """
+    filename = file.filename or ""
+    content_type = file.content_type or ""
+    try:
+        kind = detect_media_kind(filename, content_type)
+        data = read_upload_capped(file.file, size_limit_bytes(kind))
+        analysis = media_analyzer.analyze(
+            filename=filename, content_type=content_type, data=data
+        )
+    except MediaError as exc:
+        logger.info("media analysis rejected: status=%s reason=%s", exc.status_code, exc.message)
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    finally:
+        file.file.close()
+
+    record = media_store.put(analysis)
+    logger.info(
+        "media analyzed: media_id=%s kind=%s frames=%d category=%s topic=%s uncertain=%s",
+        record.media_id, record.media_kind, record.frames_analyzed,
+        record.canonical_category, record.topic, record.uncertain,
+    )
+    return record

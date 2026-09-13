@@ -19,8 +19,14 @@ try:
 except ImportError:
     GemmaModerationGuardrail = None
 from backend.services.profile import ProfileService
+from backend.services.media_analysis import (
+    MediaAnalysisStore,
+    choose_topic_source,
+    merge_tags,
+    should_use_media_category,
+)
 from backend.services.recommendation import RecommendationService
-from backend.services.retrieval import RetrievalService
+from backend.services.retrieval import RetrievalService, TOPIC_DEFAULT_TAGS, is_clean_tag
 from backend.services.canonical_taxonomy import classify_post_category
 from backend.services.tag_taxonomy import align_tags
 
@@ -60,6 +66,7 @@ class AdvisorService:
         post_repo: PostRepository,
         gemma_advisor: GemmaAdvisorEngine | None = None,
         moderation_guardrail: GemmaModerationGuardrail | None = None,
+        media_store: MediaAnalysisStore | None = None,
     ):
         self.rec_service = recommendation_service
         self.retrieval_service = retrieval_service
@@ -68,6 +75,7 @@ class AdvisorService:
         self.post_repo = post_repo
         self.gemma_advisor = gemma_advisor or GemmaAdvisorEngine()
         self.moderation = moderation_guardrail or (GemmaModerationGuardrail() if GemmaModerationGuardrail is not None else None)
+        self.media_store = media_store
 
     def get_quick_recommendation(self, user_id: str, days_ahead: int = 7) -> QuickRecommendationResponse:
         """Generates quick recommendations for the user's active topic."""
@@ -147,14 +155,33 @@ class AdvisorService:
         else:
             fallback_topic = "Teknoloji Trendleri"
 
+        # 1b. Resolve an analysed upload, if the request references one. Expired
+        # or unknown ids degrade to the text-only path instead of failing.
+        media = None
+        if request.media_id:
+            media = self.media_store.get(request.media_id) if self.media_store else None
+            if media is None:
+                logger.warning(
+                    "advisor: media_id not found or expired (%s); continuing text-only",
+                    request.media_id,
+                )
+
         # 2. Infer topic. The TF-IDF classifier is only a fast confident path;
-        # weak or zero matches are escalated to the Gemma topic judge, because
-        # the profile-topic fallback alone produces embarrassing mismatches
+        # weak or zero matches are escalated to a confident image analysis and
+        # then to the Gemma topic judge, because the profile-topic fallback
+        # alone produces embarrassing mismatches
         # (e.g. "amerikan güreşi izledik" -> Yazılım).
         inferred_topic, topic_sim = self.profile_service.classify_text_topic_confident(
             request.idea, fallback_topic=fallback_topic
         )
-        if topic_sim < self.profile_service.CONFIDENT_SIM_THRESHOLD:
+        topic_source = choose_topic_source(
+            topic_sim,
+            self.profile_service.CONFIDENT_SIM_THRESHOLD,
+            media_topic_confident=bool(media is not None and media.topic),
+        )
+        if topic_source == "media" and media is not None and media.topic:
+            inferred_topic = media.topic
+        elif topic_source == "judge":
             llm_topic = self.gemma_advisor.classify_topic(
                 request.idea, self.profile_service.topic_names
             )
@@ -162,6 +189,17 @@ class AdvisorService:
                 inferred_topic = llm_topic
         category_result = classify_post_category(request.idea, None, None, None)
         primary_category = str(category_result["primary_category"])
+
+        # The image category only overrides a text classification that matched
+        # nothing at all; `media_context` is forwarded to slot scoring only when
+        # it was actually adopted.
+        media_context = None
+        if should_use_media_category(
+            float(category_result["primary_cat_confidence"]),
+            media_category_confident=bool(media is not None and media.canonical_category),
+        ) and media is not None and media.canonical_category:
+            primary_category = str(media.canonical_category)
+            media_context = media
 
         if not user_posts.empty and "user_popularity_mean_prior" in user_posts.columns:
             prior_mean = float(user_posts["user_popularity_mean_prior"].iloc[-1])
@@ -188,6 +226,21 @@ class AdvisorService:
             )
         ]
 
+        # 4b. Media-derived hashtags lead the suggestion list: they describe the
+        # file the user actually attached. They come from a curated, NSFW-free
+        # bank and are re-checked by is_clean_tag, so they deliberately bypass
+        # the English-keyed semantic taxonomy above (which would reject Turkish
+        # hashtags outright). accepted/rejected keep describing only the tags
+        # derived from retrieved posts.
+        if media is not None:
+            media_tags = [tag for tag in media.suggested_tags if is_clean_tag(tag)]
+            suggested_tags = merge_tags(
+                media_tags,
+                suggested_tags,
+                TOPIC_DEFAULT_TAGS.get(inferred_topic, []),
+                limit=3,
+            )
+
         # 5. Score candidate slots (using GPU Tabular NN + LightGBM ensemble)
         slots = self.rec_service.recommend_slots(
             user_prior_mean=prior_mean,
@@ -198,6 +251,7 @@ class AdvisorService:
             topic=inferred_topic,
             days_ahead=7,
             top_k=3,
+            media_context=media_context,
         )
 
         # 6. Generate Google Gemma 4 strategic Turkish explanation
@@ -212,9 +266,10 @@ class AdvisorService:
 
         history_depth = history_depth_name(behavioral.evidence_post_count)
         logger.info(
-            "advisor completed: request_id=%s user=%s topic=%s category=%s slots=%d similar=%d history_depth=%s",
-            req_id, request.user_id, inferred_topic, primary_category,
+            "advisor completed: request_id=%s user=%s topic=%s(%s) category=%s slots=%d similar=%d history_depth=%s media=%s",
+            req_id, request.user_id, inferred_topic, topic_source, primary_category,
             len(slots), len(similar_posts), history_depth,
+            media.media_id if media is not None else "-",
         )
         return AdvisorResponse(
             request_id=req_id,
@@ -231,4 +286,5 @@ class AdvisorService:
             model_version="lgbm-m5-residual + google/gemma-4-E4B-it",
             data_source="SMPD benchmark & EnSosyal demo",
             service_mode="deep_advisor",
+            media_analysis=media,
         )
