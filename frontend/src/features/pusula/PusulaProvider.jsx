@@ -1,10 +1,13 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+
 import {
   pusulaApi,
   mintUserId,
@@ -249,40 +252,78 @@ export function PusulaProvider({
       setNotice("Panoya erişilemedi. Metni seçip kopyalayabilirsiniz.");
     }
   }
-  const ui = {
-    reloadRecommendations: () =>
-      recommendations.run((signal) => api.getRecommendations({ signal })),
-    mode: api.mode,
-    userId,
-    chooseUser,
-    chooseNewUser,
-    // Empty until the backend answers; the picker still offers "new account".
-    sampleUsers: sampleUsers.data || [],
-    interests,
-    toggleInterest,
-    format,
-    setFormat,
-    media,
-    mediaTask,
-    uploadMedia,
-    clearMedia,
-    draft,
-    setDraft,
-    job,
-    progress: job?.progress || 0,
-    preparation,
-    recommendations,
-    analysis,
-    mutation,
-    plans,
-    prepare,
-    analyze,
-    plan,
-    openDraft,
-    copyAnalysis,
-    navigate,
-    notify: setNotice,
-  };
+  const reloadRecommendations = useCallback(
+    () => recommendations.run((signal) => api.getRecommendations({ signal })),
+    [recommendations, api],
+  );
+
+  const ui = useMemo(
+    () => ({
+      reloadRecommendations,
+      mode: api.mode,
+      userId,
+      chooseUser,
+      chooseNewUser,
+      // Empty until the backend answers; the picker still offers "new account".
+      sampleUsers: sampleUsers.data || [],
+      interests,
+      toggleInterest,
+      format,
+      setFormat,
+      media,
+      mediaTask,
+      uploadMedia,
+      clearMedia,
+      draft,
+      setDraft,
+      job,
+      progress: job?.progress || 0,
+      preparation,
+      recommendations,
+      analysis,
+      mutation,
+      plans,
+      prepare,
+      analyze,
+      plan,
+      openDraft,
+      copyAnalysis,
+      navigate,
+      notify: setNotice,
+    }),
+    [
+      reloadRecommendations,
+      api,
+      userId,
+      chooseUser,
+      chooseNewUser,
+      sampleUsers.data,
+      interests,
+      toggleInterest,
+      format,
+      setFormat,
+      media,
+      mediaTask,
+      uploadMedia,
+      clearMedia,
+      draft,
+      setDraft,
+      job,
+      preparation,
+      recommendations,
+      analysis,
+      mutation,
+      plans,
+      prepare,
+      analyze,
+      plan,
+      openDraft,
+      copyAnalysis,
+      navigate,
+      setNotice,
+    ],
+  );
+
   return (
     <Context.Provider value={ui}>
       {children}
