@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import CompassTransition from "./components/layout/CompassTransition.jsx";
 import "./styles/layout.css";
 import "./styles/stitch.css";
 import "./styles/social-reference.css";
@@ -25,6 +26,7 @@ import TeknofestPage from "./pages/TeknofestPage.jsx";
 function SocialApp() {
   const { bg, border, textPrimary } = useTheme();
   const [activePage, setActivePage] = useState("home");
+  const [enteringPusula, setEnteringPusula] = useState(false);
   const [mediaOnly, setMediaOnly] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(true);
   const [openConversation, setOpenConversation] = useState(null);
@@ -43,6 +45,11 @@ function SocialApp() {
     submitComment,
   } = useFeedState();
   function goToPage(id) {
+    if (id === "assistant" && activePage === "home") {
+      setEnteringPusula(true);
+      return;
+    }
+    setEnteringPusula(false);
     setActivePage(id);
     setOpenConversation(null);
   }
@@ -56,6 +63,7 @@ function SocialApp() {
       activePage={activePage}
     >
       <div
+        inert={enteringPusula ? true : undefined}
         className={`app-shell stitch-shell social-shell ${isPusula ? "pusula-shell" : ""} ${bg === "#f5f6f8" ? "light-theme" : "dark"}`}
         style={{
           "--app-bg": socialDark ? "#1c1f26" : bg,
@@ -108,12 +116,17 @@ function SocialApp() {
           {activePage === "teknofest" && <TeknofestPage />}
           {isPusula && <PusulaPage page={activePage} />}
         </main>
-        <RightSidebar isPusula={isPusula} goToPage={goToPage} />
+        {!isPusula && <RightSidebar goToPage={goToPage} />}
         <MessagesBar
           messagesOpen={messagesOpen}
           setMessagesOpen={setMessagesOpen}
         />
       </div>
+      {enteringPusula && <CompassTransition onComplete={() => {
+        setActivePage("assistant");
+        setOpenConversation(null);
+        setEnteringPusula(false);
+      }} />}
     </PusulaProvider>
   );
 }
