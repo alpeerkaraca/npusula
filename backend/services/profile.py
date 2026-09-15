@@ -1,17 +1,23 @@
 """Behavioral profiling, TF-IDF centroid modeling, and drift detection service."""
 from datetime import datetime, timezone
+import logging
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.pipeline import FeatureUnion
 
+from backend.adapters.db import get_db, init_db
+from backend.config import settings
 from backend.schemas.profile import (
     BehavioralProfile,
     DeclaredProfile,
     ProfileStatus,
     TopicWeight,
 )
+
+logger = logging.getLogger("backend.services.profile")
 
 TOPIC_SEEDS: dict[str, str] = {
     "Yapay Zeka": "yapay zeka ai yapayzeka machine learning ml deep learning derin öğrenme llm dil modelleri model modeller agent ajan otonom pytorch tensorflow huggingface prompt üretken gpt sinir ağları nlp doğal dil işleme computer vision bot",
@@ -30,7 +36,7 @@ TOPIC_SEEDS: dict[str, str] = {
 class ProfileService:
     """Computes behavioral profiles and detects drift between declared and actual posting behavior."""
 
-    def __init__(self):
+    def __init__(self, db_path: Path | str | None = None):
         self.topic_names = list(TOPIC_SEEDS.keys())
         # Word tokens plus character n-grams: Turkish is agglutinative, so
         # inflected forms ("güreşi", "turnuvası") share character n-grams with
@@ -40,8 +46,20 @@ class ProfileService:
             ("char", TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), max_features=3000, lowercase=True)),
         ])
         self._fit_vectorizer()
+        self.db_path = db_path or settings.SQLITE_DB_PATH
         # Track user decisions: user_id -> True/False
         self._user_decisions: dict[str, bool] = {}
+        self._load_decisions()
+
+    def _load_decisions(self) -> None:
+        try:
+            init_db(self.db_path)
+            with get_db(self.db_path, write=False) as conn:
+                cursor = conn.execute("SELECT user_id, accept FROM user_drift_decisions;")
+                for row in cursor.fetchall():
+                    self._user_decisions[row["user_id"]] = bool(row["accept"])
+        except Exception as exc:
+            logger.debug("could not load drift decisions from sqlite: %s", exc)
 
     def _fit_vectorizer(self) -> None:
         seed_texts = list(TOPIC_SEEDS.values())
@@ -201,6 +219,18 @@ class ProfileService:
         drift_detected, question, similarity = self.evaluate_drift(declared, behavioral)
         user_id = declared.user_id
         decision = self._user_decisions.get(user_id)
+        if decision is None:
+            try:
+                with get_db(self.db_path, write=False) as conn:
+                    cursor = conn.execute(
+                        "SELECT accept FROM user_drift_decisions WHERE user_id = ?;", (user_id,)
+                    )
+                    row = cursor.fetchone()
+                    if row is not None:
+                        decision = bool(row["accept"])
+                        self._user_decisions[user_id] = decision
+            except Exception:
+                pass
 
         # Blending rules:
         # drift yoksa: 0.7 * declared + 0.3 * behavioral
@@ -240,3 +270,17 @@ class ProfileService:
 
     def record_decision(self, user_id: str, accept: bool) -> None:
         self._user_decisions[user_id] = accept
+        try:
+            with get_db(self.db_path, write=True) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO user_drift_decisions (user_id, accept, decided_at)
+                    VALUES (?, ?, datetime('now'))
+                    ON CONFLICT(user_id) DO UPDATE SET
+                        accept = excluded.accept,
+                        decided_at = excluded.decided_at;
+                    """,
+                    (user_id, 1 if accept else 0),
+                )
+        except Exception as exc:
+            logger.warning("could not persist drift decision for %s to sqlite: %s", user_id, exc)
