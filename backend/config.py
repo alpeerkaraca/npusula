@@ -74,6 +74,9 @@ class Settings:
     STATE_DIR: Path = Path(os.getenv("NPUSULA_STATE_DIR", str(DATA_DIR / "state")))
     DECLARED_TOPICS_PATH: Path = STATE_DIR / "declared_topics.json"
     SAVED_CONTENT_PATH: Path = STATE_DIR / "saved_content.json"
+    SQLITE_DB_PATH: Path = Path(
+        os.getenv("NPUSULA_SQLITE_PATH", os.getenv("NPUSULA_DB_PATH", str(STATE_DIR / "npusula.db")))
+    )
 
     # --- Layer A / Layer B artifacts (plan §4, §5) ---------------------------
     # The pre-rework artifacts (metrics.json, lgbm_popularity.txt,
@@ -156,9 +159,16 @@ class Settings:
     # used by ProfileService.
     MEDIA_MIN_PROB: float = float(os.getenv("MEDIA_MIN_PROB", "0.35"))
     MEDIA_MIN_MARGIN: float = float(os.getenv("MEDIA_MIN_MARGIN", "0.10"))
-    # Tags are scored against a much larger label bank than categories, so their
-    # softmax mass is spread thinner; they get their own floor.
     MEDIA_TAG_MIN_PROB: float = float(os.getenv("MEDIA_TAG_MIN_PROB", "0.10"))
+
+    # --- Nextcloud WebDAV (artifact sync) -----------------------------------
+    WEBDAV_URL: str = os.getenv("WEBDAV_URL", "https://cloud.alpeerkaraca.me/remote.php/dav/files/alpeerkaraca/HTWH101/")
+    WEBDAV_USER: str = os.getenv("WEBDAV_USER", "alpeerkaraca")
+    WEBDAV_PASSWORD: str = os.getenv("WEBDAV_PASSWORD", "")
+    AUTO_SYNC_ARTIFACTS_ON_STARTUP: bool = os.getenv(
+        "AUTO_SYNC_ARTIFACTS_ON_STARTUP", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    ARTIFACT_SYNC_TIMEOUT_SECONDS: float = float(os.getenv("ARTIFACT_SYNC_TIMEOUT_SECONDS", "15.0"))
 
 
 settings = Settings()
