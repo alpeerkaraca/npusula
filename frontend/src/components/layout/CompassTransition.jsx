@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 
-export default function CompassTransition({ onComplete }) {
+export default function CompassTransition({ onComplete, direction = "enter", light = false }) {
   const complete = useRef(onComplete);
   complete.current = onComplete;
   useEffect(() => {
@@ -9,7 +9,7 @@ export default function CompassTransition({ onComplete }) {
     return () => window.clearTimeout(timer);
   }, []);
   return (
-    <div className="compass-transition" role="status" aria-live="polite">
+    <div className={`compass-transition compass-${direction} ${light ? "compass-light" : ""}`} role="status" aria-live="polite">
       <div className="compass-transition-art" aria-hidden="true">
         <svg viewBox="0 0 320 320" className="compass-dial">
           <defs>
@@ -33,7 +33,7 @@ export default function CompassTransition({ onComplete }) {
           <circle cx="160" cy="160" r="9" fill="#dce8f8" stroke="#1c1f26" strokeWidth="4" />
         </svg>
       </div>
-      <span className="compass-transition-label">NPusula’ya geçiliyor…</span>
+      <span className="compass-transition-label">{direction === "return" ? "Ana Sayfa’ya dönülüyor…" : "NPusula’ya geçiliyor…"}</span>
     </div>
   );
 }

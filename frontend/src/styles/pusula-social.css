@@ -94,6 +94,11 @@
   0%, 18% { transform: rotate(0deg); }
   72%, 100% { transform: rotate(495deg); }
 }
+.compass-return .compass-needle { animation-name: compass-turn-back; }
+@keyframes compass-turn-back {
+  0%, 18% { transform: rotate(135deg); }
+  72%, 100% { transform: rotate(-405deg); }
+}
 @keyframes compass-veil {
   0%, 100% { opacity: 0; }
   15%, 84% { opacity: 1; }
