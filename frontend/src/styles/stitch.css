@@ -88,6 +88,11 @@
 .stitch-shell .sidebar-preferences {
   margin-top: auto;
   padding-top: 20px;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: #090f16;
+  padding-bottom: 16px;
 }
 .stitch-shell .main-content {
   border: 0;
