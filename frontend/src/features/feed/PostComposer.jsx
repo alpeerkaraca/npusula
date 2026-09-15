@@ -1,4 +1,5 @@
 import React from "react";
+import ProfileAvatar from "../../components/ui/ProfileAvatar.jsx";
 import {
   Image as ImageIcon,
   BarChart2,
@@ -17,15 +18,7 @@ export default function PostComposer({ draft, setDraft }) {
       style={{ padding: "18px 20px", borderBottom: `1px solid ${border}` }}
     >
       <div style={{ display: "flex", gap: 12 }}>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            background: darkMode ? "#242a35" : "#e4e6ea",
-            flexShrink: 0,
-          }}
-        />
+        <ProfileAvatar size={40} />
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
