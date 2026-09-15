@@ -196,6 +196,85 @@
   color: #003354;
   background: #98cbff;
 }
+/* Account switcher. Sits in .app-topbar, which is a sibling of .pusula-view,
+   so the zero-specificity :where() resets do not apply here and plain classes
+   are enough. */
+.account-picker {
+  position: relative;
+}
+.account-picker .operator {
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  max-width: 240px;
+}
+.account-picker-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 260px;
+  padding: 8px;
+  border: 1px solid #2c3644;
+  border-radius: 12px;
+  background: #0f141a;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  text-align: left;
+}
+.account-picker-heading {
+  margin: 4px 8px 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fb0c2;
+}
+.account-picker-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.account-picker-item:hover,
+.account-picker-item[data-active="true"] {
+  background: #1d2735;
+}
+.account-picker-item strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.account-picker-item span {
+  font-size: 11px;
+  color: #9fb0c2;
+}
+.account-picker-empty {
+  margin: 6px 8px 2px;
+  font-size: 11px;
+  color: #9fb0c2;
+}
+.light-theme .account-picker-menu {
+  border-color: #d5dbe3;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 20, 26, 0.16);
+}
+.light-theme .account-picker-heading,
+.light-theme .account-picker-item span,
+.light-theme .account-picker-empty {
+  color: #5b6b7d;
+}
+.light-theme .account-picker-item:hover,
+.light-theme .account-picker-item[data-active="true"] {
+  background: #eef2f7;
+}
 .discovery-card {
   padding: 16px;
   background: #161c23;
@@ -318,31 +397,20 @@
 .category-card {
   text-align: left;
   color: inherit;
-  border: 1px solid transparent !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .category-card[aria-pressed="true"] {
   border-color: #00a3ff !important;
-  background: #202d39;
+  background: #202d39 !important;
+  box-shadow: 0 0 16px rgba(0, 163, 255, 0.25);
 }
-.category-card[aria-pressed="false"] .check-icon {
-  visibility: hidden;
+.category-card[aria-pressed="false"] {
+  border-color: transparent !important;
+  background: rgba(22, 28, 36, 0.7);
+  box-shadow: none;
 }
-.category-card > .absolute {
-  display: none;
-}
-.category-card[aria-pressed="true"]::after {
-  content: "✓";
-  position: absolute;
-  right: 16px;
-  top: 16px;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  color: #003354;
-  background: #00a3ff;
-  box-shadow: 0 0 14px #00a3ff55;
+.category-card[aria-pressed="false"]:hover {
+  background: rgba(32, 45, 57, 0.6);
 }
 .page-interests .pusula-view > div > div > .opacity-25 {
   position: absolute;
@@ -351,9 +419,74 @@
 .page-interests .pusula-view > div > div > .absolute.inset-0 {
   position: relative;
 }
+#format-selector button {
+  transition: all 0.2s ease-in-out;
+}
 #format-selector button[aria-pressed="true"] {
   color: #98cbff;
-  outline: 1px solid #00a3ff;
+  border-color: #00a3ff !important;
+  background: #06334c !important;
+  box-shadow: 0 0 14px rgba(0, 163, 255, 0.25);
+}
+#format-selector button[aria-pressed="false"] {
+  color: inherit;
+  border-color: transparent !important;
+  outline: none !important;
+}
+
+@keyframes pusulaFadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pusula-view,
+.pusula-page {
+  animation: pusulaFadeSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pusulaResultPop {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.analysis-result-container,
+.slot-card {
+  animation: pusulaResultPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* Upload target for the idea advisor. Named rather than built from border
+   utilities because `.pusula-view :where(...)` resets at zero specificity, and
+   because a hardcoded hex is how every other border in this file is written. */
+.pusula-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 20px 16px;
+  border: 1px dashed #3d677e;
+  border-radius: 12px;
+  background: #090f16;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.pusula-dropzone:hover,
+.pusula-dropzone.is-dragging {
+  border-color: #00a3ff;
   background: #06334c;
 }
 .pusula-notice {

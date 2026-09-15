@@ -1,13 +1,9 @@
 import { ApiError, createApiClient } from "../apiClient.js";
 import { validate, validateAnalysisInput } from "./contracts.js";
+import { config } from "../../config.js";
 
-/** IANA zone used for every window request unless one is supplied. */
-export const DEFAULT_TIME_ZONE = "Europe/Istanbul";
-/**
- * The advisor runs Gemma on CPU and answers in 30-45s. The client default of
- * 20s would abort every analysis, so this call gets its own budget.
- */
-export const ADVISOR_TIMEOUT_MS = 120000;
+// Budgets and the window time zone live in src/config.js; this module holds no
+// tunables of its own.
 /**
  * The backend models media as photo | video | unknown. A "thread" is text-only
  * and genuinely has no media, so it is reported as unknown rather than being
@@ -18,7 +14,32 @@ const MEDIA_TYPE_BY_FORMAT = {
   image: "photo",
   thread: "unknown",
 };
-const USER_ID_KEY = "npusula-user-id";
+export const USER_ID_KEY = "npusula-user-id";
+
+/** Mints the anonymous identity used when no account has been chosen. */
+export function mintUserId() {
+  try {
+    return `web-${crypto.randomUUID().slice(0, 12)}`;
+  } catch {
+    return "web-anonymous";
+  }
+}
+
+/**
+ * Points this browser at a specific account. The backend has no auth or user
+ * registry: the id in localStorage *is* the identity, so writing it here is
+ * what switches accounts. Requests re-read it (see `createBackendPusulaApi`),
+ * which is why this alone is enough to change who the next call is for.
+ */
+export function setUserId(userId, storage = globalThis.localStorage) {
+  try {
+    storage?.setItem(USER_ID_KEY, userId);
+  } catch {
+    // A blocked storage must not break the switch; the in-memory id still wins
+    // for this session because the caller also holds it in React state.
+  }
+  return userId;
+}
 
 const stripHash = (tag) => String(tag).replace(/^#+/, "");
 
@@ -34,6 +55,31 @@ function rankPercents(values) {
   return values.map((value) =>
     span === 0 ? 50 : ((value - min) / span) * 100,
   );
+}
+
+/**
+ * `POST /api/media/analyze` -> contract `MediaAnalysis`.
+ * `topic` and `canonicalCategory` stay null when CLIP fell below its floors.
+ */
+export function toMediaAnalysis(response) {
+  return {
+    mediaId: response.media_id,
+    mediaKind: response.media_kind,
+    filename: response.filename,
+    sizeBytes: response.size_bytes,
+    framesAnalyzed: response.frames_analyzed,
+    durationSeconds: response.duration_seconds ?? null,
+    width: response.width,
+    height: response.height,
+    topic: response.topic ?? null,
+    topicConfidence: response.topic_confidence,
+    canonicalCategory: response.canonical_category ?? null,
+    categoryConfidence: response.category_confidence,
+    categoryMargin: response.category_margin,
+    suggestedTags: response.suggested_tags || [],
+    uncertain: response.uncertain,
+    modelName: response.model_name,
+  };
 }
 
 /** Backend `RecommendedWindow` -> contract `Slot`. Field-for-field, no invention. */
@@ -79,10 +125,27 @@ export function toSimilarPost(post) {
   };
 }
 
+/**
+ * `GET /api/sample-users` -> contract `SampleUser[]`.
+ *
+ * `historyDepth` is the backend's label for the account's real corpus row
+ * count, not for the 30-post evidence window the advisor scores — so it
+ * separates "rich history" from "no history" even though both may behave the
+ * same downstream.
+ */
+export function toSampleUsers(response) {
+  const users = Array.isArray(response?.users) ? response.users : [];
+  return users.map((user) => ({
+    userId: user.user_id,
+    postCount: user.post_count,
+    historyDepth: user.history_depth,
+  }));
+}
+
 /** `GET /api/recommend/quick/{user_id}` -> contract `Recommendations`. */
 export function toRecommendations(
   response,
-  { timeZone = DEFAULT_TIME_ZONE, receivedAt = new Date().toISOString() } = {},
+  { timeZone = config.timeZone, receivedAt = new Date().toISOString() } = {},
 ) {
   return {
     confidence: response.confidence,
@@ -98,7 +161,7 @@ export function toRecommendations(
 }
 
 /** `POST /api/recommend/advisor` -> contract `Analysis`. */
-export function toAnalysis(response, { timeZone = DEFAULT_TIME_ZONE } = {}) {
+export function toAnalysis(response, { timeZone = config.timeZone } = {}) {
   const windows = toSlots(response.windows, timeZone);
   return {
     id: response.request_id,
@@ -106,6 +169,11 @@ export function toAnalysis(response, { timeZone = DEFAULT_TIME_ZONE } = {}) {
     topic: response.topic,
     primaryCategory: response.primary_category,
     primaryCategoryConfidence: response.primary_category_confidence,
+    textCategory: response.text_category,
+    categorySource: response.category_source,
+    mediaAnalysis: response.media_analysis
+      ? toMediaAnalysis(response.media_analysis)
+      : null,
     confidence: response.confidence,
     // The advisor carries the label on each window, not on the envelope.
     confidenceLabel: windows[0]?.confidenceLabel || response.confidence,
@@ -162,7 +230,7 @@ export function resolveUserId(storage = globalThis.localStorage) {
   try {
     const existing = storage?.getItem(USER_ID_KEY);
     if (existing) return existing;
-    const created = `web-${crypto.randomUUID().slice(0, 12)}`;
+    const created = mintUserId();
     storage?.setItem(USER_ID_KEY, created);
     return created;
   } catch {
@@ -174,18 +242,36 @@ export function resolveUserId(storage = globalThis.localStorage) {
  * Talks to the NPusula FastAPI backend and shapes its answers into the contract
  * the UI renders. `baseUrl` is `/api`, which already matches the backend's own
  * route prefix, so request paths are backend-native.
+ *
+ * `userId` pins the identity for the lifetime of the adapter and is meant for
+ * tests. Left unset, every request re-reads localStorage instead: the account
+ * picker switches identity by writing that key, and a value captured once at
+ * construction would keep sending requests as the previous account forever.
  * @returns {import('./types').PusulaApi}
  */
 export function createBackendPusulaApi({
-  baseUrl = "/api",
-  timeZone = DEFAULT_TIME_ZONE,
-  userId = resolveUserId(),
+  baseUrl = config.apiBaseUrl,
+  timeZone = config.timeZone,
+  userId = null,
+  fetchImpl,
 } = {}) {
-  const request = createApiClient({ baseUrl });
+  const request = createApiClient({ baseUrl, fetchImpl });
+  const currentUserId = () => userId || resolveUserId();
   const quickPath = () =>
-    `/recommend/quick/${encodeURIComponent(userId)}?timezone=${encodeURIComponent(timeZone)}`;
+    `/recommend/quick/${encodeURIComponent(currentUserId())}?timezone=${encodeURIComponent(timeZone)}`;
   return {
     mode: "http",
+    async analyzeMedia(file, options) {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await request("/media/analyze", {
+        ...options,
+        method: "POST",
+        body,
+        timeoutMs: config.mediaUploadTimeoutMs,
+      });
+      return validate("mediaAnalysis", toMediaAnalysis(response));
+    },
     async saveProfile(body, options) {
       validate("profile", body);
       const topics = mapInterests(body.interests);
@@ -194,7 +280,7 @@ export function createBackendPusulaApi({
           code: "VALIDATION",
         });
       const response = await request(
-        `/profile/${encodeURIComponent(userId)}/interests`,
+        `/profile/${encodeURIComponent(currentUserId())}/interests`,
         { ...options, method: "PUT", body: { topics } },
       );
       // Confirm the server really stored what we sent instead of reporting a
@@ -239,16 +325,22 @@ export function createBackendPusulaApi({
       const response = await request("/recommend/advisor", {
         ...options,
         method: "POST",
-        timeoutMs: ADVISOR_TIMEOUT_MS,
+        timeoutMs: config.advisorTimeoutMs,
         body: {
-          user_id: userId,
+          user_id: currentUserId(),
           idea: body.text,
           media_type: MEDIA_TYPE_BY_FORMAT[body.format] || "photo",
           horizon: "next_7_days",
           timezone: timeZone,
+          // When present the backend lets the image own the canonical category.
+          ...(body.mediaId ? { media_id: body.mediaId } : {}),
         },
       });
       return validate("analysis", toAnalysis(response, { timeZone }));
+    },
+    async listSampleUsers(options) {
+      const response = await request("/sample-users", options);
+      return validate("sampleUsers", toSampleUsers(response));
     },
     async createPlan(body, options) {
       const response = await request("/plans", {

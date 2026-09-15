@@ -15,8 +15,8 @@ export default function RightSidebar({ isPusula = false, goToPage }) {
             </h3>
             {[
               ["Türkiye Trendi", "TEKNOFEST", "84.2B"],
-              ["Teknoloji & AI", "YapayZeka", "45.8B"],
-              ["Tarih & Toplum", "12eylül", "29.1B"],
+              ["Teknoloji & AI", "HTWH101", "45.8B"],
+              ["Teknoloji", "NPusula", "29.1B"],
             ].map(([category, tag, count]) => (
               <button
                 className="trend-link"

@@ -24,29 +24,6 @@ export default function PusulaPage({ page }) {
         )}
       </div>
       <View />
-      {page === "preparing" && (
-        <div className="preparation-controls">
-          {ui.preparation.error ? (
-            <div className="request-state request-error" role="alert">
-              <p>{ui.preparation.error.message}</p>
-              <button className="pusula-primary" onClick={ui.prepare}>
-                Tekrar Kontrol Et
-              </button>
-            </div>
-          ) : ui.job?.status === "completed" ? (
-            <button
-              className="pusula-primary"
-              onClick={() => ui.navigate("assistant")}
-            >
-              Rotamı Görüntüle →
-            </button>
-          ) : ui.preparation.status !== "loading" ? (
-            <button className="pusula-primary" onClick={ui.prepare}>
-              Hazırlığı Başlat / Devam Et
-            </button>
-          ) : null}
-        </div>
-      )}
       {ui.mutation.status === "loading" && (
         <div className="request-state" role="status">
           Kaydediliyor…

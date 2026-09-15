@@ -1,3 +1,5 @@
+import { config } from "../config.js";
+
 export class ApiError extends Error {
   constructor(message, { status = 0, code = "NETWORK_ERROR" } = {}) {
     super(message);
@@ -9,9 +11,9 @@ export class ApiError extends Error {
 
 /** Cookie-based API client. Server secrets never belong in VITE_* variables. */
 export function createApiClient({
-  baseUrl = "/api",
+  baseUrl = config.apiBaseUrl,
   fetchImpl = globalThis.fetch,
-  timeoutMs: defaultTimeoutMs = 20000,
+  timeoutMs: defaultTimeoutMs = config.requestTimeoutMs,
 } = {}) {
   return async function request(
     path,
@@ -27,15 +29,22 @@ export function createApiClient({
       controller.abort();
     }, timeoutMs);
     try {
+      // A FormData body must reach fetch untouched: only the browser knows the
+      // multipart boundary, so setting Content-Type here would break parsing.
+      const isForm =
+        typeof FormData !== "undefined" && body instanceof FormData;
       const headers = { Accept: "application/json" };
-      if (body !== undefined) headers["Content-Type"] = "application/json";
+      if (body !== undefined && !isForm)
+        headers["Content-Type"] = "application/json";
       if (requestId) headers["Idempotency-Key"] = requestId;
       const response = await fetchImpl(`${baseUrl.replace(/\/$/, "")}${path}`, {
         method,
         headers,
         credentials: "same-origin",
         signal: controller.signal,
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        ...(body !== undefined
+          ? { body: isForm ? body : JSON.stringify(body) }
+          : {}),
       });
       if (!response.ok) {
         const messages = {

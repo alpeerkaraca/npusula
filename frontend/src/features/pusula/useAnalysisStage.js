@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { config } from "../../config.js";
 
 /**
  * Narration for the advisor call, which takes 30-45s because Gemma runs on CPU
@@ -17,7 +18,6 @@ const STAGES = [
   "Paylaşım pencereleri puanlanıyor",
   "Açıklama üretiliyor",
 ];
-const SECONDS_PER_STAGE = 6;
 
 export function useAnalysisStage(active) {
   const [elapsed, setElapsed] = useState(0);
@@ -34,7 +34,7 @@ export function useAnalysisStage(active) {
   if (!active) return null;
   const index = Math.min(
     STAGES.length - 1,
-    Math.floor(elapsed / SECONDS_PER_STAGE),
+    Math.floor(elapsed / config.analysisStageSeconds),
   );
   return `${STAGES[index]}… (${elapsed} sn)`;
 }

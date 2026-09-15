@@ -1,6 +1,12 @@
 import React from "react";
 import DesignIcon from "../DesignIcon.jsx";
 import { evidenceLabel, scoreInterval, signedScore } from "../format.js";
+/** Where the winning category came from, most specific source first. */
+const CATEGORY_SOURCE_LABELS = {
+  media: "Görselden",
+  text: "Metinden",
+  topic: "Profilinden",
+};
 export default function AnalysisResult({
   result,
   onCopy,
@@ -45,9 +51,31 @@ export default function AnalysisResult({
           {/* primary_category_confidence is a match-density score, not a
               trained-model probability, so it is captioned as a match score. */}
           <span className="text-code-sm text-on-surface-variant">
-            {result.topic} · {result.primaryCategory} · eşleşme{" "}
+            {result.topic} ·{" "}
+            {CATEGORY_SOURCE_LABELS[result.categorySource] || "Metinden"}:{" "}
+            {result.primaryCategory} · eşleşme{" "}
             {result.primaryCategoryConfidence.toFixed(2)}
+            {result.mediaAnalysis?.mediaKind === "video"
+              ? ` · ${result.mediaAnalysis.framesAnalyzed} kare`
+              : ""}
           </span>
+          {/* Only meaningful when the image owned the category: it shows why the
+              text would have produced a different recommendation. */}
+          {result.categorySource === "media" &&
+            result.textCategory &&
+            result.textCategory !== result.primaryCategory && (
+              <span className="text-code-sm text-error">
+                Metinden: {result.textCategory} — uyumsuz
+              </span>
+            )}
+          {/* A cold-start user is capped at low confidence by design. Saying so
+              keeps the badge from reading like a failure. */}
+          {result.historyDepth === "cold_start" && (
+            <span className="text-code-sm text-on-surface-variant">
+              Paylaşım geçmişiniz olmadığı için güven kategori düzeyiyle
+              sınırlı; kişisel geçmişe dayanmıyor.
+            </span>
+          )}
         </div>
         <span className="self-start px-space-md py-1.5 rounded-full bg-tertiary-container/20 text-tertiary text-label-md font-bold">
           {result.confidenceLabel} Güven
@@ -118,10 +146,6 @@ export default function AnalysisResult({
           ))}
         </div>
       </section>
-      <div className="bg-surface-container rounded-xl p-space-md mb-space-lg border-l-4 border-primary text-body-md">
-        <strong className="text-primary">Kritik AI Rezonans İpucu</strong>
-        <p className="mt-space-xs">{result.tip}</p>
-      </div>
       <div className="flex flex-col sm:flex-row gap-space-sm">
         <button
           className="rounded-full bg-surface-container-high px-space-lg py-space-sm font-semibold"

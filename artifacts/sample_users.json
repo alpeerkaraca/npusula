@@ -1,0 +1,11 @@
+{
+  "_comment": "Selectable account identities for the frontend account picker, chosen to span the whole history-depth range so a demo can show the cold-start and rich-history paths side by side. /api/sample-users reads this and computes each account's live post count from the corpus; the recorded history_depth is what history_depth_name() returns for that count. Deliberately separate from demo_accounts.json, which must stay absent so /api/demo-users keeps answering [].",
+  "users": [
+    "31253@N15",
+    "32024@N27",
+    "38466@N68",
+    "21102@N64",
+    "36367@N78",
+    "100013@N27"
+  ]
+}

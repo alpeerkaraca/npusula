@@ -3,6 +3,11 @@ import { usePusula } from "../PusulaProvider.jsx";
 import DesignIcon from "../DesignIcon.jsx";
 export default function PreparingView() {
   const ui = usePusula();
+  const isCompleted = ui.job?.status === "completed" || ui.progress >= 100;
+  const step1Done = isCompleted || ui.progress >= 30;
+  const step2Done = isCompleted || ui.progress >= 70;
+  const step3Done = isCompleted || ui.progress >= 100;
+
   return (
     <div
       className="pusula-view"
@@ -16,10 +21,8 @@ export default function PreparingView() {
           <div className="w-full bg-surface-container/70 backdrop-blur-2xl rounded-xl shadow-2xl p-space-xl flex flex-col items-center text-center relative overflow-hidden">
             <div className="w-full flex items-center justify-between pb-space-lg mb-space-md">
               <div className="flex items-center gap-space-sm">
-                <span className="inline-flex w-2.5 h-2.5 rounded-full bg-secondary-container animate-ping"></span>
+                <span className={`inline-flex w-2.5 h-2.5 rounded-full ${isCompleted ? "bg-tertiary" : "bg-secondary-container animate-ping"}`}></span>
                 <span className="font-code-sm text-code-sm uppercase tracking-widest text-secondary font-semibold">
-                  {/* The model name is only known once an analysis runs, so no
-                      version is asserted here. */}
                   {ui.mode === "mock" ? "NPusula Core // Örnek" : "NPusula Core"}
                 </span>
               </div>
@@ -27,8 +30,8 @@ export default function PreparingView() {
                 <DesignIcon name="hub" className=" text-[14px] text-tertiary" />
                 <span>
                   {"Hazırlık: "}
-                  <strong className="text-on-surface font-semibold">
-                    {ui.job?.status === "completed" ? "Tamam" : "Sürüyor"}
+                  <strong className={`font-semibold ${isCompleted ? "text-tertiary" : "text-on-surface"}`}>
+                    {isCompleted ? "Tamamlandı" : "Sürüyor"}
                   </strong>
                 </span>
               </div>
@@ -38,7 +41,7 @@ export default function PreparingView() {
               <div className="absolute inset-0 rounded-full bg-transparent shadow-[0_0_50px_rgba(0,163,255,0.12)]"></div>
 
               <svg
-                className="absolute inset-0 w-full h-full animate-[spin_24s_linear_infinite]"
+                className={`absolute inset-0 w-full h-full ${isCompleted ? "opacity-40" : "animate-[spin_24s_linear_infinite]"}`}
                 fill="none"
                 viewBox="0 0 200 200"
               >
@@ -149,7 +152,7 @@ export default function PreparingView() {
               </svg>
 
               <svg
-                className="absolute inset-2 w-[calc(100%-1rem)] h-[calc(100%-1rem)] animate-[spin_4s_linear_infinite]"
+                className={`absolute inset-2 w-[calc(100%-1rem)] h-[calc(100%-1rem)] ${isCompleted ? "opacity-20" : "animate-[spin_4s_linear_infinite]"}`}
                 fill="none"
                 viewBox="0 0 180 180"
               >
@@ -180,27 +183,27 @@ export default function PreparingView() {
                 ></path>
               </svg>
 
-              <div className="absolute w-24 h-24 rounded-full bg-primary-container/20 blur-xl animate-pulse"></div>
+              <div className={`absolute w-24 h-24 rounded-full ${isCompleted ? "bg-tertiary/20 shadow-[0_0_30px_rgba(0,210,180,0.3)]" : "bg-primary-container/20 blur-xl animate-pulse"}`}></div>
 
               <div className="relative z-10 w-20 h-20 rounded-full bg-surface-container-lowest shadow-xl flex items-center justify-center">
                 <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center relative shadow-inner">
                   <div
                     className="absolute w-full h-full flex items-center justify-center transition-transform duration-700 ease-out"
                     id="compass-needle"
-                    style={{ transform: "rotate(42deg)" }}
+                    style={{ transform: `rotate(${isCompleted ? 0 : 42 + (ui.progress || 0) * 3}deg)` }}
                   >
                     <svg
-                      className="w-12 h-12 drop-shadow-[0_0_10px_rgba(0,210,255,0.7)]"
+                      className={`w-12 h-12 ${isCompleted ? "drop-shadow-[0_0_12px_rgba(0,210,180,0.8)]" : "drop-shadow-[0_0_10px_rgba(0,210,255,0.7)]"}`}
                       fill="none"
                       viewBox="0 0 48 48"
                     >
                       <polygon
-                        className="text-secondary-container"
+                        className={isCompleted ? "text-tertiary" : "text-secondary-container"}
                         fill="currentColor"
                         points="24,4 29,24 24,20"
                       ></polygon>
                       <polygon
-                        className="text-primary-container"
+                        className={isCompleted ? "text-tertiary-fixed" : "text-primary-container"}
                         fill="currentColor"
                         points="24,4 19,24 24,20"
                       ></polygon>
@@ -255,25 +258,22 @@ export default function PreparingView() {
                 <span>{"Akıllı Rota Hesaplama Motoru"}</span>
               </div>
               <h1 className="font-headline-md text-headline-md text-on-surface font-bold tracking-tight">
-                {
-                  "\n          Yelkenler fora! NPusula profiliniz ve paylaşımlarınız için en iyi rotayı çiziyor...\n        "
-                }
+                {isCompleted
+                  ? "Rotanız hazır! En verimli paylaşım saatleri belirlendi."
+                  : "Yelkenler fora! NPusula profiliniz ve paylaşımlarınız için rotayı çiziyor..."}
               </h1>
               <p className="font-body-md text-body-md text-on-surface-variant mt-space-xs leading-relaxed">
-                {
-                  "\n          Topluluk etkileşim frekansları, zamanlama yoğunluğu ve içerik çekim noktaları anlık olarak taranıyor.\n        "
-                }
+                {isCompleted
+                  ? "Topluluk etkileşim frekansları ve içerik çekim noktaları başarıyla analiz edildi."
+                  : "Topluluk etkileşim frekansları, zamanlama yoğunluğu ve içerik çekim noktaları taranıyor."}
               </p>
             </div>
 
             <div className="w-full max-w-lg mx-auto mt-space-lg flex flex-col gap-space-sm">
               <div className="flex items-center justify-between font-label-md text-label-md">
                 <span className="text-on-surface font-medium flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-secondary-container animate-ping"></span>
-                  {"\n            Kategori sinyalleri işleniyor: "}
-                  <span className="text-primary font-semibold">
-                    {"Yapay Zekâ, Teknoloji, Yazılım..."}
-                  </span>
+                  <span className={`w-2 h-2 rounded-full ${isCompleted ? "bg-tertiary" : "bg-secondary-container animate-ping"}`}></span>
+                  <span>{isCompleted ? "Kategori sinyalleri tamamlandı" : "Kategori sinyalleri işleniyor"}</span>
                 </span>
                 <span
                   className="font-bold font-code-sm text-code-sm text-secondary bg-surface-container-high px-2 py-0.5 rounded-md"
@@ -299,58 +299,103 @@ export default function PreparingView() {
 
             <div className="w-full max-w-lg mx-auto mt-space-lg bg-surface-container-low/90 rounded-xl p-space-md shadow-md flex flex-col gap-space-sm text-left">
               <span className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant font-bold px-1">
-                {"\n          Yürütülen Optimizasyon Hatları\n        "}
+                {"Optimizasyon Aşamaları"}
               </span>
 
+              {/* 1. Aşama */}
               <div className="flex items-center justify-between p-space-sm rounded-lg bg-surface-container-high/60 transition-colors">
                 <div className="flex items-center gap-space-sm">
-                  <div className="w-6 h-6 rounded-full bg-tertiary-container/30 text-tertiary flex items-center justify-center shadow-sm">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shadow-sm ${step1Done ? "bg-tertiary-container/30 text-tertiary" : "bg-surface-container-highest text-on-surface-variant"}`}>
                     <DesignIcon
-                      name="check"
-                      className=" text-[16px] font-bold"
+                      name={step1Done ? "check" : "autorenew"}
+                      className={`text-[16px] font-bold ${step1Done ? "" : "animate-spin"}`}
                     />
                   </div>
                   <span className="font-body-md text-body-md text-on-surface font-medium">
                     {"Kategori ağırlıkları indekslendi"}
                   </span>
                 </div>
-                <span className="font-code-sm text-code-sm text-tertiary font-semibold bg-tertiary-container/10 px-2 py-0.5 rounded">
-                  {ui.job?.status === "completed" ? "Tamamlandı" : "İşleniyor"}
+                <span className={`font-code-sm text-code-sm font-semibold px-2 py-0.5 rounded ${step1Done ? "text-tertiary bg-tertiary-container/10" : "text-on-surface-variant bg-surface-container-highest"}`}>
+                  {step1Done ? "Tamamlandı" : "İşleniyor"}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-space-sm rounded-lg bg-secondary-container/10 shadow-[0_0_16px_rgba(0,210,255,0.08)]">
+              {/* 2. Aşama */}
+              <div className={`flex items-center justify-between p-space-sm rounded-lg transition-colors ${step2Done ? "bg-surface-container-high/60" : "bg-secondary-container/10 shadow-[0_0_16px_rgba(0,210,255,0.08)]"}`}>
                 <div className="flex items-center gap-space-sm">
-                  <div className="w-6 h-6 rounded-full bg-secondary-container/30 text-secondary-container flex items-center justify-center">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${step2Done ? "bg-tertiary-container/30 text-tertiary" : "bg-secondary-container/30 text-secondary-container"}`}>
                     <DesignIcon
-                      name="autorenew"
-                      className=" text-[16px] animate-spin"
+                      name={step2Done ? "check" : "autorenew"}
+                      className={`text-[16px] font-bold ${step2Done ? "" : "animate-spin"}`}
                     />
                   </div>
                   <span className="font-body-md text-body-md text-on-surface font-semibold">
-                    {"Kitle etkileşim dalgaları analiz ediliyor..."}
+                    {step2Done ? "Kitle etkileşim dalgaları analiz edildi" : "Kitle etkileşim dalgaları analiz ediliyor..."}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 font-code-sm text-code-sm text-secondary font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary-container animate-pulse"></span>
-                  <span>{"Hesaplanıyor"}</span>
+                <div className={`flex items-center gap-1.5 font-code-sm text-code-sm font-medium ${step2Done ? "text-tertiary" : "text-secondary"}`}>
+                  {!step2Done && <span className="w-1.5 h-1.5 rounded-full bg-secondary-container animate-pulse"></span>}
+                  <span>{step2Done ? "Tamamlandı" : "Hesaplanıyor"}</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-space-sm rounded-lg bg-surface-container-lowest/40 opacity-70">
+              {/* 3. Aşama */}
+              <div className={`flex items-center justify-between p-space-sm rounded-lg transition-colors ${step3Done ? "bg-surface-container-high/60" : "bg-surface-container-lowest/40 opacity-70"}`}>
                 <div className="flex items-center gap-space-sm">
-                  <div className="w-6 h-6 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center">
-                    <DesignIcon name="schedule" className=" text-[16px]" />
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${step3Done ? "bg-tertiary-container/30 text-tertiary" : "bg-surface-container-highest text-on-surface-variant"}`}>
+                    <DesignIcon
+                      name={step3Done ? "check" : "schedule"}
+                      className="text-[16px] font-bold"
+                    />
                   </div>
-                  <span className="font-body-md text-body-md text-on-surface-variant">
-                    {"En verimli 3 yayın slotu hesaplanıyor"}
+                  <span className={`font-body-md text-body-md ${step3Done ? "text-on-surface font-semibold" : "text-on-surface-variant"}`}>
+                    {step3Done ? "En verimli 3 yayın slotu belirlendi" : "En verimli 3 yayın slotu hesaplanıyor"}
                   </span>
                 </div>
-                <span className="font-code-sm text-code-sm text-on-surface-variant">
-                  {"Sırada"}
+                <span className={`font-code-sm text-code-sm ${step3Done ? "text-tertiary font-semibold bg-tertiary-container/10 px-2 py-0.5 rounded" : "text-on-surface-variant"}`}>
+                  {step3Done ? "Tamamlandı" : "Sırada"}
                 </span>
               </div>
             </div>
+
+            {/* Tamamlanma CTA Kartı */}
+            {isCompleted && (
+              <div className="w-full max-w-lg mx-auto mt-space-lg p-space-md rounded-xl bg-gradient-to-r from-primary-container/20 via-secondary-container/15 to-tertiary-container/20 border border-primary/40 shadow-[0_0_24px_rgba(0,163,255,0.25)] flex flex-col items-center gap-space-sm animate-[pusulaResultPop_0.3s_ease-out]">
+                <div className="flex items-center gap-2 text-primary font-bold text-title-sm">
+                  <DesignIcon name="check_circle" className="text-[22px] text-secondary" />
+                  <span>Rotanız Başarıyla Hazırlandı!</span>
+                </div>
+                <p className="text-body-sm text-on-surface-variant text-center">
+                  Profil sinyalleri ve kitle etkileşim dalgaları optimize edildi. Şimdi size özel en verimli paylaşım saatlerini görüntüleyebilirsiniz.
+                </p>
+                <button
+                  onClick={() => ui.navigate("assistant")}
+                  className="mt-space-xs px-space-xl py-3 rounded-xl bg-gradient-to-r from-primary-container to-secondary-container text-on-primary-container font-title-sm font-bold shadow-[0_4px_16px_rgba(0,163,255,0.4)] hover:shadow-[0_6px_24px_rgba(0,210,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-space-sm cursor-pointer"
+                >
+                  <span>Rotamı Görüntüle</span>
+                  <DesignIcon name="arrow_forward" className="text-[20px]" />
+                </button>
+              </div>
+            )}
+
+            {/* Hata Durumu */}
+            {ui.preparation.error && (
+              <div className="w-full max-w-lg mx-auto mt-space-lg p-space-md rounded-xl bg-error-container/20 border border-error/40 text-error flex flex-col items-center gap-space-xs">
+                <div className="flex items-center gap-2 font-semibold">
+                  <DesignIcon name="error" className="text-[20px]" />
+                  <span>Hazırlık işlemi tamamlanamadı</span>
+                </div>
+                <p className="text-body-sm text-center text-on-surface-variant">
+                  {ui.preparation.error.message}
+                </p>
+                <button
+                  onClick={ui.prepare}
+                  className="mt-2 px-space-md py-1.5 rounded-lg bg-surface-container-high text-on-surface font-semibold hover:bg-surface-container-highest transition-colors cursor-pointer"
+                >
+                  Tekrar Dene
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 mt-space-lg text-on-surface-variant font-body-sm text-body-sm">
               <DesignIcon name="info" className=" text-[18px] text-primary" />

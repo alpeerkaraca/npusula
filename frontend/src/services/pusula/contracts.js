@@ -5,6 +5,7 @@ const percent = (value) => number(value) && value >= 0 && value <= 100;
 const unit = (value) => number(value) && value >= 0 && value <= 1;
 const count = (value) => number(value) && value >= 0;
 const nullableNumber = (value) => value === null || number(value);
+const nullableString = (value) => value === null || string(value);
 const flag = (value) => typeof value === "boolean";
 const date = (value) => string(value) && !Number.isNaN(Date.parse(value));
 const texts = (value) => Array.isArray(value) && value.every(string);
@@ -28,6 +29,26 @@ const slot = (value) =>
   number(value.observationalTimeLift) &&
   nullableNumber(value.liftCiLow) &&
   nullableNumber(value.liftCiHigh);
+// `topic` and `canonicalCategory` are deliberately nullable: below the CLIP
+// floors the backend reports uncertainty instead of guessing a label.
+const mediaAnalysis = (value) =>
+  value &&
+  string(value.mediaId) &&
+  ["photo", "video"].includes(value.mediaKind) &&
+  string(value.filename) &&
+  count(value.sizeBytes) &&
+  count(value.framesAnalyzed) &&
+  nullableNumber(value.durationSeconds) &&
+  count(value.width) &&
+  count(value.height) &&
+  nullableString(value.topic) &&
+  unit(value.topicConfidence) &&
+  nullableString(value.canonicalCategory) &&
+  unit(value.categoryConfidence) &&
+  count(value.categoryMargin) &&
+  texts(value.suggestedTags) &&
+  flag(value.uncertain) &&
+  string(value.modelName);
 const similarPost = (value) =>
   value &&
   string(value.postId) &&
@@ -39,7 +60,23 @@ const similarPost = (value) =>
   number(value.popularityScore) &&
   number(value.similarity) &&
   texts(value.tags);
+// The backend's own depth vocabulary (HISTORY_DEPTH_NAMES). Kept as a literal
+// list so a rename on either side fails loudly instead of rendering a raw code.
+const DEPTHS = [
+  "cold_start",
+  "very_low_history",
+  "low_history",
+  "medium_history",
+  "high_history",
+];
+const sampleUser = (value) =>
+  value &&
+  string(value.userId) &&
+  count(value.postCount) &&
+  DEPTHS.includes(value.historyDepth);
 const validators = {
+  mediaAnalysis: (v) => mediaAnalysis(v),
+  sampleUsers: (v) => Array.isArray(v) && v.every(sampleUser),
   profile: (v) =>
     v &&
     texts(v.interests) &&
@@ -70,6 +107,9 @@ const validators = {
     string(v.topic) &&
     string(v.primaryCategory) &&
     unit(v.primaryCategoryConfidence) &&
+    string(v.textCategory) &&
+    ["text", "media", "topic"].includes(v.categorySource) &&
+    (v.mediaAnalysis === null || mediaAnalysis(v.mediaAnalysis)) &&
     level(v.confidence) &&
     string(v.confidenceLabel) &&
     string(v.bestTime) &&

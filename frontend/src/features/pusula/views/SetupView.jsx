@@ -73,245 +73,69 @@ export default function SetupView() {
               className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-space-md"
               id="categories-grid"
             >
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container-high/70 hover:bg-surface-container-highest/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="teknoloji"
-                type="button"
-                onClick={() => ui.toggleInterest("teknoloji")}
-                aria-pressed={ui.interests.includes("teknoloji")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-primary-container/20 text-primary flex items-center justify-center shadow-[0_0_12px_rgba(0,163,255,0.25)] group-hover:scale-105 transition-transform">
-                    <DesignIcon name="memory" className=" text-[22px]" />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center shadow-[0_0_10px_rgba(0,163,255,0.4)] transition-all">
-                    <DesignIcon
-                      name="check"
-                      className=" text-[16px] font-bold"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-bold text-on-surface">
-                    {"Teknoloji"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"Donanım, Ar-Ge & Sistemler"}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="araba"
-                type="button"
-                onClick={() => ui.toggleInterest("araba")}
-                aria-pressed={ui.interests.includes("araba")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface-variant flex items-center justify-center group-hover:text-primary transition-colors">
-                    <DesignIcon
-                      name="directions_car"
-                      className=" text-[22px]"
-                    />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-surface-container-highest text-transparent flex items-center justify-center transition-all">
-                    <DesignIcon name="check" className=" text-[16px]" />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-semibold text-on-surface">
-                    {"Araba / Otomotiv"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"Mobilite & Elektrikli Araçlar"}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container-high/70 hover:bg-surface-container-highest/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="yazilim"
-                type="button"
-                onClick={() => ui.toggleInterest("yazilim")}
-                aria-pressed={ui.interests.includes("yazilim")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-primary-container/20 text-primary flex items-center justify-center shadow-[0_0_12px_rgba(0,163,255,0.25)] group-hover:scale-105 transition-transform">
-                    <DesignIcon name="terminal" className=" text-[22px]" />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center shadow-[0_0_10px_rgba(0,163,255,0.4)] transition-all">
-                    <DesignIcon
-                      name="check"
-                      className=" text-[16px] font-bold"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-bold text-on-surface">
-                    {"Yazılım"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"Geliştirme, Mimari & Bulut"}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="oyun"
-                type="button"
-                onClick={() => ui.toggleInterest("oyun")}
-                aria-pressed={ui.interests.includes("oyun")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface-variant flex items-center justify-center group-hover:text-primary transition-colors">
-                    <DesignIcon
-                      name="sports_esports"
-                      className=" text-[22px]"
-                    />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-surface-container-highest text-transparent flex items-center justify-center transition-all">
-                    <DesignIcon name="check" className=" text-[16px]" />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-semibold text-on-surface">
-                    {"Oyun / E-Spor"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"Turnuvalar & Oyun Geliştirme"}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="yasam"
-                type="button"
-                onClick={() => ui.toggleInterest("yasam")}
-                aria-pressed={ui.interests.includes("yasam")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface-variant flex items-center justify-center group-hover:text-primary transition-colors">
-                    <DesignIcon name="videocam" className=" text-[22px]" />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-surface-container-highest text-transparent flex items-center justify-center transition-all">
-                    <DesignIcon name="check" className=" text-[16px]" />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-semibold text-on-surface">
-                    {"Yaşam / Vlog"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"Gündelik, Seyahat & Deneyim"}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container-high/70 hover:bg-surface-container-highest/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="yapayzekâ"
-                type="button"
-                onClick={() => ui.toggleInterest("yapayzekâ")}
-                aria-pressed={ui.interests.includes("yapayzekâ")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-primary-container/20 text-primary flex items-center justify-center shadow-[0_0_12px_rgba(0,163,255,0.25)] group-hover:scale-105 transition-transform">
-                    <DesignIcon name="smart_toy" className=" text-[22px]" />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center shadow-[0_0_10px_rgba(0,163,255,0.4)] transition-all">
-                    <DesignIcon
-                      name="check"
-                      className=" text-[16px] font-bold"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-bold text-on-surface">
-                    {"Yapay Zekâ"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"LLM, Otomasyon & Veri Bilimi"}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="tasarim"
-                type="button"
-                onClick={() => ui.toggleInterest("tasarim")}
-                aria-pressed={ui.interests.includes("tasarim")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface-variant flex items-center justify-center group-hover:text-primary transition-colors">
-                    <DesignIcon name="palette" className=" text-[22px]" />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-surface-container-highest text-transparent flex items-center justify-center transition-all">
-                    <DesignIcon name="check" className=" text-[16px]" />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-semibold text-on-surface">
-                    {"Tasarım & Sanat"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"UI/UX, 3D & Dijital İllüstrasyon"}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="bilim"
-                type="button"
-                onClick={() => ui.toggleInterest("bilim")}
-                aria-pressed={ui.interests.includes("bilim")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface-variant flex items-center justify-center group-hover:text-primary transition-colors">
-                    <DesignIcon name="rocket" className=" text-[22px]" />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-surface-container-highest text-transparent flex items-center justify-center transition-all">
-                    <DesignIcon name="check" className=" text-[16px]" />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-semibold text-on-surface">
-                    {"Bilim & Havacılık"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"Uzay, Fizik & Savunma Sanayii"}
-                  </span>
-                </div>
-              </button>
-
-              <button
-                className="category-card group relative p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high/80 cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36"
-                data-cat="girisimcilik"
-                type="button"
-                onClick={() => ui.toggleInterest("girisimcilik")}
-                aria-pressed={ui.interests.includes("girisimcilik")}
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface-variant flex items-center justify-center group-hover:text-primary transition-colors">
-                    <DesignIcon name="insights" className=" text-[22px]" />
-                  </div>
-                  <div className="custom-checkbox w-6 h-6 rounded-lg bg-surface-container-highest text-transparent flex items-center justify-center transition-all">
-                    <DesignIcon name="check" className=" text-[16px]" />
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-title-sm text-title-sm font-semibold text-on-surface">
-                    {"Girişimcilik & Finans"}
-                  </span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    {"Yatırım, FinTech & Büyüme"}
-                  </span>
-                </div>
-              </button>
+              {[
+                { id: "teknoloji", label: "Teknoloji", sub: "Donanım, Ar-Ge & Sistemler", icon: "memory" },
+                { id: "araba", label: "Araba / Otomotiv", sub: "Mobilite & Elektrikli Araçlar", icon: "directions_car" },
+                { id: "yazilim", label: "Yazılım", sub: "Geliştirme, Mimari & Bulut", icon: "terminal" },
+                { id: "oyun", label: "Oyun / E-Spor", sub: "Turnuvalar & Oyun Geliştirme", icon: "sports_esports" },
+                { id: "yasam", label: "Yaşam / Vlog", sub: "Gündelik, Seyahat & Deneyim", icon: "videocam" },
+                { id: "yapayzekâ", label: "Yapay Zekâ", sub: "LLM, Otomasyon & Veri Bilimi", icon: "smart_toy" },
+                { id: "tasarim", label: "Tasarım & Sanat", sub: "UI/UX, 3D & Dijital İllüstrasyon", icon: "palette" },
+                { id: "bilim", label: "Bilim & Havacılık", sub: "Uzay, Fizik & Savunma Sanayii", icon: "rocket" },
+                { id: "girisimcilik", label: "Girişimcilik & Finans", sub: "Yatırım, FinTech & Büyüme", icon: "insights" },
+              ].map((cat) => {
+                const isSelected = ui.interests.includes(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    data-cat={cat.id}
+                    type="button"
+                    onClick={() => ui.toggleInterest(cat.id)}
+                    aria-pressed={isSelected}
+                    className={`category-card group relative p-space-md rounded-xl cursor-pointer transition-all duration-200 shadow-sm flex flex-col justify-between h-36 border ${
+                      isSelected
+                        ? "is-selected bg-[#202d39] border-[#00a3ff] shadow-[0_0_16px_rgba(0,163,255,0.25)]"
+                        : "bg-surface-container hover:bg-surface-container-high/80 border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between w-full">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                          isSelected
+                            ? "bg-primary-container/20 text-primary shadow-[0_0_12px_rgba(0,163,255,0.25)] group-hover:scale-105"
+                            : "bg-surface-container-high text-on-surface-variant group-hover:text-primary"
+                        }`}
+                      >
+                        <DesignIcon name={cat.icon} className="text-[22px]" />
+                      </div>
+                      <div
+                        className={`custom-checkbox w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                          isSelected
+                            ? "bg-primary-container text-on-primary-container shadow-[0_0_10px_rgba(0,163,255,0.4)]"
+                            : "bg-surface-container-highest text-transparent border border-outline-variant/30"
+                        }`}
+                      >
+                        <DesignIcon
+                          name="check"
+                          className={`text-[16px] font-bold ${isSelected ? "opacity-100" : "opacity-0"}`}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span
+                        className={`font-title-sm text-title-sm font-semibold transition-colors ${
+                          isSelected ? "text-primary font-bold" : "text-on-surface"
+                        }`}
+                      >
+                        {cat.label}
+                      </span>
+                      <span className="font-body-sm text-body-sm text-on-surface-variant">
+                        {cat.sub}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="mt-space-lg p-space-md rounded-xl bg-surface-container-lowest/80 flex items-start sm:items-center gap-space-md shadow-sm">

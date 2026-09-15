@@ -156,8 +156,35 @@ POST istekleri `Idempotency-Key` taşır. Sunucu bu anahtarı oturum/kullanıcı
 | Fikir analizi | `POST /api/recommend/advisor` |
 | İlgi alanları | `PUT /api/profile/{user_id}/interests` |
 | Plan / taslak kaydı | `POST /api/plans`, `POST /api/drafts` |
+| Görsel/video analizi | `POST /api/media/analyze` (multipart) |
 
 Eşlenen alanlar: `day`←`weekday`, `time`←`time_range_local`, `startsAt`←`window_start_utc`, `tip`←`explanation`, `hashtags`←`suggested_tags` (`#` kırpılır), `bestTime`/`alternativeTime`←`windows[0..1]`, `modelVersion`←`model_version`.
+
+## Görsel analizi (asıl kategori kaynağı)
+
+İki adımlı akış: `POST /api/media/analyze` (multipart `file`) → `media_id` → aynı id `POST /api/recommend/advisor` gövdesinde. CLIP ViT-B/32 fotoğrafı ya da videoyu (8 kare, eşit dilimlerin merkezinden, embedding ortalaması) **zaman-kaldıraç tablosuyla birebir aynı** 11 kategoriden birine eşler.
+
+**Kategori merdiveni** — en özel kanıt önce gelir, `categorySource` hangisinin kazandığını söyler:
+
+| Sıra | Kaynak | `categorySource` | Ne zaman |
+|---|---|---|---|
+| 1 | **Yüklenen görsel** | `media` | Görsel güvenliyse (`uncertain: false`) — dosyanın kendisini tarif eder |
+| 2 | **Fikir metni** | `text` | Metin bir anahtar kelimeyle eşleştiyse |
+| 3 | **İlgi alanı** | `topic` | Metin hiçbir şeye uymadıysa — hesabı tarif eder |
+
+Metnin önerisi her zaman `textCategory` olarak yanıtta kalır; `categorySource: "media"` iken farklıysa arayüz "uyumsuz" diye işaretler.
+
+**İlgi alanı neden gerekliydi:** `_prepare_features` yalnızca gönderi başlığını sınıflandırıyor. Canlı yollarda başlık boş (rota ekranı) ya da anahtar kelimesiz (fikir ekranı) olduğu için kategori jenerik yedeğe düşüyordu ve **her ilgi alanı aynı pencereleri üretiyordu**. `topic` zaten her çağrıda taşınıyordu ama hiç okunmuyordu.
+
+**Soğuk başlangıç:** paylaşım geçmişi olmayan kullanıcıda güven tasarım gereği "Düşük"e sabitlenir (`time_lift.py`'de `degraded`). Model değişmez; arayüz bunu açıkça söyler ("paylaşım geçmişiniz olmadığı için güven kategori düzeyiyle sınırlı").
+
+Bu yol, Türkçe metin sınıflandırıcısını tümden atlar. O sınıflandırıcı SMPD'nin kontrollü metadata'sı için yazılmış bir anahtar kelime haritasıdır ve serbest metinde güvenilmez ("Yemek tarifi", "Kahve", "Otomobil fuarı" ıskalar). Görsel yoluyla aynı nötr metin — *"Bugün ne paylaşsam"* — bir yemek fotoğrafıyla "Yüksek güven / Pazartesi 15.00–18.00", görselsiz "Düşük" verir.
+
+**Belirsizlik dürüstçe raporlanır:** CLIP kendi eşiklerinin (`MEDIA_MIN_PROB` 0.35, `MEDIA_MIN_MARGIN` 0.10) altında kalırsa `canonicalCategory` **null** döner, etiket listesi boşalır. Arayüz bu durumda sahte etiket göstermez, "görselden kategori çıkarılamadı" der ve analiz metinle devam eder.
+
+**503 bozulması:** görsel yığını yoksa (`/api/health` → `media_analyzer_ready: false`) uç 503 döner. Bu sert hata değildir; yükleme kartı not gösterir, metin-only akış çalışmaya devam eder.
+
+**İstemci sınırları:** jpeg/png/webp ≤ 10 MB, mp4/mov/webm ≤ 50 MB ve ≤ 60 sn — backend'in `detect_media_kind` listesiyle birebir. `apiClient` `FormData` gövdesini olduğu gibi `fetch`'e geçirir; `Content-Type`'ı tarayıcı belirler, aksi halde multipart sınırı bozulur.
 
 ## Karşılığı olmayan alanlar
 

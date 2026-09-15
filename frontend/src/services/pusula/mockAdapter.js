@@ -27,6 +27,7 @@ export function createMockPusulaApi({
   now = () => Date.now(),
 } = {}) {
   const jobs = new Map();
+  const mediaCache = new Map();
   const respond = async (kind, value, { signal } = {}) => {
     await delay(latency, signal);
     return validate(kind, value);
@@ -110,6 +111,35 @@ export function createMockPusulaApi({
   });
   return {
     mode: "mock",
+    async analyzeMedia(file, options) {
+      await delay(latency, options?.signal);
+      const name = file?.name || "";
+      const isVideo = /\.(mp4|mov|webm)$/i.test(name);
+      // A file named "...belirsiz..." exercises the uncertain branch, so the
+      // UI's null-category path stays reachable without the real model.
+      const uncertain = /belirsiz/i.test(name);
+      const record = validate("mediaAnalysis", {
+        mediaId: crypto.randomUUID(),
+        mediaKind: isVideo ? "video" : "photo",
+        filename: name || "ornek.jpg",
+        sizeBytes: file?.size || 0,
+        framesAnalyzed: isVideo ? 8 : 1,
+        durationSeconds: null,
+        width: 1024,
+        height: 768,
+        topic: uncertain ? null : "Yaşam",
+        topicConfidence: uncertain ? 0.2 : 0.5,
+        canonicalCategory: uncertain ? null : "food_dining",
+        categoryConfidence: uncertain ? 0.18 : 0.57,
+        categoryMargin: uncertain ? 0.02 : 0.42,
+        suggestedTags: uncertain ? [] : ["#yemek"],
+        uncertain,
+        modelName: "Demo",
+      });
+      // Remembered so `analyzeIdea` can echo it the way the backend does.
+      mediaCache.set(record.mediaId, record);
+      return record;
+    },
     async saveProfile(body, options) {
       const value = await respond("profile", body, options);
       store("npusula-interests", value.interests);
@@ -150,14 +180,20 @@ export function createMockPusulaApi({
       respond("recommendations", recommendations(), options),
     analyzeIdea(body, options) {
       validateAnalysisInput(body);
+      // Mirrors the backend rule: a confident image owns the category.
+      const media = body.mediaId ? mediaCache.get(body.mediaId) : null;
+      const adopted = Boolean(media && !media.uncertain);
       return respond(
         "analysis",
         {
           id: crypto.randomUUID(),
           modelVersion: "Demo",
           topic: "Yapay Zeka",
-          primaryCategory: "technology",
+          primaryCategory: adopted ? media.canonicalCategory : "technology",
           primaryCategoryConfidence: 0.65,
+          textCategory: "technology",
+          categorySource: adopted ? "media" : "text",
+          mediaAnalysis: media || null,
           confidence: "medium",
           confidenceLabel: "Orta",
           bestTime: "Salı 20.00–23.00",
@@ -186,6 +222,21 @@ export function createMockPusulaApi({
             },
           ],
         },
+        options,
+      );
+    },
+    async listSampleUsers(options) {
+      // Mirrors the backend's depth vocabulary so the picker renders the same
+      // labels in either mode. Mock mode ignores the identity entirely, so
+      // switching accounts here changes nothing downstream -- only the label.
+      return respond(
+        "sampleUsers",
+        [
+          { userId: "31253@N15", postCount: 1376, historyDepth: "high_history" },
+          { userId: "38466@N68", postCount: 100, historyDepth: "medium_history" },
+          { userId: "21102@N64", postCount: 20, historyDepth: "low_history" },
+          { userId: "36367@N78", postCount: 5, historyDepth: "very_low_history" },
+        ],
         options,
       );
     },

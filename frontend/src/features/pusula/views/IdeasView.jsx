@@ -3,6 +3,7 @@ import { usePusula } from "../PusulaProvider.jsx";
 import DesignIcon from "../DesignIcon.jsx";
 import RequestState from "../RequestState.jsx";
 import AnalysisResult from "../components/AnalysisResult.jsx";
+import MediaUpload from "../components/MediaUpload.jsx";
 import { useAnalysisStage } from "../useAnalysisStage.js";
 export default function IdeasView() {
   const ui = usePusula();
@@ -49,16 +50,28 @@ export default function IdeasView() {
                 ["video", "Video", "videocam"],
                 ["image", "Görsel / Post", "image"],
                 ["thread", "Thread", "notes"],
-              ].map(([value, label, icon]) => (
-                <button
-                  key={value}
-                  aria-pressed={ui.format === value}
-                  onClick={() => ui.setFormat(value)}
-                  className="bg-surface-container-high rounded-xl py-2 px-2 text-label-md font-semibold"
-                >
-                  <DesignIcon name={icon} /> {label}
-                </button>
-              ))}
+              ].map(([value, label, icon]) => {
+                const isSelected = ui.format === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => ui.setFormat(value)}
+                    className={`rounded-xl py-2.5 px-2 text-label-md font-semibold transition-all duration-200 border flex items-center justify-center gap-1.5 ${
+                      isSelected
+                        ? "bg-[#06334c] text-[#98cbff] border-[#00a3ff] shadow-[0_0_12px_rgba(0,163,255,0.25)]"
+                        : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border-transparent"
+                    }`}
+                  >
+                    <DesignIcon
+                      name={icon}
+                      className={isSelected ? "text-primary" : "text-on-surface-variant"}
+                    />{" "}
+                    {label}
+                  </button>
+                );
+              })}
             </div>
             <div className="flex justify-between text-label-sm mb-space-xs">
               <label htmlFor="prompt-input">İÇERİK VE SENARYO AÇIKLAMASI</label>
@@ -90,6 +103,7 @@ export default function IdeasView() {
               <DesignIcon name="tune" /> Hedef Kitle / Odak Alanlarını Değiştir
             </button>
           </section>
+          <MediaUpload />
         </div>
         <div className="xl:col-span-7">
           <RequestState

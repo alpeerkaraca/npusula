@@ -1,7 +1,12 @@
 import React, { useState } from "react";
-import { Search, UserRound } from "lucide-react";
+import { Search } from "lucide-react";
+import AccountPicker from "./AccountPicker.jsx";
+import { usePusula } from "../../features/pusula/PusulaProvider.jsx";
 export default function Topbar({ goToPage }) {
   const [query, setQuery] = useState("");
+  // Topbar renders inside PusulaProvider (App.jsx), so the active account and
+  // the switch handler come straight from the context.
+  const ui = usePusula();
   return (
     <header className="app-topbar">
       <form
@@ -18,12 +23,12 @@ export default function Topbar({ goToPage }) {
           onChange={(event) => setQuery(event.target.value)}
         />
       </form>
-      <button className="operator" onClick={() => goToPage("setup")}>
-        <span>
-          <UserRound size={18} />
-        </span>
-        Operatör
-      </button>
+      <AccountPicker
+        userId={ui.userId}
+        users={ui.sampleUsers}
+        onSelect={ui.chooseUser}
+        onNewUser={ui.chooseNewUser}
+      />
     </header>
   );
 }

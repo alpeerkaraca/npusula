@@ -5,7 +5,12 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { pusulaApi } from "../../services/pusula/index.js";
+import {
+  pusulaApi,
+  mintUserId,
+  resolveUserId,
+  setUserId as persistUserId,
+} from "../../services/pusula/index.js";
 import { delay } from "../../services/pusula/mockAdapter.js";
 import { useApiTask } from "../../hooks/useApiTask.js";
 const Context = createContext(null);
@@ -32,13 +37,36 @@ export function PusulaProvider({
   api = pusulaApi,
 }) {
   const [interests, setInterests] = useState(initialInterests);
-  const [format, setFormat] = useState("video");
+  const [format, setFormatState] = useState("video");
+  function setFormat(nextFormat) {
+    setFormatState(nextFormat);
+    if (nextFormat === "thread" && media) {
+      setMedia(null);
+      mediaTask.reset();
+    } else if (nextFormat === "image" && media?.mediaKind === "video") {
+      setMedia(null);
+      mediaTask.reset();
+    } else if (nextFormat === "video" && media?.mediaKind === "photo") {
+      setMedia(null);
+      mediaTask.reset();
+    }
+  }
   const [job, setJob] = useState(null);
   const [notice, setNotice] = useState("");
   const [plans, setPlans] = useState([]);
+  // The analysed upload, provider-local like `format`. Kept separate from
+  // `draft` so the composer still receives exactly what the user typed.
+  const [media, setMedia] = useState(null);
+  // The account every request is made for. localStorage is the source of truth
+  // (the adapter re-reads it per request); this copy exists so the picker can
+  // show the current choice and so switching can drop the previous account's
+  // cached answers.
+  const [userId, setUserIdState] = useState(resolveUserId);
   const preparation = useApiTask(),
     recommendations = useApiTask(),
     analysis = useApiTask(),
+    mediaTask = useApiTask(),
+    sampleUsers = useApiTask(),
     mutation = useApiTask();
   const prepareKey = useRef(null);
   const mutationKeys = useRef(new Map());
@@ -54,10 +82,10 @@ export function PusulaProvider({
   }, [notice]);
   useEffect(() => {
     analysis.reset();
-  }, [draft, format, analysis.reset]);
+  }, [draft, format, media, analysis.reset]);
   useEffect(() => {
     mutation.reset();
-  }, [activePage, draft, format, mutation.reset]);
+  }, [activePage, draft, format, media, mutation.reset]);
   useEffect(() => {
     if (activePage !== "ideas") analysis.reset();
   }, [activePage, analysis.reset]);
@@ -69,6 +97,32 @@ export function PusulaProvider({
   useEffect(() => {
     if (activePage !== "preparing") preparation.reset();
   }, [activePage, preparation.reset]);
+  useEffect(() => {
+    sampleUsers.run((signal) => api.listSampleUsers({ signal }));
+    return sampleUsers.cancel;
+  }, [api, sampleUsers.run, sampleUsers.cancel]);
+  /**
+   * Switches the active account. Persisting the id is what actually changes who
+   * the next request is for; the resets below drop answers that described the
+   * previous account and would otherwise stay on screen as if they still held.
+   */
+  function chooseUser(nextUserId) {
+    if (!nextUserId || nextUserId === userId) return;
+    persistUserId(nextUserId);
+    setUserIdState(nextUserId);
+    analysis.reset();
+    recommendations.reset();
+    preparation.reset();
+    mediaTask.reset();
+    mutation.reset();
+    setMedia(null);
+    setPlans([]);
+    setJob(null);
+    setNotice(`Hesap değiştirildi: ${nextUserId}`);
+  }
+  function chooseNewUser() {
+    chooseUser(mintUserId());
+  }
   function toggleInterest(value) {
     if (!interests.includes(value) && interests.length >= 5)
       return setNotice("En fazla 5 odak alanı seçebilirsiniz.");
@@ -87,6 +141,7 @@ export function PusulaProvider({
       let current = job;
       if (!current || current.status === "failed") {
         if (current?.status === "failed") prepareKey.current = null;
+        setJob({ id: "prep-init", status: "running", progress: 15, message: "Kategori sinyalleri işleniyor..." });
         await api.saveProfile({ interests }, { signal });
         prepareKey.current ||= newId();
         current = await api.startPreparation(
@@ -96,11 +151,20 @@ export function PusulaProvider({
       }
       for (let attempt = 0; attempt < 300; attempt++) {
         if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-        setJob(current);
-        if (current.status === "failed")
+        if (current.status === "failed") {
+          setJob(current);
           throw new Error(current.message || "Hazırlık tamamlanamadı.");
-        if (current.status === "completed") return current;
-        await delay(1000, signal);
+        }
+        if (current.status === "completed") {
+          setJob({ ...current, progress: 40, message: "Kategori ağırlıkları indekslendi" });
+          await delay(300, signal);
+          setJob({ ...current, progress: 75, message: "Kitle etkileşim dalgaları analiz edildi" });
+          await delay(400, signal);
+          setJob({ ...current, progress: 100, message: "Profil ve rota hazır" });
+          return current;
+        }
+        setJob(current);
+        await delay(800, signal);
         current = await api.getPreparation(current.id, { signal });
       }
       throw new Error(
@@ -108,13 +172,30 @@ export function PusulaProvider({
       );
     });
   }
+  async function uploadMedia(file) {
+    const result = await mediaTask.run((signal) =>
+      api.analyzeMedia(file, { signal, requestId: newId() }),
+    );
+    // An aborted run resolves to undefined; the previous analysis stays put.
+    if (result) setMedia(result);
+  }
+  function clearMedia() {
+    mediaTask.reset();
+    setMedia(null);
+  }
   async function analyze() {
     const text = draft.trim();
     if (!text || text.length > 500)
       return setNotice("1–500 karakter arasında bir fikir yazın.");
     await analysis.run((signal) =>
       api.analyzeIdea(
-        { text, format, interests },
+        {
+          text,
+          format,
+          interests,
+          // Present only when an upload was analysed; it then owns the category.
+          ...(media ? { mediaId: media.mediaId } : {}),
+        },
         { signal, requestId: newId() },
       ),
     );
@@ -173,10 +254,19 @@ export function PusulaProvider({
     reloadRecommendations: () =>
       recommendations.run((signal) => api.getRecommendations({ signal })),
     mode: api.mode,
+    userId,
+    chooseUser,
+    chooseNewUser,
+    // Empty until the backend answers; the picker still offers "new account".
+    sampleUsers: sampleUsers.data || [],
     interests,
     toggleInterest,
     format,
     setFormat,
+    media,
+    mediaTask,
+    uploadMedia,
+    clearMedia,
     draft,
     setDraft,
     job,

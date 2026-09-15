@@ -4,9 +4,14 @@ import { createApiClient } from "../src/services/apiClient.js";
 import { createHttpPusulaApi } from "../src/services/pusula/httpAdapter.js";
 import { createMockPusulaApi } from "../src/services/pusula/mockAdapter.js";
 import {
+  createBackendPusulaApi,
   mapInterests,
+  resolveUserId,
+  setUserId,
   toAnalysis,
+  toMediaAnalysis,
   toRecommendations,
+  toSampleUsers,
   TOPIC_VOCABULARY,
 } from "../src/services/pusula/backendAdapter.js";
 import { validate } from "../src/services/pusula/contracts.js";
@@ -135,6 +140,8 @@ const advisorPayload = {
   primary_category: "technology",
   primary_category_confidence: 0.65,
   primary_category_is_fallback: false,
+  text_category: "technology",
+  category_source: "text",
   windows: [
     {
       window_start_local: "2026-09-17T15:00:00+03:00",
@@ -193,6 +200,9 @@ test("Advisor payload maps onto the contract without inventing units", () => {
   assert.deepEqual(result.hashtags, ["yapayzeka", "ai", "derinogrenme"]);
   assert.equal(result.bestTime, "Perşembe 15.00–18.00");
   assert.equal(result.confidenceLabel, "Düşük");
+  assert.equal(result.categorySource, "text");
+  assert.equal(result.textCategory, "technology");
+  assert.equal(result.mediaAnalysis, null);
   // Score-unit residuals survive untouched, signs included.
   assert.equal(result.windows[0].observationalTimeLift, 0.0424);
   assert.equal(result.windows[0].relativePotential, 0.1578);
@@ -261,4 +271,187 @@ test("Interest ids map onto the canonical vocabulary, dedupe, and stay in it", (
   ];
   for (const topic of TOPIC_VOCABULARY)
     assert.ok(backendTopics.includes(topic), `${topic} is not a backend topic`);
+});
+// Captured from POST /api/media/analyze on the running stack.
+const mediaPayload = {
+  media_id: "abc123",
+  media_kind: "photo",
+  filename: "yemek.jpg",
+  content_type: "image/jpeg",
+  size_bytes: 2048,
+  frames_analyzed: 1,
+  duration_seconds: null,
+  width: 800,
+  height: 600,
+  topic: "Yaşam",
+  topic_confidence: 0.5014,
+  canonical_category: "food_dining",
+  category_confidence: 0.5721,
+  category_margin: 0.4242,
+  suggested_tags: ["#yemek", "#sağlık"],
+  uncertain: false,
+  model_name: "openai/clip-vit-base-patch32",
+  embedding_dim: 512,
+};
+test("FormData reaches fetch untouched so the browser sets the boundary", async () => {
+  const form = new FormData();
+  form.append("file", new Blob(["x"], { type: "image/png" }), "x.png");
+  let captured;
+  await createApiClient({
+    baseUrl: "/api",
+    fetchImpl: async (url, options) => {
+      captured = { url, options };
+      return Response.json({ ok: true });
+    },
+  })("/media/analyze", { method: "POST", body: form });
+  assert.equal(captured.url, "/api/media/analyze");
+  // Passing the FormData through unchanged is the whole point: only the browser
+  // knows the multipart boundary, so Content-Type must stay unset.
+  assert.equal(captured.options.body, form);
+  assert.equal(captured.options.headers["Content-Type"], undefined);
+});
+test("A confident image owns the category while the text proposal is kept", () => {
+  const result = validate(
+    "analysis",
+    toAnalysis({
+      ...advisorPayload,
+      primary_category: "food_dining",
+      primary_category_confidence: 0.5721,
+      primary_category_is_fallback: false,
+      text_category: "technology",
+      category_source: "media",
+      media_analysis: mediaPayload,
+    }),
+  );
+  assert.equal(result.categorySource, "media");
+  assert.equal(result.primaryCategory, "food_dining");
+  // Kept so the UI can report the disagreement the image overruled.
+  assert.equal(result.textCategory, "technology");
+  assert.equal(result.mediaAnalysis.canonicalCategory, "food_dining");
+  assert.equal(result.mediaAnalysis.mediaId, "abc123");
+});
+test("An uncertain image keeps null labels instead of guessing", () => {
+  const result = validate(
+    "mediaAnalysis",
+    toMediaAnalysis({
+      ...mediaPayload,
+      topic: null,
+      canonical_category: null,
+      suggested_tags: [],
+      uncertain: true,
+    }),
+  );
+  assert.equal(result.topic, null);
+  assert.equal(result.canonicalCategory, null);
+  assert.deepEqual(result.suggestedTags, []);
+  assert.equal(result.uncertain, true);
+});
+test("Mock media path mirrors the backend rule, uncertain images included", async () => {
+  const api = createMockPusulaApi({ latency: 0 });
+  const media = await api.analyzeMedia({ name: "yemek.jpg", size: 1024 });
+  assert.equal(media.canonicalCategory, "food_dining");
+  const adopted = await api.analyzeIdea({
+    text: "bugün ne paylaşsam",
+    format: "image",
+    mediaId: media.mediaId,
+  });
+  assert.equal(adopted.categorySource, "media");
+  assert.equal(adopted.primaryCategory, "food_dining");
+
+  // A file the model cannot label must leave the text category in charge.
+  const blurry = await api.analyzeMedia({ name: "belirsiz.jpg", size: 1024 });
+  assert.equal(blurry.uncertain, true);
+  const fallback = await api.analyzeIdea({
+    text: "bugün ne paylaşsam",
+    format: "image",
+    mediaId: blurry.mediaId,
+  });
+  assert.equal(fallback.categorySource, "text");
+  assert.equal(fallback.primaryCategory, "technology");
+});
+
+test("Sample users map onto the contract without inventing a depth", () => {
+  assert.deepEqual(
+    toSampleUsers({
+      users: [
+        { user_id: "31253@N15", post_count: 1376, history_depth: "high_history" },
+      ],
+    }),
+    [{ userId: "31253@N15", postCount: 1376, historyDepth: "high_history" }],
+  );
+  assert.deepEqual(toSampleUsers({}), []);
+  // A depth outside the backend vocabulary must fail loudly, not render as a code.
+  assert.throws(() => validate("sampleUsers", [{ userId: "x", postCount: 1, historyDepth: "rich" }]));
+});
+
+test("Choosing an account persists the id and the adapter picks it up per request", async () => {
+  const previous = globalThis.localStorage;
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => (store.has(key) ? store.get(key) : null),
+    setItem: (key, value) => store.set(key, String(value)),
+  };
+  try {
+    setUserId("31253@N15");
+    assert.equal(resolveUserId(), "31253@N15");
+
+    const seen = [];
+    const api = createBackendPusulaApi({
+      userId: null,
+      timeZone: "Europe/Istanbul",
+      fetchImpl: async (url, options) => {
+        seen.push(options?.body ? JSON.parse(options.body).user_id : url);
+        return Response.json({
+          request_id: "r",
+          model_version: "test",
+          topic: "Yaşam",
+          primary_category: "food_dining",
+          primary_category_confidence: 0.9,
+          text_category: "food_dining",
+          category_source: "text",
+          media_analysis: null,
+          confidence: "high",
+          history_depth: "high_history",
+          is_tie_or_broad_window: false,
+          timezone_basis: "user_offset",
+          suggested_tags: ["#food"],
+          explanation: "Gözlemsel bir öneri.",
+          windows: [
+            {
+              weekday: "Pazartesi",
+              weekday_index: 0,
+              bucket: 5,
+              time_range_local: "15.00–18.00",
+              window_start_utc: "2026-09-14T12:00:00Z",
+              relative_potential: 0.4,
+              support_post_count: 100,
+              support_user_count: 50,
+              observational_time_lift: 0.4159,
+              lift_ci_low: 0.1,
+              lift_ci_high: 0.7,
+              confidence: "high",
+              confidence_label: "Yüksek",
+              evidence_level: "category_weekday_bucket",
+            },
+          ],
+          similar_posts: [],
+        });
+      },
+    });
+
+    await api.analyzeIdea({ text: "bir fikir", format: "image" });
+    // Switching accounts must change the *next* request. A value captured at
+    // construction would keep sending the previous account forever.
+    setUserId("21102@N64");
+    await api.analyzeIdea({ text: "bir fikir", format: "image" });
+
+    assert.deepEqual(seen, ["31253@N15", "21102@N64"]);
+  } finally {
+    globalThis.localStorage = previous;
+  }
+});
+
+test("An explicitly injected user id still pins the adapter", () => {
+  assert.equal(resolveUserId({ getItem: () => "local-account" }), "local-account");
+  assert.equal(setUserId("pinned", { setItem: () => {} }), "pinned");
 });

@@ -1,4 +1,29 @@
 export type Format = "video" | "image" | "thread";
+export type MediaKind = "photo" | "video";
+/**
+ * CLIP analysis of an uploaded file. `topic` and `canonicalCategory` are null
+ * when the model's softmax falls below its calibrated floors — the backend
+ * reports uncertainty rather than guessing, so the UI must render the null.
+ */
+export interface MediaAnalysis {
+  mediaId: string;
+  mediaKind: MediaKind;
+  filename: string;
+  sizeBytes: number;
+  framesAnalyzed: number;
+  durationSeconds: number | null;
+  width: number;
+  height: number;
+  topic: string | null;
+  topicConfidence: number;
+  /** Same vocabulary as the window table's categories. */
+  canonicalCategory: string | null;
+  categoryConfidence: number;
+  categoryMargin: number;
+  suggestedTags: string[];
+  uncertain: boolean;
+  modelName: string;
+}
 export interface RequestOptions {
   signal?: AbortSignal;
   requestId?: string;
@@ -79,6 +104,8 @@ export interface AnalysisInput {
   text: string;
   format: Format;
   interests?: string[];
+  /** From `analyzeMedia`; when present the image owns the category. */
+  mediaId?: string;
 }
 export interface Analysis {
   id: string;
@@ -87,6 +114,18 @@ export interface Analysis {
   primaryCategory: string;
   /** 0–1 classifier confidence for the primary category. */
   primaryCategoryConfidence: number;
+  /**
+   * What the keyword classifier proposed from the idea text. Differs from
+   * `primaryCategory` when an uploaded image was confident enough to own it,
+   * which is what makes a text/image disagreement visible to the user.
+   */
+  textCategory: string;
+  /**
+   * Which evidence won: an attached image, an explicit match in the idea text,
+   * or the declared topic when the text matched nothing.
+   */
+  categorySource: "text" | "media" | "topic";
+  mediaAnalysis: MediaAnalysis | null;
   confidence: "high" | "medium" | "low";
   confidenceLabel: string;
   bestTime: string;
@@ -119,8 +158,24 @@ export interface Draft {
   text: string;
   format: Format;
 }
+/** Mirrors backend `HISTORY_DEPTH_NAMES`. */
+export type HistoryDepth =
+  | "cold_start"
+  | "very_low_history"
+  | "low_history"
+  | "medium_history"
+  | "high_history";
+/** A selectable account for the picker, with the history behind its behaviour. */
+export interface SampleUser {
+  userId: string;
+  /** Corpus rows, not the advisor's 30-post evidence window. */
+  postCount: number;
+  historyDepth: HistoryDepth;
+}
 export interface PusulaApi {
   mode: "mock" | "http";
+  /** Uploads a photo/video and returns its CLIP analysis. */
+  analyzeMedia(file: File, options?: RequestOptions): Promise<MediaAnalysis>;
   saveProfile(body: Profile, options?: RequestOptions): Promise<Profile>;
   startPreparation(
     body: Profile,
@@ -129,6 +184,8 @@ export interface PusulaApi {
   getPreparation(id: string, options?: RequestOptions): Promise<Preparation>;
   getRecommendations(options?: RequestOptions): Promise<Recommendations>;
   analyzeIdea(body: AnalysisInput, options?: RequestOptions): Promise<Analysis>;
+  /** Accounts the picker offers, spanning the history-depth range. */
+  listSampleUsers(options?: RequestOptions): Promise<SampleUser[]>;
   createPlan(body: PlanInput, options?: RequestOptions): Promise<Plan>;
   saveDraft(body: AnalysisInput, options?: RequestOptions): Promise<Draft>;
 }

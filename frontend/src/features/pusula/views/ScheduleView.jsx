@@ -31,9 +31,11 @@ export default function ScheduleView() {
               {data ? data.confidenceLabel : "Sinyal bekleniyor"}
             </div>
             {data ? (
-              <span className="text-code-sm text-on-surface-variant">
+              <span className="text-code-sm text-on-surface-variant block">
                 {data.activeTopic}
-                {data.coldStart ? " · yeni profil" : ""}
+                {data.coldStart
+                  ? " · paylaşım geçmişi yok, öneriler kategori düzeyinde"
+                  : ""}
               </span>
             ) : null}
           </div>
