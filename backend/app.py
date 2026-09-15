@@ -7,6 +7,7 @@ from uuid import uuid4
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.adapters.db import init_db, migrate_from_json_if_needed
 from backend.adapters.repository import (
     PostRepository,
     SavedContentRepository,
@@ -37,6 +38,7 @@ from backend.schemas.recommendation import (
 )
 from backend.schemas.sample_user import SampleUser, SampleUserList
 from backend.services.advisor import AdvisorService, history_depth_name
+from backend.services.artifact_sync import sync_artifacts_if_outdated
 from backend.services.device import device_manager
 from backend.services.media_analysis import (
     MediaAnalysisStore,
@@ -75,6 +77,17 @@ advisor_service = AdvisorService(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Query Nextcloud for artifact freshness and update if any are outdated
+    if settings.AUTO_SYNC_ARTIFACTS_ON_STARTUP:
+        try:
+            sync_artifacts_if_outdated()
+        except Exception as exc:
+            logger.warning("runtime artifact sync skipped due to error: %s", exc)
+
+    # Initialize SQLite database schema and migrate legacy JSON state if needed
+    init_db(settings.SQLITE_DB_PATH)
+    migrate_from_json_if_needed(settings.SQLITE_DB_PATH)
+
     # Train or load model artifact on startup
     df = post_repo.get_df()
     if not df.empty:
