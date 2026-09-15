@@ -42,6 +42,8 @@ MANIFEST: list[tuple[str, bool]] = [
     ("artifacts/final_evaluation.json", False),
     # Enables rebuilding the Qdrant index without the 458 MB raw dataset.
     ("data/processed/posts.parquet", True),
+    # SQLite state database (user declared topics, drift decisions, plans & drafts)
+    ("data/state/npusula.db", False),
 ]
 
 
@@ -106,17 +108,35 @@ def upload(env: dict[str, str], force: bool = False) -> None:
             print(f"up to date, skipping: {rel} ({local_size:,} bytes)")
             skipped += 1
             continue
-        data = path.read_bytes()
-        req = urllib.request.Request(url, data=data, method="PUT")
-        for key, value in headers.items():
-            req.add_header(key, value)
-        req.add_header("Content-Type", "application/octet-stream")
-        started = time.time()
-        with urllib.request.urlopen(req, timeout=600) as resp:
-            status = resp.status
-        elapsed = time.time() - started
-        print(f"uploaded {rel} ({local_size / (1024 * 1024):.1f} MB, HTTP {status}, {elapsed:.1f}s)")
-        uploaded += 1
+        snapshot_path = None
+        upload_path = path
+        if path.suffix == ".db":
+            try:
+                from backend.adapters.db import create_sqlite_snapshot
+                snapshot_path = create_sqlite_snapshot(path)
+                upload_path = snapshot_path
+            except Exception as exc:
+                print(f"could not snapshot {rel} ({exc}); uploading direct")
+                upload_path = path
+
+        try:
+            data = upload_path.read_bytes()
+            req = urllib.request.Request(url, data=data, method="PUT")
+            for key, value in headers.items():
+                req.add_header(key, value)
+            req.add_header("Content-Type", "application/octet-stream")
+            started = time.time()
+            with urllib.request.urlopen(req, timeout=600) as resp:
+                status = resp.status
+            elapsed = time.time() - started
+            print(f"uploaded {rel} ({len(data) / (1024 * 1024):.1f} MB, HTTP {status}, {elapsed:.1f}s)")
+            uploaded += 1
+        finally:
+            if snapshot_path and snapshot_path.exists():
+                try:
+                    snapshot_path.unlink()
+                except Exception:
+                    pass
     print(f"upload summary: {uploaded} uploaded, {skipped} up to date, {missing} missing locally")
 
 
