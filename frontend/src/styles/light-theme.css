@@ -1,0 +1,63 @@
+/* Final theme overrides for the shared social and NPusula surfaces. */
+.social-shell.light-theme {
+  --light-panel: #ffffff;
+  --light-subtle: #eaf0f6;
+  --light-border: #d8e0e9;
+  --light-text: #243247;
+  --light-muted: #52647a;
+}
+.social-shell.light-theme .social-brand > span { color: var(--light-muted); }
+.social-shell.light-theme .sidebar nav button[aria-current="page"] {
+  background: #deebfa !important;
+  color: #145ca0 !important;
+}
+.social-shell.light-theme .sidebar-preferences,
+.social-shell.light-theme .sidebar-preferences > div,
+.social-shell.light-theme .post-card,
+.social-shell.light-theme .post-composer {
+  border-color: var(--light-border) !important;
+}
+.social-shell.light-theme .sidebar-preferences span { color: var(--light-muted) !important; }
+.social-shell.light-theme .post-actions > button,
+.social-shell.light-theme .post-actions > span {
+  background: var(--light-subtle) !important;
+  border-color: var(--light-border) !important;
+}
+.social-shell.light-theme .right-sidebar > div:nth-child(2),
+.social-shell.light-theme .messages-bar {
+  background: var(--light-panel) !important;
+  border-color: var(--light-border) !important;
+  color: var(--light-text);
+}
+.social-shell.light-theme .right-sidebar > div:nth-child(2) > div:last-child > div {
+  border-color: var(--light-border);
+}
+.social-shell.light-theme .operator,
+.social-shell.light-theme .pusula-view [class*="bg-surface-container-high"] {
+  background: var(--light-subtle);
+  color: var(--light-text);
+}
+.social-shell.light-theme .pusula-view [class*="bg-surface-container-lowest"],
+.social-shell.light-theme .request-state,
+.social-shell.light-theme .local-plans,
+.social-shell.light-theme .media-dropzone {
+  background: var(--light-panel);
+  color: var(--light-muted);
+  border-color: var(--light-border);
+}
+.social-shell.light-theme .pusula-view article,
+.social-shell.light-theme .pusula-view > section[class*="bg-surface"],
+.social-shell.light-theme .app-topbar { border-color: var(--light-border); }
+.social-shell.light-theme .pusula-view [class*="text-on-surface-variant"],
+.social-shell.light-theme .demo-caption,
+.social-shell.light-theme .discovery-card p { color: var(--light-muted); }
+.social-shell.light-theme .pusula-view .text-primary,
+.social-shell.light-theme .pusula-page-meta button { color: #0869ad; }
+.social-shell.light-theme .pusula-view .text-tertiary { color: #087657; }
+.social-shell.light-theme #format-selector button[aria-pressed="true"],
+.social-shell.light-theme .pusula-view button[aria-pressed="true"] {
+  background: #deebfa !important; color: #145ca0; border-color: #458dce !important;
+}
+.social-shell.light-theme .request-error { color: #ad2935; }
+.social-shell.light-theme .media-dropzone.dragging { background: #e5f2ff; }
+.compass-transition.compass-light { background: #f5f6f8f5; color: #243247; }

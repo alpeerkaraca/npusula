@@ -1,0 +1,114 @@
+/* NPusula shares the feed shell; these rules only change its presentation. */
+.social-shell.pusula-shell { grid-template-rows: auto; }
+.social-shell.pusula-shell .sidebar,
+.social-shell.pusula-shell .main-content,
+.social-shell.pusula-shell .right-sidebar { grid-row: 1; }
+.social-shell.pusula-shell .social-brand { display: flex; }
+.social-shell.pusula-shell .dashboard-brand { display: none; }
+.social-shell.pusula-shell .right-sidebar { top: 28px; padding-top: 8px; }
+.pusula-shell .app-topbar {
+  height: auto; min-height: 64px; padding: 0 0 16px; margin-bottom: 20px;
+  border-bottom: 1px solid #2a303b; position: relative; flex-wrap: wrap;
+}
+.pusula-shell .app-topbar form {
+  flex: 1; width: auto; min-width: 140px; border: 1px solid #2a303b;
+  background: #191c23; border-radius: 999px; padding: 9px 14px;
+}
+.pusula-shell .operator { background: #252933; font-size: 13px; }
+.pusula-shell .discovery-card {
+  background: #191c23; border: 1px solid #2a303b;
+  border-radius: 16px; padding: 24px; box-shadow: none;
+}
+.pusula-shell .trend-link { border-bottom: 1px solid #292f3b; padding: 12px 0; }
+.pusula-shell .trend-link strong { color: #dce0e7; font-size: 14px; }
+.pusula-shell .pusula-page { container-type: inline-size; padding-bottom: 48px; }
+.pusula-shell .pusula-view { color: #dce0e7; font-size: 14px; line-height: 1.5; gap: 24px; }
+.pusula-shell .pusula-view [class*="bg-surface"],
+.pusula-shell .request-state, .pusula-shell .local-plans {
+  background-color: #191c23; box-shadow: none;
+}
+.pusula-shell .pusula-view [class*="bg-surface-container-high"] { background-color: #252933; }
+.pusula-shell .pusula-view [class*="bg-surface-container-lowest"] { background-color: #1c1f26; }
+.pusula-shell .pusula-view [class*="text-on-surface-variant"] { color: #9aa7b7; }
+.pusula-shell .pusula-view .text-primary { color: #32a6ef; }
+.pusula-shell .pusula-view .shadow-xl { box-shadow: none; }
+.pusula-shell .pusula-view > section[class*="bg-surface"],
+.pusula-shell .pusula-view article { border: 1px solid #2a303b; border-radius: 16px; }
+.pusula-shell .pusula-view .blur-3xl { display: none; }
+.pusula-shell .pusula-view .text-headline-lg { font-size: 24px; line-height: 1.3; }
+.pusula-shell .pusula-view .text-headline-md { font-size: 20px; line-height: 1.4; }
+.pusula-shell .pusula-view .text-headline-sm { font-size: 18px; line-height: 1.4; }
+.pusula-shell .pusula-view .p-space-xl { padding: 24px; }
+.pusula-shell .pusula-view .p-space-lg { padding: 20px; }
+.pusula-shell .pusula-view header { flex-wrap: wrap; align-items: baseline; }
+.pusula-shell .pusula-primary,
+.pusula-shell .pusula-view button[class*="from-primary-container"] {
+  background: linear-gradient(100deg, #04c7d4, #3449ff); color: white; border-radius: 999px;
+  font-size: 14px; box-shadow: none;
+}
+.pusula-shell .pusula-view button { cursor: pointer; }
+.pusula-shell .pusula-view article > .h-1 { display: none; }
+.pusula-shell .pusula-view article > .absolute { position: static; align-self: flex-start; width: fit-content; }
+@container (max-width: 740px) {
+  .page-assistant .pusula-view .grid { grid-template-columns: minmax(0, 1fr); }
+  .page-assistant .pusula-view article { gap: 16px; }
+}
+.pusula-shell.light-theme .pusula-view { color: #252933; }
+.pusula-shell.light-theme .pusula-view [class*="bg-surface"],
+.pusula-shell.light-theme .discovery-card,
+.pusula-shell.light-theme .app-topbar form { background-color: #fff; border-color: #dce0e7; }
+.pusula-shell.light-theme .trend-link strong { color: #252933; }
+@media (max-width: 767px) {
+  .pusula-shell .app-topbar { padding-top: 12px; gap: 12px; }
+  .pusula-shell .pusula-view .p-space-xl { padding: 18px; }
+  .pusula-shell .pusula-view .text-headline-lg { font-size: 22px; }
+}
+
+.pusula-shell .pusula-view article strong { white-space: nowrap; flex-shrink: 0; }
+.pusula-shell .pusula-view article .items-baseline { flex-direction: column; align-items: flex-start; }
+.pusula-shell .pusula-view article .text-headline-lg { font-size: 22px; }
+
+/* Expanded workspace retains the same social navigation and palette. */
+.social-shell.pusula-shell {
+  max-width: none; margin-inline: 0; padding: 28px 32px 0 24px;
+  grid-template-columns: 230px minmax(0, 1fr); column-gap: 40px;
+}
+.pusula-shell .main-content { width: 100%; }
+.pusula-shell .pusula-page { max-width: 1480px; margin-inline: auto; }
+.compass-transition {
+  position: fixed; inset: 0; z-index: 1000; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  background: #1c1f26f5; color: #cbd5e4; gap: 24px;
+  animation: compass-veil 2.2s ease both;
+}
+.compass-transition-art { width: min(360px, 70vw); animation: compass-arrive 2.2s cubic-bezier(.22,.7,.2,1) both; }
+.compass-dial { display: block; width: 100%; filter: drop-shadow(0 0 32px #04c7d420); }
+.compass-needle { transform-origin: 160px 160px; animation: compass-turn 2.2s cubic-bezier(.45,0,.2,1) both; }
+.compass-transition-label { font: 500 14px/1.5 'Inter', sans-serif; animation: compass-veil 2.2s ease both; }
+@keyframes compass-arrive {
+  0% { transform: scale(.08); opacity: 0; }
+  24%, 76% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(.06); opacity: 0; }
+}
+@keyframes compass-turn {
+  0%, 18% { transform: rotate(0deg); }
+  72%, 100% { transform: rotate(495deg); }
+}
+.compass-return .compass-needle { animation-name: compass-turn-back; }
+@keyframes compass-turn-back {
+  0%, 18% { transform: rotate(135deg); }
+  72%, 100% { transform: rotate(-405deg); }
+}
+@keyframes compass-veil {
+  0%, 100% { opacity: 0; }
+  15%, 84% { opacity: 1; }
+}
+@media (max-width: 1199px) {
+  .social-shell.pusula-shell { grid-template-columns: 210px minmax(0, 1fr); padding: 20px; gap: 24px; }
+}
+@media (max-width: 767px) {
+  .social-shell.pusula-shell { display: block; padding: 0 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .compass-transition, .compass-transition-art, .compass-needle, .compass-transition-label { animation: none; }
+}

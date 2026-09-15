@@ -1,4 +1,5 @@
 import React from "react";
+import ProfileAvatar from "../ui/ProfileAvatar.jsx";
 import { Search, ChevronDown } from "lucide-react";
 import { TRENDS } from "../../data/trends.js";
 import { useTheme } from "../../theme/ThemeProvider.jsx";
@@ -66,15 +67,7 @@ export default function RightSidebar({ isPusula = false, goToPage }) {
                 }}
               />
             </div>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: "50%",
-                background: darkMode ? "#242a35" : "#e4e6ea",
-                flexShrink: 0,
-              }}
-            />
+            <ProfileAvatar size={34} />
             <ChevronDown size={16} color={textMuted} />
           </div>
 

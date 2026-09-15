@@ -1,7 +1,10 @@
 import React, { useState } from "react";
+import CompassTransition from "./components/layout/CompassTransition.jsx";
 import "./styles/layout.css";
 import "./styles/stitch.css";
 import "./styles/social-reference.css";
+import "./styles/pusula-social.css";
+import "./styles/light-theme.css";
 import { PusulaProvider } from "./features/pusula/PusulaProvider.jsx";
 import PusulaPage, { PUSULA_PAGES } from "./features/pusula/PusulaPage.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
@@ -24,6 +27,7 @@ import TeknofestPage from "./pages/TeknofestPage.jsx";
 function SocialApp() {
   const { bg, border, textPrimary } = useTheme();
   const [activePage, setActivePage] = useState("home");
+  const [transitionTarget, setTransitionTarget] = useState(null);
   const [mediaOnly, setMediaOnly] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(true);
   const [openConversation, setOpenConversation] = useState(null);
@@ -42,11 +46,17 @@ function SocialApp() {
     submitComment,
   } = useFeedState();
   function goToPage(id) {
+    if ((id === "assistant" && activePage === "home") ||
+        (id === "home" && PUSULA_PAGES.some(([page]) => page === activePage))) {
+      setTransitionTarget(id);
+      return;
+    }
+    setTransitionTarget(null);
     setActivePage(id);
     setOpenConversation(null);
   }
   const isPusula = PUSULA_PAGES.some(([id]) => id === activePage);
-  const socialDark = !isPusula && bg !== "#f5f6f8";
+  const socialDark = bg !== "#f5f6f8";
   return (
     <PusulaProvider
       navigate={goToPage}
@@ -55,7 +65,8 @@ function SocialApp() {
       activePage={activePage}
     >
       <div
-        className={`app-shell stitch-shell ${isPusula ? "pusula-shell" : "social-shell"} ${bg === "#f5f6f8" ? "light-theme" : "dark"}`}
+        inert={transitionTarget ? true : undefined}
+        className={`app-shell stitch-shell social-shell ${isPusula ? "pusula-shell" : ""} ${bg === "#f5f6f8" ? "light-theme" : "dark"}`}
         style={{
           "--app-bg": socialDark ? "#1c1f26" : bg,
           "--app-border": border,
@@ -70,8 +81,9 @@ function SocialApp() {
           mediaOnly={mediaOnly}
           setMediaOnly={setMediaOnly}
         />
-        {isPusula && <Topbar goToPage={goToPage} />}
+
         <main className="main-content">
+          {isPusula && <Topbar goToPage={goToPage} />}
           {activePage === "home" && (
             <HomePage
               tab={tab}
@@ -106,12 +118,17 @@ function SocialApp() {
           {activePage === "teknofest" && <TeknofestPage />}
           {isPusula && <PusulaPage page={activePage} />}
         </main>
-        <RightSidebar isPusula={isPusula} goToPage={goToPage} />
+        {!isPusula && <RightSidebar goToPage={goToPage} />}
         <MessagesBar
           messagesOpen={messagesOpen}
           setMessagesOpen={setMessagesOpen}
         />
       </div>
+      {transitionTarget && <CompassTransition light={bg === "#f5f6f8"} direction={transitionTarget === "home" ? "return" : "enter"} onComplete={() => {
+        setActivePage(transitionTarget);
+        setOpenConversation(null);
+        setTransitionTarget(null);
+      }} />}
     </PusulaProvider>
   );
 }
