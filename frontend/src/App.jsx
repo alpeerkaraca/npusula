@@ -10,6 +10,7 @@ import PusulaPage, { PUSULA_PAGES } from "./features/pusula/PusulaPage.jsx";
 import Topbar from "./components/layout/Topbar.jsx";
 import { ThemeProvider, useTheme } from "./theme/ThemeProvider.jsx";
 import { useFeedState } from "./features/feed/useFeedState.js";
+import { usePageRouter } from "./hooks/usePageRouter.js";
 import Sidebar from "./components/layout/Sidebar.jsx";
 import RightSidebar from "./components/layout/RightSidebar.jsx";
 import MessagesBar from "./features/messages/MessagesBar.jsx";
@@ -26,7 +27,7 @@ import TeknofestPage from "./pages/TeknofestPage.jsx";
 
 function SocialApp() {
   const { bg, border, textPrimary } = useTheme();
-  const [activePage, setActivePage] = useState("home");
+  const { activePage, goToPage: navigate } = usePageRouter();
   const [transitionTarget, setTransitionTarget] = useState(null);
   const [mediaOnly, setMediaOnly] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(true);
@@ -45,16 +46,21 @@ function SocialApp() {
     setCommentDraft,
     submitComment,
   } = useFeedState();
+
+  // Wraps the router's navigate to handle CompassTransition and clear conversation.
   function goToPage(id) {
-    if ((id === "assistant" && activePage === "home") ||
-        (id === "home" && PUSULA_PAGES.some(([page]) => page === activePage))) {
+    if (
+      (id === "assistant" && activePage === "home") ||
+      (id === "home" && PUSULA_PAGES.some(([page]) => page === activePage))
+    ) {
       setTransitionTarget(id);
       return;
     }
     setTransitionTarget(null);
-    setActivePage(id);
+    navigate(id);
     setOpenConversation(null);
   }
+
   const isPusula = PUSULA_PAGES.some(([id]) => id === activePage);
   const socialDark = bg !== "#f5f6f8";
   return (
@@ -80,8 +86,8 @@ function SocialApp() {
           goToPage={goToPage}
           mediaOnly={mediaOnly}
           setMediaOnly={setMediaOnly}
+          isPusula={isPusula}
         />
-
         <main className="main-content">
           {isPusula && <Topbar goToPage={goToPage} />}
           {activePage === "home" && (
@@ -124,11 +130,17 @@ function SocialApp() {
           setMessagesOpen={setMessagesOpen}
         />
       </div>
-      {transitionTarget && <CompassTransition light={bg === "#f5f6f8"} direction={transitionTarget === "home" ? "return" : "enter"} onComplete={() => {
-        setActivePage(transitionTarget);
-        setOpenConversation(null);
-        setTransitionTarget(null);
-      }} />}
+      {transitionTarget && (
+        <CompassTransition
+          light={bg === "#f5f6f8"}
+          direction={transitionTarget === "home" ? "return" : "enter"}
+          onComplete={() => {
+            navigate(transitionTarget);
+            setOpenConversation(null);
+            setTransitionTarget(null);
+          }}
+        />
+      )}
     </PusulaProvider>
   );
 }
