@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+remote-files/
+.checks/
+
+.pnpm-store/
+.vite/

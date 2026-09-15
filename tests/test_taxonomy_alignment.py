@@ -149,3 +149,70 @@ def test_category_classification_exposes_fallback_and_confidence():
     assert two_domains["has_secondary_cat"] == 1
     assert two_domains["secondary_category"] == "entertainment_gaming"
     assert two_domains["secondary_cat_confidence"] < two_domains["primary_cat_confidence"]
+
+
+def test_turkish_lifestyle_keyword_reaches_its_category():
+    """The advisor's topic vocabulary is Turkish, so "Yaşam" needs the Turkish
+    twin of "lifestyle" or that interest never reaches a category."""
+    result = classify_post_category("Yaşam", None, None, None)
+    assert result["primary_category"] == "social_lifestyle"
+    assert result["primary_cat_confidence"] > 0.30
+
+
+def test_prefix_matching_avoids_english_word_collisions():
+    """"tech" must not match "techniques", nor "auto" match "automation".
+
+    The prefix rule exists so Turkish inflections resolve; carried over to
+    English stems it silently relabels unrelated posts.
+    """
+    assert (
+        classify_post_category("dough techniques", None, None, None)["primary_category"]
+        != "technology"
+    )
+    assert (
+        classify_post_category("task automation for teams", None, None, None)[
+            "primary_category"
+        ]
+        != "automotive"
+    )
+    # The Turkish inflections the prefix rule is for still resolve.
+    assert (
+        classify_post_category("yeni oyunu", None, None, None)["primary_category"]
+        == "entertainment_gaming"
+    )
+    assert (
+        classify_post_category("sabah sporu", None, None, None)["primary_category"]
+        == "sports_fitness"
+    )
+
+
+def test_topic_decides_the_category_when_the_title_is_empty():
+    """The declared topic must reach window scoring, not just the label.
+
+    `_prepare_features` only ever classifies the post title, so on the live
+    paths the category collapsed to the generic fallback and every topic
+    produced identical windows.
+    """
+    from backend.services.recommendation import RecommendationService
+
+    service = RecommendationService()
+    codes = {}
+    for topic in ("Oyun", "Yaşam"):
+        _, code = service.predict_base_potential(
+            user_prior_mean=5.8, user_post_count=0, title="", topic=topic
+        )
+        codes[topic] = code
+
+    assert codes["Oyun"] == CATEGORY_CODE_MAP["entertainment_gaming"]
+    assert codes["Yaşam"] == CATEGORY_CODE_MAP["social_lifestyle"]
+
+
+def test_text_still_outranks_the_topic():
+    """The topic describes the account; the text describes this post."""
+    from backend.services.recommendation import RecommendationService
+
+    service = RecommendationService()
+    _, code = service.predict_base_potential(
+        user_prior_mean=5.8, user_post_count=0, title="Python tutorial", topic="Spor"
+    )
+    assert code == CATEGORY_CODE_MAP["technology"]

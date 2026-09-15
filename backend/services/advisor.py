@@ -20,11 +20,11 @@ from backend.schemas.recommendation import (
     QuickRecommendationResponse,
     RecommendedWindow,
 )
-from backend.services.gemma_advisor import GemmaAdvisorEngine, format_window_turkish
+from backend.services.llm_advisor import LLMAdvisorEngine, format_window_turkish
 try:
-    from backend.services.moderation import GemmaModerationGuardrail
+    from backend.services.moderation import ModerationGuardrail
 except ImportError:
-    GemmaModerationGuardrail = None
+    ModerationGuardrail = None
 from backend.services.profile import ProfileService
 from backend.services.media_analysis import (
     TEXT_CATEGORY_NO_MATCH_CONFIDENCE,
@@ -95,17 +95,19 @@ class AdvisorService:
         profile_service: ProfileService,
         user_repo: UserRepository,
         post_repo: PostRepository,
-        gemma_advisor: GemmaAdvisorEngine | None = None,
-        moderation_guardrail: GemmaModerationGuardrail | None = None,
+        llm_advisor: LLMAdvisorEngine | None = None,
+        moderation_guardrail: ModerationGuardrail | None = None,
         media_store: MediaAnalysisStore | None = None,
+        gemma_advisor: LLMAdvisorEngine | None = None,
     ):
         self.rec_service = recommendation_service
         self.retrieval_service = retrieval_service
         self.profile_service = profile_service
         self.user_repo = user_repo
         self.post_repo = post_repo
-        self.gemma_advisor = gemma_advisor or GemmaAdvisorEngine()
-        self.moderation = moderation_guardrail or (GemmaModerationGuardrail() if GemmaModerationGuardrail is not None else None)
+        self.llm_advisor = llm_advisor or gemma_advisor or LLMAdvisorEngine()
+        self.gemma_advisor = self.llm_advisor  # Backward-compatible alias
+        self.moderation = moderation_guardrail or (ModerationGuardrail() if ModerationGuardrail is not None else None)
         self.media_store = media_store
 
     def get_quick_recommendation(
@@ -181,7 +183,7 @@ class AdvisorService:
         """Processes the user idea, retrieves similar posts, scores local windows, explains."""
         req_id = f"req-{uuid.uuid4().hex[:8]}"
 
-        # 0. Content safety & policy guardrail (Gemma 4 Shield Guardrail)
+        # 0. Content safety & policy guardrail
         # Confidence-gated: only decisive model confidence, obfuscated evasion,
         # or an LLM verdict can block; uncertain cases fail open to avoid
         # false positives on legitimate content.
@@ -217,7 +219,7 @@ class AdvisorService:
 
         # 2. Infer topic. The TF-IDF classifier is only a fast confident path;
         # weak or zero matches are escalated to a confident image analysis and
-        # then to the Gemma topic judge.
+        # then to the LLM topic judge.
         inferred_topic, topic_sim = self.profile_service.classify_text_topic_confident(
             request.idea, fallback_topic=fallback_topic
         )
@@ -229,25 +231,51 @@ class AdvisorService:
         if topic_source == "media" and media is not None and media.topic:
             inferred_topic = media.topic
         elif topic_source == "judge":
-            llm_topic = self.gemma_advisor.classify_topic(
+            llm_topic = self.llm_advisor.classify_topic(
                 request.idea, self.profile_service.topic_names
             )
             if llm_topic:
                 inferred_topic = llm_topic
 
         category_result = classify_post_category(request.idea, None, None, None)
-        primary_category = str(category_result["primary_category"])
+        # Kept separately so the response can show what the text would have said;
+        # `text_category` is what makes a text/image disagreement reportable.
+        text_category = str(category_result["primary_category"])
+        text_category_confidence = float(category_result["primary_cat_confidence"])
+        primary_category = text_category
+        category_source = "text"
+        # Confidence of whichever source won; `category_is_fallback` below reads
+        # it together with the source so a topic-asserted category is not
+        # reported as an unasserted fallback.
+        category_confidence = text_category_confidence
+        category_is_fallback = (
+            text_category_confidence <= TEXT_CATEGORY_NO_MATCH_CONFIDENCE
+        )
 
-        # The image category only overrides a text classification that matched
-        # nothing at all; `media_context` is forwarded to window scoring only
-        # when it was actually adopted.
+        # Ladder, most specific evidence first: an attached image describes this
+        # post, an explicit text match describes the idea, and the user's topic
+        # describes the account. Mirrors `predict_base_potential`'s overrides so
+        # the reported category and the scored category stay the same thing.
         media_context = None
         if should_use_media_category(
-            float(category_result["primary_cat_confidence"]),
-            media_category_confident=bool(media is not None and media.canonical_category),
+            media_category_confident=bool(
+                media is not None and media.canonical_category
+            )
         ) and media is not None and media.canonical_category:
             primary_category = str(media.canonical_category)
+            category_source = "media"
+            category_confidence = float(media.category_confidence)
+            category_is_fallback = False
             media_context = media
+        elif text_category_confidence <= TEXT_CATEGORY_NO_MATCH_CONFIDENCE:
+            topic_result = classify_post_category(inferred_topic, None, None, None)
+            topic_confidence = float(topic_result["primary_cat_confidence"])
+            if topic_confidence > TEXT_CATEGORY_NO_MATCH_CONFIDENCE:
+                primary_category = str(topic_result["primary_category"])
+                category_source = "topic"
+                category_confidence = topic_confidence
+                # The topic asserted a category, so this is not a fallback.
+                category_is_fallback = False
 
         if not user_posts.empty and "user_popularity_mean_prior" in user_posts.columns:
             prior_mean = float(user_posts["user_popularity_mean_prior"].iloc[-1])
@@ -270,9 +298,8 @@ class AdvisorService:
         # was adopted, `primary_category` is a fallback, not knowledge: a known
         # tag must then be reported as aligned-by-domain rather than mislabelled
         # `mismatched` against a category nobody asserted.
-        text_category_confidence = float(category_result["primary_cat_confidence"])
         alignment_context: str | None = primary_category
-        if media_context is None and text_category_confidence <= TEXT_CATEGORY_NO_MATCH_CONFIDENCE:
+        if category_source == "text" and category_is_fallback:
             alignment_context = None
 
         topic_defaults = TOPIC_DEFAULT_TAGS.get(inferred_topic, [])
@@ -320,8 +347,8 @@ class AdvisorService:
             media_context=media_context,
         )
 
-        # 6. Generate the Gemma 4 explanation under the mandatory wording rules
-        explanation = self.gemma_advisor.generate_explanation(
+        # 6. Generate the strategic explanation under the mandatory wording rules
+        explanation = self.llm_advisor.generate_explanation(
             idea=request.idea,
             topic=inferred_topic,
             media_type=request.media_type,
@@ -329,13 +356,6 @@ class AdvisorService:
             suggested_tags=suggested_tags,
             similar_posts=similar_posts,
         )
-
-        if media_context is not None:
-            category_confidence = float(media_context.category_confidence)
-            category_is_fallback = False
-        else:
-            category_confidence = text_category_confidence
-            category_is_fallback = text_category_confidence <= TEXT_CATEGORY_NO_MATCH_CONFIDENCE
 
         history_depth = history_depth_name(behavioral.evidence_post_count)
         logger.info(
@@ -353,6 +373,8 @@ class AdvisorService:
             primary_category=primary_category,
             primary_category_confidence=category_confidence,
             primary_category_is_fallback=category_is_fallback,
+            text_category=text_category,
+            category_source=category_source,
             windows=recommendation.windows,
             accepted_tags=accepted_tags,
             rejected_tags=rejected_tags,
@@ -366,8 +388,8 @@ class AdvisorService:
             is_tie_or_broad_window=recommendation.is_tie_or_broad_window,
             timezone_basis=recommendation.timezone_basis,
             timezone_fallback=recommendation.timezone_fallback,
-            model_version=f"base-potential-lgbm + time-lift-table + {settings.GEMMA_MODEL_NAME}",
-            data_source="SMPD benchmark (observational) & NSosyal demo",
+            model_version=f"base-potential-lgbm + time-lift-table + {settings.LLM_MODEL_NAME}",
+            data_source="Observational benchmark & platform integration demo",
             service_mode="deep_advisor",
             media_analysis=media,
         )

@@ -108,6 +108,29 @@ def test_advisor_api_family_idea_quality(client):
     assert any(tag in {"#yaşam", "#lifestyle", "#günlükyaşam"} for tag in data["accepted_tags"])
 
 
+def test_category_is_reported_as_a_fallback_when_nothing_asserts_it(client):
+    """Neither the idea text nor the topic matched, so the category is a guess.
+
+    "Eğitim" is in the topic vocabulary but has no canonical category, which
+    makes it the one case where the ladder bottoms out. The response must say
+    so rather than presenting the label as knowledge.
+    """
+    response = client.post("/api/recommend/advisor", json={
+        "user_id": "31253@N15",
+        "idea": "üniversite sınavına hazırlık ve ders çalışma yöntemleri",
+        "media_type": "photo",
+        "horizon": "next_7_days",
+        "timezone": "Europe/Istanbul",
+    })
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["text_category"]
+    assert data["category_source"] == "text"
+    assert data["primary_category_is_fallback"] is True
+    assert data["primary_category_confidence"] <= 0.30
+
+
 def test_suggested_tags_are_aligned_semantics_only_and_deduplicated(client):
     """Only verified tags may be suggested, and never twice (plan §6.2)."""
     response = client.post("/api/recommend/advisor", json={
@@ -120,10 +143,12 @@ def test_suggested_tags_are_aligned_semantics_only_and_deduplicated(client):
     assert response.status_code == 200
     data = response.json()
 
-    # The category classifier matched no keyword, so the category is a fallback
-    # and is reported as such instead of being asserted as knowledge.
-    assert data["primary_category_is_fallback"] is True
-    assert data["primary_category_confidence"] <= 0.30
+    # The idea text matches no keyword, so the declared topic supplies the
+    # category. That is asserted evidence with a named source, not an
+    # unasserted fallback.
+    assert data["category_source"] == "topic"
+    assert data["primary_category_is_fallback"] is False
+    assert data["primary_category_confidence"] > 0.30
 
     assert data["suggested_tags"], "a technology idea must still get verified tags"
     assert len(data["suggested_tags"]) <= 3

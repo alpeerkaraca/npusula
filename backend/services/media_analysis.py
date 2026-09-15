@@ -16,20 +16,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import base64
 import io
+import json
 import logging
 import math
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import threading
 import uuid
 from typing import Any, Literal
 
+import httpx
 import numpy as np
 
 from backend.config import settings
+from backend.prompts import build_vision_analysis_prompt
 from backend.schemas.media import MediaAnalysis, MediaAnalysisResponse
+from backend.services.canonical_taxonomy import CANONICAL_CATEGORIES
 
 logger = logging.getLogger(__name__)
 
@@ -168,12 +174,20 @@ def choose_topic_source(
     return "judge"
 
 
-def should_use_media_category(
-    text_category_confidence: float,
-    media_category_confident: bool,
-) -> bool:
-    """Overrides the category only when the text classifier matched nothing at all."""
-    return media_category_confident and text_category_confidence <= TEXT_CATEGORY_NO_MATCH_CONFIDENCE
+def should_use_media_category(media_category_confident: bool) -> bool:
+    """Decides whether an analysed upload owns the category.
+
+    The image wins whenever it is confident. It describes the file the user
+    actually attached, whereas the text classifier is a keyword map built for
+    SMPD's controlled metadata and mislabels free text (the "tech" prefix
+    matches "techniques", turning a recipe into technology). The two scores are
+    not comparable anyway: the text score is a match-density count, the image
+    score a softmax probability.
+
+    The caller still falls back to the text category when the image is
+    uncertain, because `media_category_confident` is False for a null category.
+    """
+    return media_category_confident
 
 
 def merge_tags(
@@ -328,6 +342,47 @@ def extract_frames(path: Path, timestamps: list[float]) -> list[Any]:
     return frames
 
 
+def create_video_storyboard(frames: list[Any]) -> Any:
+    """Combines representative video frames into a 2x2 storyboard grid image.
+
+    If only 1 frame is present, returns that frame directly.
+    For 2+ frames, samples up to 4 evenly spaced frames and tiles them into a
+    (448, 448) 2x2 grid so vision language models can perceive temporal progression.
+    """
+    Image = _require_pillow()
+    if not frames:
+        raise MediaValidationError("Medyadan hiç kare çözümlenemedi.")
+    if len(frames) == 1:
+        return frames[0]
+
+    n = len(frames)
+    if n >= 4:
+        indices = [int(i * (n - 1) / 3) for i in range(4)]
+        selected = [frames[idx] for idx in indices]
+    else:
+        selected = frames[:]
+        while len(selected) < 4:
+            selected.append(selected[-1])
+
+    tile_size = (224, 224)
+    canvas = Image.new("RGB", (tile_size[0] * 2, tile_size[1] * 2), color=(0, 0, 0))
+    positions = [
+        (0, 0),
+        (tile_size[0], 0),
+        (0, tile_size[1]),
+        (tile_size[0], tile_size[1]),
+    ]
+    for frame, pos in zip(selected, positions):
+        resized = frame.copy()
+        resized.thumbnail(tile_size)
+        offset_x = pos[0] + (tile_size[0] - resized.width) // 2
+        offset_y = pos[1] + (tile_size[1] - resized.height) // 2
+        canvas.paste(resized, (offset_x, offset_y))
+
+    return canvas
+
+
+
 # --------------------------------------------------------------------------
 # Prompt banks (curated, English prompts -> Turkish labels)
 # --------------------------------------------------------------------------
@@ -420,16 +475,31 @@ CLIP_LOGIT_SCALE = 100.0
 # MediaAnalyzer: CLIP image embedding + zero-shot label scoring
 # --------------------------------------------------------------------------
 class MediaAnalyzer:
-    """Lazy-loading CLIP wrapper with per-group zero-shot scoring."""
+    """Multimodal vision analyzer supporting local multimodal LLM/VLM and zero-shot embeddings."""
 
     def __init__(
         self,
         model_name: str | None = None,
         cache_dir: Path | None = None,
+        backend: str | None = None,
     ):
-        self.model_name = model_name or settings.CLIP_MODEL_NAME
+        if backend is not None:
+            self.backend = backend.strip().lower()
+        elif model_name and ("/" in model_name or "clip" in model_name.lower()):
+            self.backend = "clip"
+        else:
+            self.backend = getattr(settings, "MEDIA_ANALYZER_BACKEND", "llm").strip().lower()
+
+        if self.backend in ("llm", "vlm", "gemma"):
+            self.model_name = model_name or settings.LLM_MODEL_NAME
+        else:
+            self.model_name = model_name or settings.VISION_MODEL_NAME
         self.cache_dir = Path(cache_dir or settings.MEDIA_CACHE_DIR)
+        self.llm_api_url = getattr(settings, "LLM_API_URL", getattr(settings, "GEMMA_API_URL", "http://127.0.0.1:11434"))
+        self.gemma_api_url = self.llm_api_url  # Backward-compatible alias
+        self.timeout = getattr(settings, "LLM_VISION_TIMEOUT_SECONDS", getattr(settings, "GEMMA_VISION_TIMEOUT_SECONDS", 15.0))
         self._lock = threading.Lock()
+        self._ready = False
         self._model: Any = None
         self._processor: Any = None
         self._torch: Any = None
@@ -439,6 +509,8 @@ class MediaAnalyzer:
 
     @property
     def is_ready(self) -> bool:
+        if self.backend in ("llm", "vlm", "gemma"):
+            return self._ready
         return self._model is not None
 
     @property
@@ -446,24 +518,58 @@ class MediaAnalyzer:
         return self._load_error
 
     def warm_up(self) -> bool:
-        """Loads model and label banks; returns False instead of raising."""
+        """Loads model or verifies LLM service connectivity; returns False instead of raising."""
         try:
             self._ensure_loaded()
             return True
         except MediaError as exc:
             logger.warning("media analyzer unavailable: %s", exc.message)
             return False
+        except Exception as exc:
+            logger.warning("media analyzer warm-up failed: %s", exc)
+            return False
 
     # -- model lifecycle ---------------------------------------------------
     def _ensure_loaded(self) -> None:
-        if self._model is not None:
+        if self.is_ready:
             return
         with self._lock:
-            if self._model is not None:
+            if self.is_ready:
                 return
-            self._load_model()
+            if self.backend in ("llm", "vlm", "gemma"):
+                self._load_llm_vision()
+            else:
+                self._load_clip()
 
-    def _load_model(self) -> None:
+    def _load_llm_vision(self) -> None:
+        """Verifies LLM endpoint is accessible and vision-capable model is available."""
+        try:
+            with httpx.Client(timeout=3.0) as client:
+                resp = client.get(f"{self.llm_api_url.rstrip('/')}/api/tags")
+                if resp.status_code != 200:
+                    raise MediaUnavailableError(
+                        f"LLM servisine erişilemedi (HTTP {resp.status_code})."
+                    )
+                models = [m.get("name") for m in resp.json().get("models", [])]
+                target_base = self.model_name.split(":")[0]
+                has_model = self.model_name in models or any(
+                    m and m.startswith(target_base) for m in models
+                )
+                if not has_model:
+                    raise MediaUnavailableError(
+                        f"LLM servisi üzerinde '{self.model_name}' modeli bulunamadı."
+                    )
+            self._ready = True
+            logger.info("media analyzer ready (vlm vision): %s at %s", self.model_name, self.llm_api_url)
+        except Exception as exc:
+            self._load_error = str(exc)
+            raise MediaUnavailableError(
+                f"Görsel analiz servisi hazır değil ({self.llm_api_url}): {exc}"
+            ) from exc
+
+    _load_gemma = _load_llm_vision  # Backward-compatible alias
+
+    def _load_clip(self) -> None:
         try:
             import torch  # noqa: PLC0415 - lazy by design
             from transformers import CLIPModel, CLIPProcessor  # noqa: PLC0415
@@ -591,13 +697,131 @@ class MediaAnalyzer:
         return labels[order[0]], best, margin
 
     def _tag_labels(self, labels: list[str], probabilities: np.ndarray) -> list[str]:
+        """Tags for a confident image, or none at all.
+
+        The tag bank is small, so a flat distribution publishes confidently
+        wrong labels: a car photo scored "#seyahat" 0.33 and "#hayvan" 0.21
+        while "#araba" sat at 0.02. Raising the per-tag floor does not fix that
+        -- it only hides some of the wrong labels while dropping correct weak
+        ones (a city photo's "#mimari" at 0.09). Gating the whole set on the top
+        label's own confidence, using the same floor the category uses, reports
+        "no tags" for that photo instead of three unrelated ones.
+        """
         order = np.argsort(probabilities)[::-1]
+        if len(order) == 0 or float(probabilities[order[0]]) < settings.MEDIA_MIN_PROB:
+            return []
         selected = [
             labels[index]
             for index in order
             if float(probabilities[index]) >= settings.MEDIA_TAG_MIN_PROB
         ]
         return selected[: settings.MEDIA_TOP_TAGS]
+
+    def _analyze_with_llm_vision(
+        self,
+        image: Any,
+        is_video: bool = False,
+    ) -> tuple[str | None, float, float, str | None, float, list[str]]:
+        """Invokes multimodal vision LLM with base64 image and parses structured JSON output."""
+        buf = io.BytesIO()
+        image.convert("RGB").save(buf, format="JPEG", quality=85)
+        b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+        prompt = build_vision_analysis_prompt(
+            categories=CANONICAL_CATEGORIES,
+            topics=list(TOPIC_PROMPTS.keys()),
+            is_video=is_video,
+        )
+
+        payload = {
+            "model": self.model_name,
+            "prompt": prompt,
+            "images": [b64],
+            "stream": False,
+            "think": False,
+            "format": "json",
+            "options": {"temperature": 0, "num_predict": 256},
+        }
+
+        endpoint = f"{self.llm_api_url.rstrip('/')}/api/generate"
+        attempts = max(1, getattr(settings, "LLM_RETRY_COUNT", getattr(settings, "GEMMA_RETRY_COUNT", 2)))
+        parsed_data: dict[str, Any] | None = None
+        last_exc: Exception | None = None
+
+        for attempt in range(attempts):
+            try:
+                with httpx.Client(timeout=self.timeout) as client:
+                    resp = client.post(endpoint, json=payload)
+                    if resp.status_code == 200:
+                        res_json = resp.json()
+                        raw_response = (
+                            res_json.get("response", "").strip()
+                            or res_json.get("thinking", "").strip()
+                        )
+                        if raw_response:
+                            clean_json = raw_response
+                            if "</think>" in clean_json:
+                                clean_json = clean_json.split("</think>")[-1].strip()
+                            clean_json = re.sub(r"^<think>.*?</think>", "", clean_json, flags=re.DOTALL).strip()
+                            if "```" in clean_json:
+                                clean_json = re.sub(r"```json\s*", "", clean_json)
+                                clean_json = re.sub(r"```\s*", "", clean_json)
+                            try:
+                                parsed_data = json.loads(clean_json)
+                                break
+                            except Exception as json_err:
+                                logger.warning("VLM JSON parse failed on attempt %d: %s", attempt + 1, json_err)
+                    logger.warning(
+                        "vlm vision attempt %d failed: status=%s", attempt + 1, resp.status_code
+                    )
+            except Exception as exc:
+                last_exc = exc
+                logger.warning("vlm vision attempt %d error: %s", attempt + 1, exc)
+            import time
+            time.sleep(0.25)
+
+        if parsed_data is None:
+            raise MediaUnavailableError(
+                f"Görsel analizi tamamlayamadı ({self.model_name}): {last_exc or 'Boş yanıt'}"
+            )
+
+        raw_cat = parsed_data.get("category")
+        category = raw_cat if raw_cat in CANONICAL_CATEGORIES else None
+
+        try:
+            cat_conf = float(parsed_data.get("category_confidence", 0.85))
+        except (TypeError, ValueError):
+            cat_conf = 0.85
+
+        raw_top = parsed_data.get("topic")
+        topic = raw_top if raw_top in TOPIC_PROMPTS else None
+
+        try:
+            top_conf = float(parsed_data.get("topic_confidence", 0.80))
+        except (TypeError, ValueError):
+            top_conf = 0.80
+
+        raw_tags = parsed_data.get("tags") or []
+        tags: list[str] = []
+        for t in raw_tags:
+            if isinstance(t, str):
+                cleaned = t.strip()
+                if not cleaned:
+                    continue
+                if not cleaned.startswith("#"):
+                    cleaned = f"#{cleaned}"
+                if len(cleaned) > 1 and cleaned.lower() not in [x.lower() for x in tags]:
+                    tags.append(cleaned)
+        suggested_tags = tags[: settings.MEDIA_TOP_TAGS]
+
+        if cat_conf < settings.MEDIA_MIN_PROB:
+            category = None
+            suggested_tags = []
+
+        margin = max(0.0, cat_conf - settings.MEDIA_MIN_PROB)
+        return category, cat_conf, margin, topic, top_conf, suggested_tags
+
+    _analyze_with_gemma = _analyze_with_llm_vision  # Backward-compatible alias
 
     # -- public API --------------------------------------------------------
     def analyze(
@@ -625,17 +849,25 @@ class MediaAnalyzer:
         if not frames:
             raise MediaValidationError("Medyadan hiç kare çözümlenemedi.")
 
-        embedding = (
-            self._video_embedding(frames) if len(frames) > 1 else self._embed_images(frames)[0]
-        )
+        if self.backend in ("llm", "vlm", "gemma"):
+            storyboard = create_video_storyboard(frames) if kind == "video" else frames[0]
+            category, category_conf, category_margin, topic, topic_conf, tags = self._analyze_with_llm_vision(
+                storyboard, is_video=(kind == "video")
+            )
+            embedding_dim = 2560
+        else:
+            embedding = (
+                self._video_embedding(frames) if len(frames) > 1 else self._embed_images(frames)[0]
+            )
 
-        category_labels, category_probs = self._group_scores(embedding, "category")
-        topic_labels, topic_probs = self._group_scores(embedding, "topic")
-        tag_labels, tag_probs = self._group_scores(embedding, "tag")
+            category_labels, category_probs = self._group_scores(embedding, "category")
+            topic_labels, topic_probs = self._group_scores(embedding, "topic")
+            tag_labels, tag_probs = self._group_scores(embedding, "tag")
 
-        category, category_conf, category_margin = self._top_label(category_labels, category_probs)
-        topic, topic_conf, _ = self._top_label(topic_labels, topic_probs)
-        tags = self._tag_labels(tag_labels, tag_probs) if category is not None else []
+            category, category_conf, category_margin = self._top_label(category_labels, category_probs)
+            topic, topic_conf, _ = self._top_label(topic_labels, topic_probs)
+            tags = self._tag_labels(tag_labels, tag_probs) if category is not None else []
+            embedding_dim = int(embedding.shape[0])
 
         return MediaAnalysis(
             media_kind=kind,
@@ -654,7 +886,7 @@ class MediaAnalyzer:
             suggested_tags=tags,
             uncertain=category is None,
             model_name=self.model_name,
-            embedding_dim=int(embedding.shape[0]),
+            embedding_dim=embedding_dim,
         )
 
     def _decode_video(self, data: bytes) -> tuple[list[Any], float, int, int]:

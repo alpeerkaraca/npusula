@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>N BETA - Sosyal Medya</title>
+<!-- Tailwind CSS CDN with forms and container queries plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Font: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              bg: '#0c1219',
+              sidebar: '#0c1219',
+              card: '#131d2a',
+              input: '#1a2636',
+              border: '#1d2c3f',
+              blue: '#00a3ff',
+              lightBlue: '#38bdf8',
+              muted: '#7e92a8',
+              text: '#e2e8f0',
+              activeNav: '#162536'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Base and Layout Custom Styles -->
+<style data-purpose="custom-scrollbar">
+    /* Custom sleek scrollbar matching the dark web interface */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0c1219;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f3044;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2b435f;
+    }
+  </style>
+<!-- Toggle Switch & Special Button Styles -->
+<style data-purpose="toggle-components">
+    .toggle-checkbox:checked {
+      right: 0;
+      border-color: #00a3ff;
+      background-color: #00a3ff;
+    }
+    .toggle-checkbox:checked + .toggle-label {
+      background-color: #00a3ff;
+    }
+  </style>
+</head>
+<body class="bg-[#0c1219] text-[#e2e8f0] font-sans antialiased min-h-screen flex justify-center selection:bg-brand-blue selection:text-white">
+<!-- BEGIN: MasterLayout -->
+<div class="w-full max-w-[1600px] flex justify-between min-h-screen relative" data-purpose="main-wrapper">
+<!-- BEGIN: LeftSidebar -->
+<aside class="w-[260px] h-screen sticky top-0 flex flex-col justify-between py-5 px-4 select-none border-r border-[#192535]/60 z-30" data-purpose="left-navigation-sidebar">
+<!-- Upper Section: Brand and Navigation -->
+<div class="flex flex-col gap-5">
+<!-- Logo -->
+<div class="flex flex-col items-start px-3 mb-1" data-purpose="brand-logo">
+<div class="flex items-center gap-1.5 cursor-pointer">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0072ff] via-[#00a3ff] to-[#00d4ff] flex items-center justify-center shadow-lg shadow-sky-500/20">
+<span class="text-white font-black text-2xl tracking-tighter italic">N</span>
+</div>
+</div>
+<span class="text-[10px] tracking-[0.2em] font-bold text-[#627b97] mt-1.5 uppercase pl-0.5">B E T A</span>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col space-y-1 text-[15px] font-medium" data-purpose="nav-links">
+<!-- Ana Sayfa (Active) -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-full bg-[#182637] text-white transition-colors group" href="#">
+<div class="w-7 h-7 rounded-full bg-[#00a3ff] flex items-center justify-center text-white shadow-sm">
+<svg class="w-4 h-4 fill-current" viewbox="0 0 24 24">
+<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path>
+</svg>
+</div>
+<span class="font-semibold text-[14.5px]">Ana Sayfa</span>
+</a>
+<!-- Bildirimler with badge '4' -->
+<a class="flex items-center justify-between px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors group" href="#">
+<div class="flex items-center gap-3.5">
+<div class="relative flex items-center justify-center w-7 h-7">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="absolute -top-1 -right-1.5 bg-[#00a3ff] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none ring-2 ring-[#0c1219]">4</span>
+</div>
+<span>Bildirimler</span>
+</div>
+</a>
+<!-- Mesajlar -->
+<a class="flex items-center gap-3.5 px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors" href="#">
+<div class="w-7 h-7 flex items-center justify-center">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>Mesajlar</span>
+</a>
+<!-- Keşfet -->
+<a class="flex items-center gap-3.5 px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors" href="#">
+<div class="w-7 h-7 flex items-center justify-center">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M12 21a9 9 0 100-18 9 9 0 000 18z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M14.828 9.172l-4.242 1.414-1.414 4.242 4.242-1.414 1.414-4.242z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>Keşfet</span>
+</a>
+<!-- Nod Oyna -->
+<a class="flex items-center gap-3.5 px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors" href="#">
+<div class="w-7 h-7 flex items-center justify-center">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>Nod Oyna</span>
+</a>
+<!-- Topluluklar -->
+<a class="flex items-center gap-3.5 px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors" href="#">
+<div class="w-7 h-7 flex items-center justify-center">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>Topluluklar</span>
+</a>
+<!-- Kaydedilenler -->
+<a class="flex items-center gap-3.5 px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors" href="#">
+<div class="w-7 h-7 flex items-center justify-center">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>Kaydedilenler</span>
+</a>
+<!-- Beğeniler -->
+<a class="flex items-center gap-3.5 px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors" href="#">
+<div class="w-7 h-7 flex items-center justify-center">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>Beğeniler</span>
+</a>
+<!-- TEKNOFEST Kayıt -->
+<a class="flex items-center gap-3.5 px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors" href="#">
+<div class="w-7 h-7 flex items-center justify-center">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="truncate">TEKNOFEST Kayıt</span>
+</a>
+<!-- NPusula (Special requested addition) -->
+<a class="flex items-center gap-3.5 px-4 py-2 rounded-full hover:bg-[#141e2b] text-[#8e9fae] hover:text-white transition-colors" data-purpose="npusula-nav-item" href="#">
+<div class="w-7 h-7 flex items-center justify-center">
+<!-- Compass icon for NPusula -->
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="9.5" stroke-linecap="round" stroke-linejoin="round"></circle>
+<polygon class="fill-current/20" points="12,6 15,12 12,18 9,12" stroke-linecap="round" stroke-linejoin="round"></polygon>
+<circle cx="12" cy="12" fill="currentColor" r="1.5"></circle>
+</svg>
+</div>
+<span>NPusula</span>
+</a>
+</nav>
+<!-- CTA Button: Yeni Gönder -->
+<div class="pt-2">
+<button class="w-full py-3 px-5 rounded-full bg-gradient-to-r from-[#00b4db] to-[#0083b0] hover:from-[#00c0ea] hover:to-[#0092c6] text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition-all transform active:scale-98">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewbox="0 0 24 24">
+<path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[15px]">Yeni Gönder</span>
+</button>
+</div>
+</div>
+<!-- Bottom Toggles Section -->
+<div class="space-y-4 pt-4 border-t border-[#1a2636]/60 text-sm text-[#8e9fae] px-1" data-purpose="settings-toggles">
+<!-- Medya Toggle -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Medya</span>
+</div>
+<!-- Inactive switch -->
+<button aria-pressed="false" class="w-10 h-5 flex items-center bg-[#1c293a] rounded-full p-0.5 cursor-pointer" type="button">
+<div class="bg-[#5c7087] w-4 h-4 rounded-full shadow-md"></div>
+</button>
+</div>
+<!-- Karanlık Mod Toggle -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Karanlık mod</span>
+</div>
+<!-- Active switch (blue) -->
+<button aria-pressed="true" class="w-10 h-5 flex items-center bg-[#00a3ff] rounded-full p-0.5 justify-end cursor-pointer" type="button">
+<div class="bg-white w-4 h-4 rounded-full shadow-md"></div>
+</button>
+</div>
+</div>
+</aside>
+<!-- END: LeftSidebar -->
+<!-- BEGIN: MainContentFeed -->
+<main class="flex-1 max-w-[690px] min-h-screen px-4 py-4 mx-auto" data-purpose="center-feed-stream">
+<!-- Top Navigation Tabs (Akış / Medya) -->
+<div class="flex border-b border-[#1b2737] mb-4 text-[15px] font-semibold" data-purpose="top-tabs">
+<button class="relative pb-3 px-8 text-white text-center cursor-pointer transition-colors group">
+<span class="text-[#00a3ff]">Akış</span>
+<!-- Active tab indicator line -->
+<div class="absolute bottom-0 left-0 right-0 h-[3px] bg-[#00a3ff] rounded-t-full"></div>
+</button>
+<button class="pb-3 px-8 text-[#7e92a8] hover:text-white transition-colors cursor-pointer">
+<span>Medya</span>
+</button>
+</div>
+<!-- Post Creation Box -->
+<div class="bg-[#121c27] border border-[#1b2a3a] rounded-2xl p-4 mb-5 shadow-sm" data-purpose="create-post-box">
+<div class="flex gap-3">
+<!-- User Avatar Placeholder -->
+<div class="w-10 h-10 rounded-full bg-[#33465b] flex-shrink-0 flex items-center justify-center overflow-hidden border border-[#2b3c4f]">
+<svg class="w-6 h-6 text-[#9bb0c7] fill-current mt-1" viewbox="0 0 24 24">
+<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
+</svg>
+</div>
+<!-- Input Area -->
+<div class="flex-1">
+<input class="w-full bg-transparent border-none text-[#e2e8f0] placeholder-[#576b80] focus:ring-0 text-[15px] p-0 pt-2 outline-none" placeholder="Gönderi oluşturmak için..." type="text"/>
+</div>
+</div>
+<!-- Post Action Tools Bottom Bar -->
+<div class="flex items-center justify-between mt-5 pt-2 border-t border-[#182535]">
+<div class="flex items-center gap-4 text-[#7990a8] pl-1">
+<!-- Image Icon -->
+<button class="hover:text-[#00a3ff] transition-colors" title="Görsel ekle" type="button">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.7]" viewbox="0 0 24 24">
+<path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Poll / Chart Icon -->
+<button class="hover:text-[#00a3ff] transition-colors" title="Anket" type="button">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.7]" viewbox="0 0 24 24">
+<path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Info Icon -->
+<button class="hover:text-[#00a3ff] transition-colors" title="Bilgi" type="button">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.7]" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="9.5"></circle>
+<path d="M12 8.25h.008v.008H12V8.25zm0 3v4.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Emoji Icon -->
+<button class="hover:text-[#00a3ff] transition-colors" title="Emoji" type="button">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.7]" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="9.5"></circle>
+<path d="M15 9.75h.008v.008H15V9.75zm-6 0h.008v.008H9V9.75zm.75 4.875a4.125 4.125 0 004.5 0" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Calendar Icon -->
+<button class="hover:text-[#00a3ff] transition-colors" title="Zamanla" type="button">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.7]" viewbox="0 0 24 24">
+<path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Location Icon -->
+<button class="hover:text-[#00a3ff] transition-colors" title="Konum" type="button">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[1.7]" viewbox="0 0 24 24">
+<path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Send Action Button -->
+<button class="py-1.5 px-4 rounded-full bg-[#1e2c3e] text-[#697d93] text-sm font-semibold flex items-center gap-1.5 cursor-not-allowed">
+<svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewbox="0 0 24 24">
+<path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Gönder</span>
+</button>
+</div>
+</div>
+<!-- Feed Card: TEKNOFEST Official Post -->
+<article class="bg-[#121c27] border border-[#1b2a3a] rounded-2xl p-4.5 mb-4 shadow-sm" data-purpose="feed-post-card">
+<!-- Post Header -->
+<div class="flex items-start justify-between mb-2.5">
+<div class="flex items-center gap-3">
+<!-- Teknofest circular avatar -->
+<div class="w-10 h-10 rounded-full bg-black flex items-center justify-center overflow-hidden ring-1 ring-sky-500/30 flex-shrink-0">
+<div class="w-full h-full bg-gradient-to-tr from-[#990000] via-[#0b1b3a] to-[#0099ff] flex items-center justify-center p-1">
+<span class="text-[8px] font-extrabold text-white tracking-tighter uppercase">TEKNOFEST</span>
+</div>
+</div>
+<!-- Name & Metadata -->
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="font-bold text-[15px] text-white hover:underline cursor-pointer">TEKNOFEST</span>
+<!-- Verified blue check badge -->
+<span class="text-[#00a3ff]" title="Onaylanmış Hesap">
+<svg class="w-4 h-4 fill-current" viewbox="0 0 24 24">
+<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
+</svg>
+</span>
+<span class="text-[#7e92a8] text-sm hover:underline cursor-pointer">@teknofest</span>
+<span class="text-[#495b6e] text-xs">·</span>
+<span class="text-[#7e92a8] text-sm">şimdi</span>
+</div>
+</div>
+<!-- 3-Dots Menu button -->
+<button class="text-[#64798e] hover:text-white p-1 rounded-full transition-colors" type="button">
+<svg class="w-5 h-5 fill-current" viewbox="0 0 24 24">
+<circle cx="5" cy="12" r="2"></circle>
+<circle cx="12" cy="12" r="2"></circle>
+<circle cx="19" cy="12" r="2"></circle>
+</svg>
+</button>
+</div>
+<!-- Post Content Text -->
+<div class="text-[14.5px] leading-relaxed text-[#dae4f0] space-y-2 mb-3.5 pl-0.5">
+<p>Her başarılı uçuşun ardında birbirine güvenen bir ekip vardır. ✈️</p>
+<p>Uluslararası ve Liseler Arası İHA Yarışması | <a class="text-[#00a3ff] hover:underline" href="#">#TEKNOFEST2026</a> | Malatya 🚀</p>
+</div>
+<!-- 4-Grid Image Gallery -->
+<div class="rounded-xl overflow-hidden border border-[#1f2f42] grid grid-cols-2 gap-0.5 bg-[#0f1721] mb-3 relative" data-purpose="post-media-grid">
+<!-- Image 1 (Top Left) -->
+<div class="aspect-[16/10] overflow-hidden relative group bg-[#162333]">
+<img alt="TEKNOFEST İHA Takımı" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKsTdL8snG9F997wCPUZkwG501a5g1VcsYpFRbr9k9dCkzkgXFs1gIPyfiCDztHqJKIbOBfE9yJkUMBn1RA9GcJ_rCagjRXDE2aBliVXWlHIKfqUGiaV6kCx_NZBV84ExTjYEfsjUrTOYTWELsF5WnJacYn4ts8f-GVJNJb61MUXQe8rikJm3g3_a90Kc-89OkdlJLnaJcq7o3l8X_-IlyjtJxtrYBg6ZDFtXywKPkzPdlAHyFcHVgDAUAvGu8tEaJpg"/>
+</div>
+<!-- Image 2 (Top Right) -->
+<div class="aspect-[16/10] overflow-hidden relative group bg-[#162333]">
+<img alt="Yarışmacılar kutlama yapıyor" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXLKwIjefAcJd5bL55ZmMUuBTcZQUA4s9PQzvuCCTO9NaqXrNzDL6IopYEWM2zaUYwI2yFXIrN_GzGyWzFV0GYhD7ZJU06WyYv6rIvdmYN6viz77xCa0vAWoLRSxVei1dM9s7q0_HyYbPVmL3e3U9BGIaS7agMMlOQnZ0Yku6uM7VfrxyQLLQAYr3hy-WywFxsgoaKJjd1QrTX0Q9IYz2QlPI_-IuVfJBWE1yZlRKLO_r6ulEO-nkd5C7d7ID5roSHFA"/>
+</div>
+<!-- Image 3 (Bottom Left) with Save overlay pill -->
+<div class="aspect-[16/10] overflow-hidden relative group bg-[#162333]">
+<img alt="İHA ekibi pistte" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZxBlT82h0fSKms2AJjWzcyL1asMhxZYvpGbkmTIuqG-RABXjY3RuvHPf-DNqLFKMKTT1G7q1UX6r1fb5SY2vc_GZTAIrV4dtqoQkvlrxCAtgF1PbQBPSlnrpst28FFwhcLt-iOuVpLugUFEBLTRP5CunTpW0J26VDNg5Wj2_BqTTmWeF01B_H73--dAqJncAlZWl2LAv_eqNc7EjbtBJmkZkXJkiIpCaVD3G02PiT7VmPaYX98z420dbuqvsdjLXRZQ"/>
+<!-- Pinterest/Save pill tag style as seen in reference -->
+<span class="absolute top-2 left-2 bg-[#e60023] hover:bg-[#ad081b] text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md cursor-pointer">
+<svg class="w-3 h-3 fill-current" viewbox="0 0 24 24">
+<path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738.098.119.112.224.083.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.546.535 6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"></path>
+</svg>
+              Save
+            </span>
+</div>
+<!-- Image 4 (Bottom Right) -->
+<div class="aspect-[16/10] overflow-hidden relative group bg-[#162333]">
+<img alt="Aile sarılması ve gurur anı" class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDthsNdKPAH6xx5MJibyMkzHMaEofWQH31iisaMigvFFQ1l5Hi_pIxvRw8emzK7b_k_ZyESNxzY16oAEfRKUEOFRE_MosmRF8sWBBpzM1Vk9n5vuE-HotoLF-4u_-daN0Jou23rdLLxwaj9ecK7oqyE1IvXZaHkmfpT737CjQaVPjGh_To6U-_XB4sTHZ8bX8jfgl3Nh-VCno0wjx_b30WJJEEolc8qEpOleDoEc-wmnKQiUjHk7bwUzyQiko3_SwyngA"/>
+</div>
+</div>
+<!-- Post Action Interaction Bar -->
+<div class="flex items-center justify-between text-[#798e9f] text-xs font-medium pt-1 px-1" data-purpose="interaction-stats-bar">
+<!-- Comments -->
+<button class="flex items-center gap-1.5 hover:text-[#00a3ff] transition-colors group">
+<div class="p-1 rounded-full group-hover:bg-[#00a3ff]/10">
+<svg class="w-4 h-4 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.608 1.077.458 1.67l-.736 2.915a.75.75 0 00.93.908l3.187-1.063c.52-.173 1.092-.124 1.57.142A8.887 8.887 0 0012 20.25z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>0</span>
+</button>
+<!-- Repost / Quote -->
+<button class="flex items-center gap-1.5 hover:text-green-400 transition-colors group">
+<div class="p-1 rounded-full group-hover:bg-green-500/10">
+<svg class="w-4 h-4 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M4.5 12c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M7.5 7.5L4.5 4.5m0 0L1.5 7.5M4.5 4.5v6m12 6.5l3 3m0 0l3-3m-3 3v-6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>0</span>
+</button>
+<!-- Boost / Rocket (2) -->
+<button class="flex items-center gap-1.5 hover:text-[#00a3ff] transition-colors group">
+<div class="p-1 rounded-full group-hover:bg-[#00a3ff]/10">
+<svg class="w-4 h-4 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>2</span>
+</button>
+<!-- Analytics / Views (31) -->
+<button class="flex items-center gap-1.5 hover:text-[#00a3ff] transition-colors group">
+<div class="p-1 rounded-full group-hover:bg-[#00a3ff]/10">
+<svg class="w-4 h-4 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125-0 01-1.125-1.125V4.125z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span>31</span>
+</button>
+<!-- Right side icons: Bookmark & Share -->
+<div class="flex items-center gap-3">
+<button class="hover:text-[#00a3ff] transition-colors">
+<svg class="w-4 h-4 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<button class="hover:text-[#00a3ff] transition-colors">
+<svg class="w-4 h-4 stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</div>
+</article>
+<!-- Second post preview header matching bottom edge of reference -->
+<article class="bg-[#121c27] border border-[#1b2a3a] rounded-2xl p-4.5 opacity-90">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-black flex items-center justify-center overflow-hidden ring-1 ring-sky-500/30">
+<div class="w-full h-full bg-gradient-to-tr from-[#990000] via-[#0b1b3a] to-[#0099ff] flex items-center justify-center p-1">
+<span class="text-[8px] font-extrabold text-white tracking-tighter uppercase">TEKNOFEST</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="font-bold text-[15px] text-white">TEKNOFEST</span>
+<span class="text-[#00a3ff]">
+<svg class="w-4 h-4 fill-current" viewbox="0 0 24 24">
+<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
+</svg>
+</span>
+<span class="text-[#7e92a8] text-sm">@teknofest</span>
+<span class="text-[#495b6e] text-xs">·</span>
+<span class="text-[#7e92a8] text-sm">31dk</span>
+</div>
+</div>
+</article>
+</main>
+<!-- END: MainContentFeed -->
+<!-- BEGIN: RightSidebar -->
+<aside class="w-[340px] h-screen sticky top-0 py-4 px-4 flex flex-col justify-between select-none z-30" data-purpose="right-discovery-sidebar">
+<div>
+<!-- Top Search Bar & User Profile Bubble -->
+<div class="flex items-center gap-3 mb-6" data-purpose="search-and-account">
+<!-- Search Pill Input -->
+<div class="flex-1 relative">
+<span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#5e748d]">
+<svg class="w-4 h-4 stroke-current fill-none stroke-[2]" viewbox="0 0 24 24">
+<path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<input class="w-full pl-10 pr-4 py-2 bg-[#141e2b] border border-[#233549] rounded-full text-sm text-[#e2e8f0] placeholder-[#5e748d] focus:outline-none focus:border-[#00a3ff] transition-colors" placeholder="Arama yap" type="text"/>
+</div>
+<!-- User Profile Dropdown Pill -->
+<div class="flex items-center gap-1 cursor-pointer">
+<div class="w-9 h-9 rounded-full bg-[#f1f5f9] flex items-center justify-center text-[#1e293b] font-bold overflow-hidden ring-2 ring-[#223347]">
+<svg class="w-7 h-7 text-[#64748b] fill-current translate-y-1.5" viewbox="0 0 24 24">
+<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
+</svg>
+</div>
+<svg class="w-4 h-4 text-[#8ea1b5]" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="M19.5 8.25l-7.5 7.5-7.5-7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Popüler (Trending) Card -->
+<section class="bg-[#121c27] border border-[#1b2a3a] rounded-2xl p-4 shadow-sm" data-purpose="popular-topics-widget">
+<!-- Widget Title Header -->
+<div class="flex items-center justify-between pb-3 mb-1 border-b border-[#1b2a3a]/80">
+<h2 class="text-white font-bold text-[16px]">Popüler</h2>
+<a class="text-xs font-semibold text-[#8396aa] hover:text-[#00a3ff] flex items-center gap-0.5 transition-colors" href="#">
+<span>Tümünü gör</span>
+<svg class="w-3.5 h-3.5 stroke-current fill-none stroke-[2]" viewbox="0 0 24 24">
+<path d="M8.25 4.5l7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</a>
+</div>
+<!-- Trending Hash Items -->
+<div class="divide-y divide-[#1b2a3a]/60">
+<!-- Trend 1 -->
+<div class="py-3 flex items-start gap-3 hover:bg-[#152232]/50 -mx-2 px-2 rounded-lg cursor-pointer transition-colors">
+<span class="text-[#00a3ff] text-xl font-black mt-0.5 select-none">#</span>
+<div class="flex flex-col">
+<span class="font-bold text-sm text-white hover:text-[#00a3ff] transition-colors">12eylül</span>
+<span class="text-xs text-[#6e8297]">845 gönderi</span>
+</div>
+</div>
+<!-- Trend 2 -->
+<div class="py-3 flex items-start gap-3 hover:bg-[#152232]/50 -mx-2 px-2 rounded-lg cursor-pointer transition-colors">
+<span class="text-[#00a3ff] text-xl font-black mt-0.5 select-none">#</span>
+<div class="flex flex-col">
+<span class="font-bold text-sm text-white hover:text-[#00a3ff] transition-colors">12Eylül1980</span>
+<span class="text-xs text-[#6e8297]">127 gönderi</span>
+</div>
+</div>
+<!-- Trend 3 -->
+<div class="py-3 flex items-start gap-3 hover:bg-[#152232]/50 -mx-2 px-2 rounded-lg cursor-pointer transition-colors">
+<span class="text-[#00a3ff] text-xl font-black mt-0.5 select-none">#</span>
+<div class="flex flex-col">
+<span class="font-bold text-sm text-white hover:text-[#00a3ff] transition-colors">TEKNOFEST</span>
+<span class="text-xs text-[#6e8297]">718 gönderi</span>
+</div>
+</div>
+<!-- Trend 4 -->
+<div class="py-3 flex items-start gap-3 hover:bg-[#152232]/50 -mx-2 px-2 rounded-lg cursor-pointer transition-colors">
+<span class="text-[#00a3ff] text-xl font-black mt-0.5 select-none">#</span>
+<div class="flex flex-col">
+<span class="font-bold text-sm text-white hover:text-[#00a3ff] transition-colors">ÜlküOcakları</span>
+<span class="text-xs text-[#6e8297]">146 gönderi</span>
+</div>
+</div>
+<!-- Trend 5 -->
+<div class="py-3 flex items-start gap-3 hover:bg-[#152232]/50 -mx-2 px-2 rounded-lg cursor-pointer transition-colors">
+<span class="text-[#00a3ff] text-xl font-black mt-0.5 select-none">#</span>
+<div class="flex flex-col">
+<span class="font-bold text-sm text-white hover:text-[#00a3ff] transition-colors">ALLAH</span>
+<span class="text-xs text-[#6e8297]">2,5B gönderi</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Bottom Floating Messages Bar Widget -->
+<div class="w-full bg-[#121c27] border border-[#1e2f42] rounded-t-xl px-4 py-3 flex items-center justify-between shadow-2xl cursor-pointer hover:bg-[#152333] transition-colors" data-purpose="floating-messages-dock">
+<div class="flex items-center gap-2 text-[#e2e8f0]">
+<svg class="w-5 h-5 text-[#8fa2b6] stroke-current fill-none stroke-[1.8]" viewbox="0 0 24 24">
+<path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-sm font-semibold">Mesajlar</span>
+<svg class="w-3.5 h-3.5 text-[#8fa2b6] stroke-current fill-none stroke-[2.5]" viewbox="0 0 24 24">
+<path d="M4.5 15.75l7.5-7.5 7.5 7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<!-- Compose new message icon -->
+<button class="text-[#00a3ff] hover:text-[#38bdf8] p-1" title="Yeni Mesaj" type="button">
+<svg class="w-5 h-5 stroke-current fill-none stroke-[2]" viewbox="0 0 24 24">
+<path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</aside>
+<!-- END: RightSidebar -->
+</div>
+<!-- END: MasterLayout -->
+</body></html>

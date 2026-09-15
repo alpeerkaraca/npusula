@@ -167,6 +167,9 @@ SMPD_TO_CANONICAL_MAPPING: Dict[str, Tuple[str, str]] = {
     "girişim": ("business_economy", "entrepreneurship"),
     "economy": ("business_economy", "markets"),
     "lifestyle": ("social_lifestyle", "daily_life"),
+    # Turkish twin of "lifestyle": the advisor's topic vocabulary is Turkish, so
+    # without this the "Yaşam" interest never reaches a canonical category.
+    "yaşam": ("social_lifestyle", "daily_life"),
     "family": ("social_lifestyle", "family_parenting"),
     "aile": ("social_lifestyle", "family_parenting"),
     "çocuk": ("social_lifestyle", "family_parenting"),
@@ -191,6 +194,14 @@ def _clean_optional_text(value: Any) -> Optional[str]:
         return None
     text = str(value).strip()
     return text or None
+
+
+# Keywords whose prefix rule collides with unrelated English words. "tech"
+# matches "techniques", so a bread-making post was classified as technology;
+# "auto" matches "automation", pulling software posts into automotive. These
+# two match whole words only. Turkish stems keep the prefix rule so inflections
+# still resolve ("güreş" -> "güreşi", "oyun" -> "oyunu").
+PREFIX_UNSAFE_KEYWORDS = {"tech", "auto"}
 
 
 # 6. classify_post_category function
@@ -245,7 +256,7 @@ def classify_post_category(
     # All matches are counted (no early break) so the confidence score stays
     # informative; assignment semantics are unchanged by later matches.
     for keyword, (cat, subcat) in SMPD_TO_CANONICAL_MAPPING.items():
-        if len(keyword) >= 4:
+        if len(keyword) >= 4 and keyword not in PREFIX_UNSAFE_KEYWORDS:
             matched = re.search(rf"(?<!\w){re.escape(keyword)}", text_to_search)
         else:
             matched = re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", text_to_search)

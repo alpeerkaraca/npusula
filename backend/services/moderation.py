@@ -1,4 +1,4 @@
-"""Model-based content safety and moderation guardrail service for NPusula.
+"""Model-based content safety and moderation guardrail service.
 
 Includes:
 1. Adversarial Text Normalizer: De-obfuscates leetspeak, symbol substitutions (e.g. c1pl4q -> ciplak),
@@ -6,7 +6,7 @@ Includes:
 2. Subword & Character N-Gram Machine Learning Classifier: Calibrated multiclass model predicting
    probabilities across safety categories (safe, sexual_content, gambling, violence, hate_speech),
    delivering confidence scores and risk scores.
-3. Gemma 4 / ShieldGemma Semantic Judge integration for comprehensive LLM evaluation.
+3. Semantic LLM Judge integration for comprehensive evaluation.
 
 Curated data (lexicon, fallback corpus, regression batteries) lives in
 backend.services.moderation_data; the production classifier artifact is
@@ -26,7 +26,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import FeatureUnion, Pipeline
 
 from backend.config import settings
+from backend.prompts import build_moderation_prompt
 from backend.services.moderation_data import (
+    DISCUSSION_FRAMES,
     MODERATION_TRAINING_CORPUS,
     UNSAFE_LEXICON,
     strip_phrase_exceptions,
@@ -180,8 +182,8 @@ class GuardrailClassifierModel:
         return scores
 
 
-class GemmaModerationGuardrail:
-    """Comprehensive Guardrail combining Adversarial Normalization, ML Classifier & Gemma 4 LLM."""
+class ModerationGuardrail:
+    """Comprehensive Guardrail combining Adversarial Normalization, ML Classifier & LLM."""
 
     # Confidence-gated decision thresholds. Blocking requires strong model
     # confidence about a specific unsafe category; weak or split signals fail
@@ -203,7 +205,7 @@ class GemmaModerationGuardrail:
     REASON_TEMPLATES: dict[str, str] = {
         "sexual_content": (
             "İçerik Güvenlik İhlali (Müstehcenlik/Yetişkin İçerik): Girdiğiniz içerik fikri "
-            "NSosyal Topluluk Kuralları ve Güvenlik İlkelerine aykırıdır."
+            "Topluluk Kuralları ve Güvenlik İlkelerine aykırıdır."
         ),
         "gambling": (
             "İçerik Güvenlik İhlali (Yasa Dışı Kumar/Bahis): Yasa dışı bahis ve kumar "
@@ -211,7 +213,7 @@ class GemmaModerationGuardrail:
         ),
         "violence": (
             "İçerik Güvenlik İhlali (Şiddet/Zararlı İçerik): Şiddet, tehlike veya kendine "
-            "zarar verme barındıran fikirler NSosyal ilkelerine aykırıdır."
+            "zarar verme barındıran fikirler platform güvenlik ilkelerine aykırıdır."
         ),
         "hate_speech": (
             "İçerik Güvenlik İhlali (Nefret Söylemi): Ayrımcılık veya nefret barındıran "
@@ -223,40 +225,19 @@ class GemmaModerationGuardrail:
         self,
         model_name: str | None = None,
         api_url: str | None = None,
-        timeout_seconds: float = 15.0,
+        timeout_seconds: float = settings.LLM_TIMEOUT_SECONDS,
     ):
         self.normalizer = AdversarialNormalizer()
         self.classifier = GuardrailClassifierModel()
-        self.model_name = model_name or settings.GEMMA_MODEL_NAME
-        self.api_url = api_url or settings.GEMMA_API_URL
+        self.model_name = model_name or settings.LLM_MODEL_NAME
+        self.api_url = api_url or settings.LLM_API_URL
         self.timeout = timeout_seconds
 
-    def build_gemma_prompt(self, text: str, normalized: str, leet_detected: bool) -> str:
-        """Constructs Gemma 4 instruction-following prompt for semantic evaluation."""
-        return (
-            f"<start_of_turn>user\n"
-            f"Sen NSosyal platformunun içerik güvenliği ve moderasyon modelisin (Gemma Safety Guardrail / ShieldGemma).\n"
-            f"Kullanıcının ilettiği içerik fikrini platform kurallarına göre analiz et.\n\n"
-            f"İÇERİK BİLGİSİ:\n"
-            f"- Orijinal Metin: \"{text}\"\n"
-            f"- Normalleştirilmiş Metin: \"{normalized}\"\n"
-            f"- Sembol/Rakam Gizleme Tespiti: {'Evet' if leet_detected else 'Hayır'}\n\n"
-            f"GÜVENLİK POLİTİKALARI:\n"
-            f"1. Müstehcenlik ve Cinsellik (adult/sexual): Çıplaklık (örn. c1pl4q), pornografi, erotizm, ayak resmi/fetişi, eskort vb.\n"
-            f"2. Yasa Dışı Faaliyetler ve Kumar (illegal/gambling): Yasadışı bahis (b4h1s), kumar, uyuşturucu, silah vb.\n"
-            f"3. Şiddet ve Tehdit (violence): Fiziksel zarar, intihar veya kendine zarar verme.\n"
-            f"4. Nefret Söylemi ve Ağır Hakaret (hate_speech): Kişi veya gruplara yönelik ayrımcı, aşağılayıcı söylemler.\n\n"
-            f"TALİMAT:\n"
-            f"SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir metin ekleme:\n"
-            f"{{\n"
-            f"  \"is_safe\": true veya false,\n"
-            f"  \"category\": \"none\" veya \"sexual_content\" veya \"gambling\" veya \"violence\" veya \"hate_speech\",\n"
-            f"  \"confidence\": 0.0 - 1.0,\n"
-            f"  \"reason\": \"Kullanıcıya gösterilecek nazik ve net Türkçe gerekçe\"\n"
-            f"}}\n"
-            f"<end_of_turn>\n"
-            f"<start_of_turn>model\n"
-        )
+    def build_llm_prompt(self, text: str, normalized: str, leet_detected: bool) -> str:
+        """Constructs instruction-following prompt for semantic evaluation."""
+        return build_moderation_prompt(text, normalized, leet_detected)
+
+    build_gemma_prompt = build_llm_prompt  # Backward-compatible alias
 
     @staticmethod
     def _strip_phrase_exceptions(text: str) -> str:
@@ -276,6 +257,37 @@ class GemmaModerationGuardrail:
                 return category
         return None
 
+    @staticmethod
+    def _is_discussion_reference(text: str) -> bool:
+        """True when an unsafe term is the subject of the text, not its content.
+
+        "Kumar bağımlılığıyla ilgili bir haber" names a lexicon term without
+        promoting it. Such a hit is deferred to the LLM instead of being
+        hard-blocked by the lexicon.
+        """
+        return any(frame in text for frame in DISCUSSION_FRAMES)
+
+    def _lexicon_verdict(
+        self, category: str, normalized_text: str, idea: str, obfuscation_detected: bool
+    ) -> ModerationVerdict:
+        """The deterministic block a lexicon hit earns when nothing overrules it."""
+        base_reason = self.REASON_TEMPLATES[category]
+        reason_msg = f"{base_reason} (Model Risk Skoru: %100, Güven: %100)."
+        if obfuscation_detected:
+            reason_msg += f" [Gizleme/Sembol Girişimi Tespit Edildi: '{idea}' -> '{normalized_text}']"
+        scores = {cat: 0.01 for cat in ("safe", "sexual_content", "gambling", "violence", "hate_speech")}
+        scores[category] = 0.96
+        return ModerationVerdict(
+            is_safe=False,
+            confidence_score=1.0,
+            risk_score=1.0,
+            category=category,
+            category_scores=scores,
+            obfuscation_detected=obfuscation_detected,
+            normalized_text=normalized_text,
+            reason=reason_msg,
+        )
+
     def _llm_arbitrate(self, text: str, normalized: str, leet_detected: bool) -> tuple[bool, str | None, float | None, bool]:
         """Asks Gemma 4 to arbitrate uncertain ML scores.
 
@@ -286,20 +298,25 @@ class GemmaModerationGuardrail:
         applied (safe or unsafe).
         """
         try:
-            prompt = self.build_gemma_prompt(text, normalized, leet_detected)
+            prompt = self.build_llm_prompt(text, normalized, leet_detected)
             endpoint = f"{self.api_url.rstrip('/')}/api/generate"
             payload = {
                 "model": self.model_name,
                 "prompt": prompt,
                 "stream": False,
+                "think": settings.LLM_THINK,
+                "options": {
+                    "num_predict": settings.LLM_MODERATION_MAX_TOKENS,
+                    "temperature": 0,
+                },
             }
             with httpx.Client(timeout=self.timeout) as client:
-                res = client.post(endpoint, json=payload)
-                if res.status_code != 200:
-                    # Ollama intermittently returns 500 under load; retry once
-                    # before failing open (fast failure, ~0.5s extra).
+                res = None
+                for _ in range(max(1, settings.LLM_RETRY_COUNT)):
                     res = client.post(endpoint, json=payload)
-                if res.status_code != 200:
+                    if res.status_code == 200:
+                        break
+                if res is None or res.status_code != 200:
                     return False, None, None, False
                 data = res.json()
                 response_text = data.get("response", "").strip()
@@ -338,23 +355,15 @@ class GemmaModerationGuardrail:
         # unsafe terms in other languages (e.g. "naked girls"), so explicit
         # terms are blocked deterministically regardless of ML coverage.
         lexicon_category = self._lexicon_check(normalized_text)
-        if lexicon_category is not None:
-            base_reason = self.REASON_TEMPLATES[lexicon_category]
-            reason_msg = f"{base_reason} (Model Risk Skoru: %100, Güven: %100)."
-            if obfuscation_detected:
-                reason_msg += f" [Gizleme/Sembol Girişimi Tespit Edildi: '{idea}' -> '{normalized_text}']"
-            scores = {cat: 0.01 for cat in ("safe", "sexual_content", "gambling", "violence", "hate_speech")}
-            scores[lexicon_category] = 0.96
-            return ModerationVerdict(
-                is_safe=False,
-                confidence_score=1.0,
-                risk_score=1.0,
-                category=lexicon_category,
-                category_scores=scores,
-                obfuscation_detected=obfuscation_detected,
-                normalized_text=normalized_text,
-                reason=reason_msg,
-            )
+        # A term inside a harm-discourse frame is the subject of the text, not
+        # its content, so the deterministic block is held back and the LLM gets
+        # to judge the whole thing. If the model cannot be reached the block is
+        # applied anyway, below -- deferring must never silently allow a term.
+        lexicon_deferred = (
+            lexicon_category is not None and self._is_discussion_reference(normalized_text)
+        )
+        if lexicon_category is not None and not lexicon_deferred:
+            return self._lexicon_verdict(lexicon_category, normalized_text, idea, obfuscation_detected)
 
         # Stage 2: Classification. Clean text is scored once on the raw input;
         # only adversarial (obfuscated) text gets the dual-view treatment with
@@ -390,7 +399,7 @@ class GemmaModerationGuardrail:
         decisive_unsafe = top_unsafe_prob >= self.DECISIVE_UNSAFE_PROB and risk_score >= self.DECISIVE_RISK
         obfuscated_unsafe = obfuscation_detected and top_unsafe_prob >= self.OBFUSCATED_UNSAFE_PROB
 
-        # Stage 3: LLM Cross-verification with Gemma 4 for the uncertain band.
+        # Stage 3: LLM Cross-verification for the uncertain band.
         # The LLM arbitrates instead of the weak classifier signal; if the LLM is
         # unreachable the guardrail fails open (allows content) rather than blocking
         # legitimate content on a hunch.
@@ -398,12 +407,18 @@ class GemmaModerationGuardrail:
         llm_category = None
         llm_confidence = None
         llm_consulted = False
-        if not decisive_unsafe and not obfuscated_unsafe and risk_score >= self.LLM_CHECK_RISK_FLOOR:
+        if not decisive_unsafe and not obfuscated_unsafe and (
+            lexicon_deferred or risk_score >= self.LLM_CHECK_RISK_FLOOR
+        ):
             llm_unsafe, llm_category, llm_confidence, llm_consulted = self._llm_arbitrate(idea, normalized_text, obfuscation_detected)
             if llm_unsafe:
                 if llm_category is not None:
                     top_unsafe_cat = llm_category
                 risk_score = max(risk_score, 0.90)
+            elif lexicon_deferred and not llm_consulted:
+                # The term matched the lexicon and nothing overruled it, so it
+                # keeps its block rather than passing on a missing model.
+                return self._lexicon_verdict(lexicon_category, normalized_text, idea, obfuscation_detected)
 
         # Decision: block only on decisive model confidence, obfuscated evasion, or LLM verdict
         if decisive_unsafe or obfuscated_unsafe or llm_unsafe:
@@ -444,3 +459,15 @@ class GemmaModerationGuardrail:
             reason="",
             llm_consulted=llm_consulted,
         )
+
+
+# Backward-compatible alias
+GemmaModerationGuardrail = ModerationGuardrail
+
+__all__ = [
+    "ModerationGuardrail",
+    "GemmaModerationGuardrail",
+    "ModerationVerdict",
+    "AdversarialNormalizer",
+    "GuardrailClassifierModel",
+]

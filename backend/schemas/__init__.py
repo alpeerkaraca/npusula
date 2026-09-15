@@ -4,9 +4,17 @@ from backend.schemas.post import MediaType, MediaTypeEnum, PostRecord
 from backend.schemas.profile import (
     BehavioralProfile,
     DeclaredProfile,
+    DeclaredTopicsRequest,
     ProfileDecisionRequest,
     ProfileStatus,
     TopicWeight,
+)
+from backend.schemas.sample_user import SampleUser, SampleUserList
+from backend.schemas.saved import (
+    DraftRequest,
+    DraftResponse,
+    PlanRequest,
+    PlanResponse,
 )
 from backend.schemas.recommendation import (
     AdvisorRequest,
@@ -29,6 +37,13 @@ __all__ = [
     "BehavioralProfile",
     "ProfileStatus",
     "ProfileDecisionRequest",
+    "DeclaredTopicsRequest",
+    "PlanRequest",
+    "PlanResponse",
+    "DraftRequest",
+    "DraftResponse",
+    "SampleUser",
+    "SampleUserList",
     "RecommendedWindow",
     "WindowRecommendation",
     "QuickRecommendationResponse",

@@ -23,6 +23,7 @@ from backend.services.media_analysis import (
     check_size,
     check_video_limits,
     choose_topic_source,
+    create_video_storyboard,
     detect_media_kind,
     evenly_spaced_timestamps,
     merge_tags,
@@ -136,11 +137,16 @@ def test_choose_topic_source_prefers_confident_text_then_media_then_judge():
     assert choose_topic_source(0.05, 0.25, media_topic_confident=False) == "judge"
 
 
-def test_should_use_media_category_only_when_text_matched_nothing():
-    # 0.30 is the "no keyword matched" confidence in canonical_taxonomy.
-    assert should_use_media_category(0.30, media_category_confident=True) is True
-    assert should_use_media_category(0.65, media_category_confident=True) is False
-    assert should_use_media_category(0.30, media_category_confident=False) is False
+def test_should_use_media_category_lets_a_confident_image_win():
+    """The image owns the category whenever it is confident.
+
+    It used to yield to any text keyword hit, which let the "tech" prefix
+    matching "techniques" turn a recipe into technology.
+    """
+    assert should_use_media_category(media_category_confident=True) is True
+    # An uncertain image has canonical_category None, so the caller falls back
+    # to the text category.
+    assert should_use_media_category(media_category_confident=False) is False
 
 
 def test_merge_tags_prioritises_media_and_deduplicates():
@@ -277,7 +283,7 @@ def test_media_api_analyzes_upload_and_feeds_the_advisor():
         payload = response.json()
         assert payload["media_kind"] == "photo"
         assert payload["frames_analyzed"] == 1
-        assert payload["embedding_dim"] == 512
+        assert payload["embedding_dim"] in {512, 2560}
 
         request = {
             "user_id": "31253@N15",
@@ -298,6 +304,91 @@ def test_media_api_analyzes_upload_and_feeds_the_advisor():
         assert unknown.json()["media_analysis"] is None
 
 
+def _stored_analysis(category: str | None, confidence: float):
+    """Puts a fixed analysis in the advisor's store, bypassing CLIP.
+
+    The gate and the reporting around it must be testable without depending on
+    what a particular photo happens to look like to the model.
+    """
+    from backend.app import advisor_service
+    from backend.schemas.media import MediaAnalysis
+
+    return advisor_service.media_store.put(
+        MediaAnalysis(
+            media_kind="photo",
+            filename="test.png",
+            content_type="image/png",
+            size_bytes=16,
+            frames_analyzed=1,
+            width=8,
+            height=8,
+            topic="Yaşam" if category else None,
+            topic_confidence=0.5,
+            canonical_category=category,
+            category_confidence=confidence,
+            category_margin=0.4,
+            suggested_tags=["#yemek"] if category else [],
+            uncertain=category is None,
+            model_name="test",
+            embedding_dim=512,
+        )
+    )
+
+
+# "Python tutorial" hits a text keyword hard, so moving the category to
+# food_dining can only have come from the image.
+_MISMATCH_IDEA = "Python tutorial: building a small web API"
+
+
+def test_confident_image_category_wins_and_text_is_still_reported():
+    from fastapi.testclient import TestClient
+
+    from backend.app import app
+
+    record = _stored_analysis("food_dining", 0.57)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/recommend/advisor",
+            json={
+                "user_id": "31253@N15",
+                "idea": _MISMATCH_IDEA,
+                "media_type": "photo",
+                "media_id": record.media_id,
+            },
+        )
+    assert response.status_code == 200
+    body = response.json()
+    # The image describes the attached file, so it owns the category...
+    assert body["category_source"] == "media"
+    assert body["primary_category"] == "food_dining"
+    assert body["primary_category_is_fallback"] is False
+    # ...while the text proposal is kept so a disagreement stays reportable.
+    assert body["text_category"] == "technology"
+
+
+def test_uncertain_image_leaves_the_text_category_in_charge():
+    from fastapi.testclient import TestClient
+
+    from backend.app import app
+
+    record = _stored_analysis(None, 0.0)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/recommend/advisor",
+            json={
+                "user_id": "31253@N15",
+                "idea": _MISMATCH_IDEA,
+                "media_type": "photo",
+                "media_id": record.media_id,
+            },
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["category_source"] == "text"
+    assert body["primary_category"] == "technology"
+    assert body["text_category"] == "technology"
+
+
 # --- graceful degradation -------------------------------------------------
 def test_analyzer_degrades_when_weights_are_unavailable(tmp_path: Path):
     analyzer = MediaAnalyzer(model_name="npusula/does-not-exist", cache_dir=tmp_path)
@@ -305,3 +396,50 @@ def test_analyzer_degrades_when_weights_are_unavailable(tmp_path: Path):
     assert analyzer.is_ready is False
     with pytest.raises(MediaUnavailableError):
         analyzer.analyze(filename="kahve.jpg", content_type="image/jpeg", data=_jpeg_bytes())
+
+
+# --- video storyboard & gemma vision --------------------------------------
+def test_create_video_storyboard_single_and_multi_frame():
+    f1 = Image.new("RGB", (64, 64), (100, 10, 10))
+    single = create_video_storyboard([f1])
+    assert single == f1
+
+    frames = [Image.new("RGB", (64, 64), (i * 20, 10, 10)) for i in range(8)]
+    board = create_video_storyboard(frames)
+    assert board.size == (448, 448)
+
+
+def test_gemma_vision_parsing_and_uncertainty(monkeypatch):
+    analyzer = MediaAnalyzer(backend="gemma")
+    
+    # Mock successful Ollama response
+    class MockResponse:
+        status_code = 200
+        def json(self):
+            return {
+                "response": (
+                    '{"category": "technology", "category_confidence": 0.92, '
+                    '"topic": "Yazılım", "topic_confidence": 0.88, '
+                    '"tags": ["kodlama", "#yazilim", "#python"]}'
+                )
+            }
+
+    class MockClient:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def post(self, url, json):
+            return MockResponse()
+
+    monkeypatch.setattr("httpx.Client", MockClient)
+    
+    cat, cat_c, margin, top, top_c, tags = analyzer._analyze_with_gemma(Image.new("RGB", (32, 32)))
+    assert cat == "technology"
+    assert cat_c == 0.92
+    assert top == "Yazılım"
+    assert tags == ["#kodlama", "#yazilim", "#python"]
+    assert margin > 0.0
+

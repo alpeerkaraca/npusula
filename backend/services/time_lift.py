@@ -465,6 +465,22 @@ def confidence_tr(confidence: str) -> str:
     }.get(confidence, "Düşük")
 
 
+def evidence_tr(evidence_level: str) -> str:
+    """Turkish label for the evidence level.
+
+    Kept in step with the frontend's `EVIDENCE_LABELS`. The advisor prompt
+    embeds this rather than the raw enum, which the model used to echo back
+    verbatim ("category_weekday_bucket kanıtına göre...").
+    """
+    return {
+        LEVEL_CATEGORY_WEEKDAY_BUCKET: "Kategori + gün/saat",
+        LEVEL_CATEGORY_BUCKET: "Kategori + saat dilimi",
+        LEVEL_GLOBAL_WEEKDAY_BUCKET: "Genel + gün/saat",
+        LEVEL_GLOBAL_BUCKET: "Genel + saat dilimi",
+        LEVEL_NEUTRAL: "Nötr",
+    }.get(evidence_level, evidence_level)
+
+
 def supported_bucket_count(table: TimeLiftTable, weekday: int | None = None) -> int:
     """Number of category×weekday×bucket groups eligible for a strict claim."""
     entries = table.levels.get(LEVEL_CATEGORY_WEEKDAY_BUCKET, {})
@@ -485,6 +501,7 @@ __all__ = [
     "WindowScore",
     "decide_windows",
     "confidence_tr",
+    "evidence_tr",
     "supported_bucket_count",
     "LEVEL_CATEGORY_WEEKDAY_BUCKET",
     "LEVEL_CATEGORY_BUCKET",

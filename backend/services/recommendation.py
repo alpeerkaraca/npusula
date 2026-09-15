@@ -41,6 +41,7 @@ from backend.schemas.recommendation import (
 )
 from backend.services.candidate_generator import build_candidate_windows
 from backend.services.canonical_taxonomy import CATEGORY_CODE_MAP, classify_post_category
+from backend.services.media_analysis import TEXT_CATEGORY_NO_MATCH_CONFIDENCE
 from backend.services.tag_taxonomy import align_tags
 from backend.services.time_features import resolve_user_timezone
 from backend.services.time_lift import (
@@ -464,6 +465,34 @@ class RecommendationService:
         X["primary_cat_confidence"] = float(media_context.category_confidence)
         return True
 
+    @staticmethod
+    def _apply_topic_category(X: pd.DataFrame, topic: str) -> bool:
+        """Fills the category from the user's topic when the text matched nothing.
+
+        `_prepare_features` only ever classifies the post title, so on the live
+        paths -- where the quick endpoint passes `title=""` and an advisor idea
+        often misses every keyword -- the category collapsed to the generic
+        fallback. The topic was already carried on every call and simply never
+        read, which is why declared interests changed nothing but a label.
+
+        A text match always outranks the topic: it describes this post, whereas
+        the topic describes the account.
+        """
+        if not topic:
+            return False
+        if float(X["primary_cat_confidence"].iloc[0]) > TEXT_CATEGORY_NO_MATCH_CONFIDENCE:
+            return False
+        result = classify_post_category(topic, None, None, None)
+        confidence = float(result["primary_cat_confidence"])
+        if confidence <= TEXT_CATEGORY_NO_MATCH_CONFIDENCE:
+            return False
+        code = CATEGORY_CODE_MAP.get(str(result["primary_category"]))
+        if code is None:
+            return False
+        X["primary_cat_code"] = float(code)
+        X["primary_cat_confidence"] = confidence
+        return True
+
     def predict_base_potential(
         self,
         *,
@@ -471,6 +500,7 @@ class RecommendationService:
         user_post_count: int,
         title: str = "",
         tags: list[str] | None = None,
+        topic: str = "",
         media_type: MediaTypeEnum = MediaTypeEnum.PHOTO,
         media_context: MediaAnalysis | None = None,
         timezone_basis_fallback: bool = False,
@@ -491,6 +521,8 @@ class RecommendationService:
             }
         ])
         X = self._prepare_features(frame)
+        self._apply_topic_category(X, topic)
+        # Runs last: a confident image outranks both the idea text and the topic.
         self._apply_media_category(X, media_context)
         category_code = int(X["primary_cat_code"].iloc[0])
         baseline = float(self.account_baseline(frame, categories=X["primary_cat_code"].to_numpy())[0])
@@ -533,6 +565,7 @@ class RecommendationService:
             user_post_count=user_post_count,
             title=title,
             tags=tags,
+            topic=topic,
             media_type=media_type,
             media_context=media_context,
             timezone_basis_fallback=user_tz.is_fallback,

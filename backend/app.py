@@ -3,22 +3,40 @@ from contextlib import asynccontextmanager
 import logging
 import time
 from typing import Any
+from uuid import uuid4
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.adapters.repository import PostRepository, UserRepository
+from backend.adapters.repository import (
+    PostRepository,
+    SavedContentRepository,
+    UserRepository,
+    _read_json_dict,
+)
 from backend.adapters.storage import QdrantPostStore
 from backend.config import settings
 from backend.logging_setup import setup_logging
 from backend.schemas.media import MediaAnalysisResponse
-from backend.schemas.profile import ProfileDecisionRequest, ProfileStatus
+from backend.schemas.profile import (
+    DeclaredProfile,
+    DeclaredTopicsRequest,
+    ProfileDecisionRequest,
+    ProfileStatus,
+)
+from backend.schemas.saved import (
+    DraftRequest,
+    DraftResponse,
+    PlanRequest,
+    PlanResponse,
+)
 from backend.schemas.recommendation import (
     AdvisorRequest,
     AdvisorResponse,
     ModelMetricsResponse,
     QuickRecommendationResponse,
 )
-from backend.services.advisor import AdvisorService
+from backend.schemas.sample_user import SampleUser, SampleUserList
+from backend.services.advisor import AdvisorService, history_depth_name
 from backend.services.device import device_manager
 from backend.services.media_analysis import (
     MediaAnalysisStore,
@@ -38,6 +56,7 @@ logger = logging.getLogger("backend.app")
 # Initialize repositories and services
 post_repo = PostRepository()
 user_repo = UserRepository()
+saved_repo = SavedContentRepository()
 profile_service = ProfileService()
 retrieval_service = RetrievalService()
 recommendation_service = RecommendationService()
@@ -76,16 +95,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="NPusula API",
-    description="Intelligent Posting Time Recommendation & Profile Drift Advisor for NSosyal",
+    description="Intelligent Posting Time Recommendation & Profile Drift Advisor",
     version="0.1.0",
     lifespan=lifespan,
 )
 
-# Enable CORS for frontend integration
+# CORS for frontend integration. `allow_credentials` stays off: a wildcard
+# origin with credentials is invalid per the CORS spec and browsers reject it.
+# The service is stateless and issues no cookies, and the dev server proxies
+# /api same-origin, so nothing needs credentialed cross-origin access.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -116,7 +138,8 @@ def get_health() -> dict[str, Any]:
         "model_ready": recommendation_service.model is not None,
         "media_analyzer_ready": media_analyzer.is_ready,
         "gpu": gpu_info,
-        "advisor_model": settings.GEMMA_MODEL_NAME,
+        "advisor_model": settings.LLM_MODEL_NAME,
+        "llm_model": settings.LLM_MODEL_NAME,
     }
 
 
@@ -124,6 +147,30 @@ def get_health() -> dict[str, Any]:
 def get_demo_users() -> list[dict[str, Any]]:
     """Returns the three curated demo accounts (aligned, drift, cold-start)."""
     return user_repo.get_demo_users()
+
+
+@app.get("/api/sample-users", response_model=SampleUserList)
+def get_sample_users() -> SampleUserList:
+    """Selectable accounts spanning the history-depth range, for the UI picker.
+
+    Depth is derived from the corpus row count rather than ProfileService's
+    ``evidence_post_count``: that one is capped at 30 (it reads the 30 most
+    recent posts), so every account with real history reports
+    ``medium_history`` and the picker could not tell them apart.
+    """
+    curated = _read_json_dict(settings.SAMPLE_USERS_PATH).get("users", [])
+    user_ids = [entry for entry in curated if isinstance(entry, str)]
+    counts = post_repo.get_user_post_counts(user_ids)
+    return SampleUserList(
+        users=[
+            SampleUser(
+                user_id=user_id,
+                post_count=counts.get(user_id, 0),
+                history_depth=history_depth_name(counts.get(user_id, 0)),
+            )
+            for user_id in user_ids
+        ]
+    )
 
 
 @app.get("/api/profile/{user_id}", response_model=ProfileStatus)
@@ -143,6 +190,51 @@ def record_profile_decision(user_id: str, payload: ProfileDecisionRequest) -> Pr
     user_posts = post_repo.get_user_history(user_id)
     behavioral = profile_service.compute_behavioral_profile(user_id, user_posts)
     return profile_service.get_profile_status(declared, behavioral)
+
+
+@app.put("/api/profile/{user_id}/interests", response_model=DeclaredProfile)
+def put_user_interests(
+    user_id: str, payload: DeclaredTopicsRequest
+) -> DeclaredProfile:
+    """Stores the interest topics the setup wizard collected for this user.
+
+    Topics arrive already mapped to the canonical vocabulary. Like every other
+    profile route this trusts the caller-supplied `user_id`, because the service
+    has no authentication; exposing it publicly requires adding one first.
+    """
+    user_repo.update_user_declared_topics(user_id, payload.topics)
+    logger.info(
+        "declared topics stored: user_id=%s topics=%s", user_id, payload.topics
+    )
+    return user_repo.get_declared_profile(user_id)
+
+
+@app.post("/api/plans", response_model=PlanResponse)
+def create_plan(payload: PlanRequest) -> PlanResponse:
+    """Records content the user attached to a recommended window.
+
+    This stores intent only: there is no scheduler, publish permission or
+    notification behind it, so the response reports `status="saved"` and never
+    claims the post was scheduled or published.
+    """
+    plan_id = f"plan-{uuid4().hex[:12]}"
+    saved_repo.put(plan_id, {"kind": "plan", **payload.model_dump()})
+    logger.info("plan saved: id=%s slot_id=%s", plan_id, payload.slot_id)
+    return PlanResponse(
+        id=plan_id,
+        slot_id=payload.slot_id,
+        starts_at=payload.starts_at,
+        status="saved",
+    )
+
+
+@app.post("/api/drafts", response_model=DraftResponse)
+def save_draft(payload: DraftRequest) -> DraftResponse:
+    """Stores text the user wants carried into the composer. Does not post it."""
+    draft_id = f"draft-{uuid4().hex[:12]}"
+    saved_repo.put(draft_id, {"kind": "draft", **payload.model_dump()})
+    logger.info("draft saved: id=%s chars=%d", draft_id, len(payload.text))
+    return DraftResponse(id=draft_id, text=payload.text, format=payload.format)
 
 
 @app.get("/api/recommend/quick/{user_id}", response_model=QuickRecommendationResponse)

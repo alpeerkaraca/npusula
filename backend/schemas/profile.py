@@ -48,6 +48,32 @@ class ProfileStatus(StrictSchema):
     active_recommendation_topics: list[TopicWeight]
 
 
+class DeclaredTopicsRequest(StrictSchema):
+    """Interest topics the setup wizard sends, already mapped to the vocabulary.
+
+    The client maps its own interest ids onto `ProfileService`'s canonical topic
+    names (see the interest map in the frontend's backendAdapter). At least one
+    topic is required rather than two: several client ids collapse onto the same
+    topic, so a valid two-interest selection can dedupe down to one.
+    """
+
+    topics: list[StrictStr] = Field(..., min_length=1, max_length=5)
+
+    @field_validator("topics")
+    @classmethod
+    def topics_must_be_canonical(cls, v: list[str]) -> list[str]:
+        # Imported lazily: the schema layer must not depend on the service layer
+        # at module import time.
+        from backend.services.profile import TOPIC_SEEDS
+
+        unknown = [topic for topic in v if topic not in TOPIC_SEEDS]
+        if unknown:
+            raise ValueError(
+                f"Unknown topics {unknown}; expected a subset of {list(TOPIC_SEEDS)}"
+            )
+        return v
+
+
 class ProfileDecisionRequest(StrictSchema):
     """User decision to accept or decline the suggested profile drift update."""
 
