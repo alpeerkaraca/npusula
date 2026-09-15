@@ -44,7 +44,11 @@ from backend.services.recommendation import RecommendationService
 
 FIXTURES = Path(__file__).parent / "fixtures" / "nsosyal"
 FEED_FIXTURE = FIXTURES / "explore_feed_sample.json"
-CONTRACT_SCHEMA = Path(__file__).resolve().parents[1] / "nsosyal_features.json.shema"
+CONTRACT_SCHEMA = (
+    (FIXTURES / "nsosyal_features.schema.json")
+    if (FIXTURES / "nsosyal_features.schema.json").exists()
+    else Path(__file__).resolve().parents[1] / "nsosyal_features.json.shema"
+)
 SALT = "test-salt-not-a-secret"
 
 
