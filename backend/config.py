@@ -5,6 +5,7 @@ Every value is read from the process environment, after the repository's
 that the environment already defines takes precedence over `.env`. The keys
 this module reads are documented in `.env.example`.
 """
+import json
 import os
 from pathlib import Path
 import socket
@@ -33,12 +34,36 @@ def find_qdrant_host() -> str:
     return "127.0.0.1"
 
 
+def find_base_potential_mean() -> float | None:
+    """Mean popularity score of the data Layer A was trained on.
+
+    Read from the training artifact so the advisor can say where a score sits
+    relative to the population instead of showing the reader a bare number.
+    Returns None when the artifact is missing or malformed; callers then omit
+    the comparison rather than inventing a baseline.
+    """
+    metrics_path = Path(__file__).resolve().parent.parent / "artifacts" / "base_potential_metrics.json"
+    try:
+        payload = json.loads(metrics_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    value = payload.get("global_train_mean")
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
 class Settings:
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
     DATA_DIR: Path = BASE_DIR / "data"
     PROCESSED_DATA_PATH: Path = DATA_DIR / "processed" / "posts.parquet"
     ARTIFACTS_DIR: Path = BASE_DIR / "artifacts"
     DEMO_ACCOUNTS_PATH: Path = ARTIFACTS_DIR / "demo_accounts.json"
+    # Selectable accounts for the frontend picker. Separate file from the demo
+    # roster on purpose: that one must stay absent so /api/demo-users keeps
+    # answering [] (locked by tests/test_api_endpoints.py).
+    SAMPLE_USERS_PATH: Path = ARTIFACTS_DIR / "sample_users.json"
 
     # --- Runtime state -------------------------------------------------------
     # Interests and saved content written while the app runs. `data/` is
@@ -61,20 +86,59 @@ class Settings:
     FINAL_EVALUATION_PATH: Path = ARTIFACTS_DIR / "final_evaluation.json"
     LEGACY_ARTIFACTS_DIR: Path = ARTIFACTS_DIR / "legacy"
 
-    GEMMA_MODEL_NAME: str = os.getenv("GEMMA_MODEL_NAME", "gemma4:e4b")
-    GEMMA_API_URL: str = os.getenv("GEMMA_API_URL", "http://127.0.0.1:11434")
+    # Population mean of the training target, so the advisor prompt can place a
+    # base_potential score relative to the data. None = artifact unreadable.
+    BASE_POTENTIAL_MEAN: float | None = find_base_potential_mean()
+
+    # --- LLM Service Settings (Generic) ------------------------------------
+    LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", os.getenv("GEMMA_MODEL_NAME", "qwen3-vl:4b-instruct"))
+    LLM_API_URL: str = os.getenv("LLM_API_URL", os.getenv("GEMMA_API_URL", "http://127.0.0.1:11434"))
+    # Reasoning / thinking mode toggle. With thinking on, models spend the
+    # generation budget on internal reasoning tokens; set false for direct responses.
+    LLM_THINK: bool = os.getenv("LLM_THINK", os.getenv("GEMMA_THINK", "false")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    # Generation cap to bound latency and guarantee predictable timeouts.
+    LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", os.getenv("GEMMA_MAX_TOKENS", "512")))
+    # Topic judge needs only a single label.
+    LLM_JUDGE_MAX_TOKENS: int = int(os.getenv("LLM_JUDGE_MAX_TOKENS", os.getenv("GEMMA_JUDGE_MAX_TOKENS", "32")))
+    # Moderation guardrail returns a compact JSON verdict.
+    LLM_MODERATION_MAX_TOKENS: int = int(
+        os.getenv("LLM_MODERATION_MAX_TOKENS", os.getenv("GEMMA_MODERATION_MAX_TOKENS", "128"))
+    )
+    LLM_TIMEOUT_SECONDS: float = float(os.getenv("LLM_TIMEOUT_SECONDS", os.getenv("GEMMA_TIMEOUT_SECONDS", "30.0")))
+    LLM_RETRY_COUNT: int = int(os.getenv("LLM_RETRY_COUNT", os.getenv("GEMMA_RETRY_COUNT", "2")))
+    LLM_VISION_TIMEOUT_SECONDS: float = float(
+        os.getenv("LLM_VISION_TIMEOUT_SECONDS", os.getenv("GEMMA_VISION_TIMEOUT_SECONDS", "15.0"))
+    )
+
+    # Backward-compatibility aliases for legacy code and existing environments
+    GEMMA_MODEL_NAME: str = LLM_MODEL_NAME
+    GEMMA_API_URL: str = LLM_API_URL
+    GEMMA_THINK: bool = LLM_THINK
+    GEMMA_MAX_TOKENS: int = LLM_MAX_TOKENS
+    GEMMA_JUDGE_MAX_TOKENS: int = LLM_JUDGE_MAX_TOKENS
+    GEMMA_MODERATION_MAX_TOKENS: int = LLM_MODERATION_MAX_TOKENS
+    GEMMA_TIMEOUT_SECONDS: float = LLM_TIMEOUT_SECONDS
+    GEMMA_RETRY_COUNT: int = LLM_RETRY_COUNT
+    GEMMA_VISION_TIMEOUT_SECONDS: float = LLM_VISION_TIMEOUT_SECONDS
 
     QDRANT_HOST: str = find_qdrant_host()
     QDRANT_PORT: int = int(os.getenv("QDRANT_PORT", "6333"))
     QDRANT_COLLECTION: str = "successful_posts"
     VECTOR_DIM: int = 512
 
-    # --- Uploaded media analysis (photo/video -> CLIP zero-shot) ---
+    # --- Uploaded media analysis (llm | clip) ---
+    MEDIA_ANALYZER_BACKEND: str = os.getenv("MEDIA_ANALYZER_BACKEND", "llm").strip().lower()
     # Weights live outside the image/artifacts: `models/` is bind-mounted, so a
     # checkpoint is never baked into the Docker image or committed to git.
     MODELS_DIR: Path = BASE_DIR / "models"
     MEDIA_CACHE_DIR: Path = Path(os.getenv("MEDIA_CACHE_DIR", str(MODELS_DIR / "hf")))
-    CLIP_MODEL_NAME: str = os.getenv("CLIP_MODEL_NAME", "openai/clip-vit-base-patch32")
+    VISION_MODEL_NAME: str = os.getenv("VISION_MODEL_NAME", os.getenv("CLIP_MODEL_NAME", "openai/clip-vit-base-patch32"))
+    CLIP_MODEL_NAME: str = VISION_MODEL_NAME
     # "cpu" (default), "auto" (try DeviceManager first, then CPU), "cuda", "directml".
     # Defaults to CPU because DirectML cannot run this model (it raises
     # "Cannot set version_counter for inference tensor"), and CPU inference is

@@ -39,7 +39,7 @@ services:
       retries: 10
       start_period: 20s
 
-  # Pulls the configured Gemma model once the LLM runtime is healthy.
+  # Pulls the configured LLM model once the runtime is healthy.
   # Until it finishes, LLM-assisted paths degrade to their deterministic
   # fallbacks (topic judge, explanations) without blocking the API.
   ollama-init:
@@ -50,7 +50,7 @@ services:
     environment:
       OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
-    command: ["ollama pull ${GEMMA_MODEL_NAME:-gemma4:e4b}"]
+    command: ["ollama pull $${LLM_MODEL_NAME:-$${GEMMA_MODEL_NAME:-qwen3-vl:4b-instruct}}"]
     restart: "no"
 
   api:
@@ -64,9 +64,11 @@ services:
       # .env points at 127.0.0.1, which is wrong inside a container.
       QDRANT_HOST: qdrant
       QDRANT_PORT: "6333"
+      LLM_API_URL: http://ollama:11434
       GEMMA_API_URL: http://ollama:11434
       # These are container-agnostic, so .env (or the shell) supplies them.
-      GEMMA_MODEL_NAME: ${GEMMA_MODEL_NAME:-gemma4:e4b}
+      LLM_MODEL_NAME: ${LLM_MODEL_NAME:-${GEMMA_MODEL_NAME:-qwen3-vl:4b-instruct}}
+      GEMMA_MODEL_NAME: ${LLM_MODEL_NAME:-${GEMMA_MODEL_NAME:-qwen3-vl:4b-instruct}}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       # Set to 1 for an offline demo once ./models is populated.
       HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-0}
