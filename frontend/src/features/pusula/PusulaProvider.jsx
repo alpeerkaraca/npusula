@@ -80,9 +80,8 @@ export function PusulaProvider({
     const timer = setTimeout(() => setNotice(""), 5000);
     return () => clearTimeout(timer);
   }, [notice]);
-  useEffect(() => {
-    analysis.reset();
-  }, [draft, format, media, analysis.reset]);
+  // Keep the last submitted analysis while the user edits the next idea.
+  // Only an explicit analyze action replaces it; account/page changes reset it.
   useEffect(() => {
     mutation.reset();
   }, [activePage, draft, format, media, mutation.reset]);
