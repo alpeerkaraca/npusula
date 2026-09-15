@@ -27,6 +27,7 @@ const VALID_PAGES = new Set([
  * Falls back to "home" for unknown paths or the root "/".
  */
 function readPageFromUrl() {
+  if (typeof window === "undefined" || !window.location) return "home";
   const segment = window.location.pathname.replace(/^\//, "").split("/")[0];
   return segment && VALID_PAGES.has(segment) ? segment : "home";
 }
@@ -45,6 +46,7 @@ export function usePageRouter() {
   const [activePage, setActivePage] = useState(readPageFromUrl);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     function onPopState() {
       setActivePage(readPageFromUrl());
     }
@@ -55,9 +57,11 @@ export function usePageRouter() {
   const goToPage = useCallback((id) => {
     const target = VALID_PAGES.has(id) ? id : "home";
     setActivePage(target);
-    const url = target === "home" ? "/" : `/${target}`;
-    if (window.location.pathname !== url) {
-      window.history.pushState({ page: target }, "", url);
+    if (typeof window !== "undefined" && window.location) {
+      const url = target === "home" ? "/" : `/${target}`;
+      if (window.location.pathname !== url) {
+        window.history.pushState({ page: target }, "", url);
+      }
     }
   }, []);
 

@@ -4,9 +4,16 @@ export default function CompassTransition({ onComplete, direction = "enter", lig
   const complete = useRef(onComplete);
   complete.current = onComplete;
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timer = window.setTimeout(() => complete.current(), reduced ? 120 : 2200);
-    return () => window.clearTimeout(timer);
+    if (typeof window === "undefined") {
+      complete.current?.();
+      return;
+    }
+    const reduced =
+      typeof window !== "undefined" && window.matchMedia
+        ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        : false;
+    const timer = setTimeout(() => complete.current?.(), reduced ? 120 : 2200);
+    return () => clearTimeout(timer);
   }, []);
   return (
     <div className={`compass-transition compass-${direction} ${light ? "compass-light" : ""}`} role="status" aria-live="polite">
