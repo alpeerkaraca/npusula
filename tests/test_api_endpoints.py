@@ -272,6 +272,14 @@ def test_model_metrics_endpoint(client):
 def isolated_state(tmp_path, monkeypatch):
     """Points the runtime stores at a temp dir so tests never write real state."""
     import backend.app as app_module
+    from backend.adapters.db import init_db
+
+    db_path = tmp_path / "test_state.db"
+    init_db(db_path)
+
+    monkeypatch.setattr(app_module.user_repo, "db_path", db_path)
+    monkeypatch.setattr(app_module.saved_repo, "db_path", db_path)
+    monkeypatch.setattr(app_module.profile_service, "db_path", db_path)
 
     monkeypatch.setattr(
         app_module.user_repo, "state_path", tmp_path / "declared_topics.json"
@@ -283,6 +291,7 @@ def isolated_state(tmp_path, monkeypatch):
     # to keep these tests from leaking state into each other.
     monkeypatch.setattr(app_module.user_repo, "_declared", {})
     monkeypatch.setattr(app_module.saved_repo, "_data", {})
+    monkeypatch.setattr(app_module.profile_service, "_user_decisions", {})
     return tmp_path
 
 
@@ -305,9 +314,18 @@ def test_declared_topics_survive_a_reload(client, isolated_state):
     client.put("/api/profile/web-test-2/interests", json={"topics": ["Oyun"]})
     reloaded = UserRepository(
         demo_path=isolated_state / "absent.json",
-        state_path=isolated_state / "declared_topics.json",
+        db_path=isolated_state / "test_state.db",
     )
     assert reloaded.get_declared_profile("web-test-2").declared_topics == ["Oyun"]
+
+
+def test_profile_decision_survives_a_reload(client, isolated_state):
+    """Drift decisions are stored in SQLite and survive a fresh ProfileService reload."""
+    from backend.services.profile import ProfileService
+
+    client.post("/api/profile/test-drift-user/decision", json={"accept": True})
+    fresh_profile_service = ProfileService(db_path=isolated_state / "test_state.db")
+    assert fresh_profile_service._user_decisions.get("test-drift-user") is True
 
 
 def test_declared_topics_never_create_demo_accounts(client, isolated_state):
