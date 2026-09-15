@@ -85,11 +85,8 @@ export default function Sidebar({
       </button>
 
       <SidebarPreferences
-        mediaOnly={mediaOnly}
-        setMediaOnly={setMediaOnly}
         activePage={activePage}
         goToPage={goToPage}
-        isPusula={isPusula}
       />
     </aside>
   );

@@ -1,67 +1,15 @@
 import React from "react";
-import { Settings, Play, Moon } from "lucide-react";
-import ToggleSwitch from "../ui/ToggleSwitch.jsx";
+import { Settings } from "lucide-react";
 import { useTheme } from "../../theme/ThemeProvider.jsx";
 
 /**
- * Bottom section of Sidebar: media toggle (social only), dark mode toggle,
- * and settings button.
- *
- * `isPusula` hides the media toggle because it's irrelevant in the Pusula
- * shell — the value is preserved so it takes effect when returning to social.
+ * Bottom section of Sidebar: just the Settings link.
+ * Dark mode and media toggles are available in the Settings page.
  */
-export default function SidebarPreferences({
-  mediaOnly,
-  setMediaOnly,
-  activePage,
-  goToPage,
-  isPusula,
-}) {
-  const { darkMode, setDarkMode, textMuted } = useTheme();
+export default function SidebarPreferences({ activePage, goToPage }) {
+  const { textMuted } = useTheme();
   return (
-    <div
-      className="sidebar-preferences"
-      style={{ display: "flex", flexDirection: "column", gap: 14 }}
-    >
-      {/* Medya toggle — only meaningful in social mode */}
-      {!isPusula && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <span
-            className="preference-label"
-            style={{ fontSize: 14, color: textMuted }}
-          >
-            <Play size={20} aria-hidden="true" />
-            Medya
-          </span>
-          <ToggleSwitch checked={mediaOnly} onChange={setMediaOnly} />
-        </div>
-      )}
-
-      {/* Dark mode toggle — always visible */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <span
-          className="preference-label"
-          style={{ fontSize: 14, color: textMuted }}
-        >
-          <Moon size={20} aria-hidden="true" />
-          Karanlık mod
-        </span>
-        <ToggleSwitch checked={darkMode} onChange={setDarkMode} />
-      </div>
-
-      {/* Settings link */}
+    <div className="sidebar-preferences">
       <button
         onClick={() => goToPage("settings")}
         style={{
