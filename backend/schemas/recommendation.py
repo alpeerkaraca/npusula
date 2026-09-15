@@ -156,6 +156,22 @@ class AdvisorResponse(StrictSchema):
         default=True,
         description="True when nothing matched and the category is the classifier's fallback label",
     )
+    text_category: StrictStr = Field(
+        default="",
+        description=(
+            "Category the keyword classifier proposed from the idea text. Differs from "
+            "primary_category when an uploaded image was confident enough to own the category, "
+            "which is what makes a text/image disagreement reportable."
+        ),
+    )
+    category_source: Literal["text", "media", "topic"] = Field(
+        default="text",
+        description=(
+            "Which evidence produced primary_category: an attached image, an explicit "
+            "match in the idea text, or the user's declared topic when the text matched "
+            "nothing. Most specific source wins."
+        ),
+    )
     windows: list[RecommendedWindow]
     accepted_tags: list[StrictStr] = Field(default_factory=list)
     rejected_tags: list[StrictStr] = Field(default_factory=list)
