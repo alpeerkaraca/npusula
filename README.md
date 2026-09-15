@@ -48,17 +48,19 @@ aralığı ve hiyerarşik kanıt seviyesi her öneriyle birlikte döner.
 
 - `POST /api/recommend/advisor` — fikri analiz eder: konu/kategori çıkarımı,
   benzer başarılı gönderiler, önerilen pencereler, doğrulanmış etiketler ve
-  Türkçe strateji açıklaması (Gemma 4). Gövdeye `timezone` (IANA) veya
+  Türkçe strateji açıklaması (LLM danışmanı). Gövdeye `timezone` (IANA) veya
   `utc_offset_minutes` eklenir; verilmezse pencereler UTC'de hesaplanır ve
   yanıt bunu `timezone_basis: "utc_fallback"` ile açıkça söyler.
 - `GET /api/recommend/quick/{user_id}?timezone=Europe/Istanbul` — kullanıcının
   aktif konusuna göre hızlı pencere önerisi
 - `GET /api/profile/{user_id}` — beyan edilen vs davranışsal profil + drift
-- `POST /api/media/analyze` — yüklenen fotoğraf/videoyu CLIP ile analiz eder
+- `POST /api/media/analyze` — yüklenen fotoğraf/videoyu görsel analiz modeliyle (CLIP veya LLM Vision) analiz eder
   (konu, kanonik kategori, etiketler); dönen `media_id` advisor isteğine
   eklenince görsel kanıt öneriye girer
 - Tüm advisor istekleri içerik güvenliği guardrail'inden geçer
-  (lexicon + hafif ML + LLM hakem; fail-open eşikler)
+  (lexicon + hafif ML + LLM hakem; fail-open eşikler). Bir sözlük terimi
+  tartışma çerçevesi içindeyse ("kumar bağımlılığı haberi") sert blok yerine
+  LLM'e devredilir; LLM'e ulaşılamazsa blok geri gelir
 
 ## Mimari
 
@@ -74,16 +76,17 @@ aralığı ve hiyerarşik kanıt seviyesi her öneriyle birlikte döner.
 | Zaman lift tablosu | `scripts/06_time_lift.py` | yalnız train + expanding-window OOF residual |
 | Kilitli final test | `scripts/evaluate_final.py` | test split'i **tek** kez okur; provenance yazar |
 | Vektör arama | `backend/services/retrieval.py` + Qdrant | benzer postlar + etiket ağırlıklandırma (benzerlik eşikli) |
-| Konu/kategori | `backend/services/profile.py`, `canonical_taxonomy.py` | char n-gram TF-IDF + kelime-sınırı eşleme; belirsizde Gemma yargıcı |
+| Konu/kategori | `backend/services/profile.py`, `canonical_taxonomy.py` | char n-gram TF-IDF + kelime-sınırı eşleme; belirsizde LLM yargıcı |
 | Tag hizası | `backend/services/tag_taxonomy.py` | aligned / mismatched / generic / NSFW / **unknown** sınıfları |
-| Guardrail | `backend/services/moderation.py`, `moderation_data.py` | lexicon + TF-IDF/LogReg + Gemma hakem |
-| Medya analizi | `backend/services/media_analysis.py`, `models/` | CLIP ViT-B/32 zero-shot (video: 8 kare ortalaması) |
-| LLM | `backend/services/gemma_advisor.py` | Ollama üzerinden Gemma 4 (konu, açıklama, hakemlik) |
+| Guardrail | `backend/services/moderation.py`, `moderation_data.py` | lexicon + TF-IDF/LogReg + LLM hakem (`ModerationGuardrail`); tartışma çerçevesinde LLM'e devir |
+| Medya analizi | `backend/services/media_analysis.py`, `models/` | CLIP ViT-B/32 veya LLM Vision zero-shot (video: 8 kare ortalaması) |
+| LLM Danışmanı | `backend/services/llm_advisor.py` (ve `gemma_advisor.py`) | Ollama / LLM API üzerinden model çağrısı (`LLMAdvisorEngine`); 500'lerde ayarlanabilir tekrar ve deterministik fallback |
+| Prompt'lar | `backend/prompts.py` | Modele giden prompt şablonlarının tamamı tek dosyada |
 
-**Runtime'da GPU/PyTorch tabular modeli yoktur.** Eski `pytorch_popularity_gpu.pt`
-deneyi `artifacts/legacy/` altına alındı; `backend/models/tabular_nn.py` ve
+**Runtime'da deneysel GPU tabular modeli yoktur.** Eski deneysel model dosyası
+`artifacts/legacy/` altına alındı; `backend/models/tabular_nn.py` ve
 `scripts/train_gpu_model.py` kaldırıldı. PyTorch yalnızca CLIP medya analizi ve
-`device.py` cihaz raporlaması için kullanılır.
+`device.py` cihaz raporlaması için kullanılır. Katman A taban potansiyeli doğrudan **LightGBM booster** ile hesaplanır.
 
 ## Veri durumu
 
@@ -103,9 +106,8 @@ deneyi `artifacts/legacy/` altına alındı; `backend/models/tabular_nn.py` ve
   okunabiliyorsa `True` olur (bugün tüm satırlar `False`); kaynak statüsü
   alanı tek başına yeterli sayılmaz.
 - **NSosyal veri API'si talep edildi; sağlanması belirsiz.** Bu nedenle model ve
-  demo SMPD benchmark'ı ile devam etmektedir; adaptasyon planı için
-  `docs/NSOSYAL_ADAPTATION.md`.
-- Türkçe fikirler için telafiler: Gemma konu yargıcı, retrieval benzerlik
+  demo SMPD benchmark'ı ile devam etmektedir.
+- Türkçe fikirler için telafiler: LLM konu yargıcı, retrieval benzerlik
   eşikleri ve doğrulanmış etiket fallback'leri. SMPD korpusunda Türkçe post
   bulunmadığından benzer-post listesi birçok Türkçe fikirde boş döner.
 
@@ -221,7 +223,7 @@ python scripts/07_index_qdrant.py
 
 # 7) Doğrulama
 python scripts/verify_acceptance.py               # planın 12 kabul maddesi, artifact'lardan
-pytest tests/                                     # 156 test
+pytest tests/                                     # 233 test (tam kapsamlı test paketi)
 python scripts/smoke_test.py                      # canlı API uçtan uca
 python scripts/idea_battery.py --base-url http://127.0.0.1:8000
 ```
@@ -242,33 +244,38 @@ seçim test okunmadan tamamlanır.
   pencerelerdir**; saatler tek tek sıralanmaz.
 - `relative_potential` **yüzde cinsinden kesin engagement artışı değildir**:
   aday pencereler arasında modelin gözlemsel göreli skorudur (lift farkı).
+- Pencerelerin `lift` değeri **kategorinin kendi ortalamasına göre** farktır ve
+  negatif olabilir. Advisor promptu en yüksek lift'li pencereyi öne çıkarır,
+  negatif olanları öneri gibi sunmaz; listede negatif pencere bulunması
+  verinin sınırıdır, pencere sayısı değil.
 - Tag önerisi yalnız `aligned_semantic` etiketlerden üretilir; sözlükte
   bulunmayan etiket `unknown_tags` olarak ayrı raporlanır ("anlamsız" ilan
   edilmez).
-- Konu (topic) çıkarımı: kelime örtüşmesi zayıfsa Gemma yargıcı devreye girer;
-  Gemma erişilemezse kullanıcı profilindeki konuya düşülür.
+- Konu (topic) çıkarımı: kelime örtüşmesi zayıfsa LLM yargıcı devreye girer;
+  LLM erişilemezse kullanıcı profilindeki konuya düşülür.
 - Medya analizi yalnızca **yüklenen dosya** üzerinde çalışır; korpustaki
   görsellerle karşılaştırma yapılmaz (veri paketinde görsel dosyası yok).
   Etiketler küratörlü bir bankadan gelir ve yalnızca görsel olarak ayırt
   edilebilir kavramları içerir (#kahve, #fitness); finans veya girişimcilik
-  gibi soyut konular görselden çıkarılmaz, Gemma yargıcına bırakılır.
+  gibi soyut konular görselden çıkarılmaz, LLM yargıcına bırakılır.
 - Kişiselleştirilmiş `user × kategori × bucket` zaman katmanı **yoktur**:
   minimum destek ve shrinkage olmadan eklenmez (plan Faz 7).
 
 ## Medya analizi (fotoğraf / video)
 
-`POST /api/media/analyze` (multipart `file`) yüklenen dosyayı CLIP ViT-B/32 ile
-analiz eder ve bir `media_id` döner; bu id `POST /api/recommend/advisor`
-gövdesine eklendiğinde görsel kanıt öneriye karışır.
+`POST /api/media/analyze` (multipart `file`) yüklenen dosyayı görsel analiz motoru
+(varsayılan CLIP ViT-B/32 veya yapılandırılan VLM/LLM Vision) ile analiz eder ve bir
+`media_id` döner; bu id `POST /api/recommend/advisor` gövdesine eklendiğinde görsel
+kanıt öneriye karışır.
 
 | Adım | Davranış |
 |---|---|
 | Doğrulama | Görsel: jpeg/png/webp ≤ 10 MB · Video: mp4/mov/webm ≤ 50 MB ve ≤ 60 sn |
-| Görsel | RGB → CLIP → L2 normalleştirilmiş 512-D vektör |
+| Görsel | RGB → Görsel Encoder → L2 normalleştirilmiş 512-D vektör (veya VLM analizi) |
 | Video | 8 eşit dilimin **merkezinden** kare (ilk/son siyah kare sorunu yapısal olarak oluşmaz) → embeddinglerin ortalaması → yeniden normalleştirme |
 | Çıktı | konu, kanonik kategori (11), etiketler (≤3), güven ve marj |
-| Konu merdiveni | Güvenli metin → güvenli görsel → Gemma yargıcı → kullanıcı profili |
-| Kategori kuralı | Yalnızca metin hiçbir kelimeyle eşleşmediyse (güven 0.30) görsel kategorisi geçersiz kılar |
+| Konu merdiveni | Güvenli metin → güvenli görsel → LLM yargıcı → kullanıcı profili |
+| Kategori kuralı | Merdiven, en özel kanıt önce: **görsel** (güvenliyse, `uncertain=false`) → **fikir metni** (anahtar kelime eşleştiyse) → **ilgi alanı** (metin hiç uymadıysa). Kazanan `category_source` ile bildirilir; metnin önerisi `text_category` olarak yanıtta kalır, böylece uyuşmazlık raporlanabilir |
 | Etiketler | Görsel etiketleri listebaşı olur, aynı hiza kontrolünden geçer |
 
 Ölçülen süreler (CPU): görsel ~0.06 sn, 8 kareli video ~0.5 sn, model yükleme
@@ -305,7 +312,7 @@ docker compose up -d --build     # qdrant + ollama (+ model indirme) + api
 docker compose logs -f api       # uygulama logları (LOG_LEVEL ile seviye)
 ```
 
-İlk açılışta `ollama-init` hizmeti `GEMMA_MODEL_NAME` modelini (varsayılan
+İlk açılışta `ollama-init` hizmeti `LLM_MODEL_NAME` modelini (varsayılan
 `gemma4:e4b`) otomatik indirir. İndirme tamamlanana kadar
 LLM'e bağlı yollar (konu yargıcı, açıklama üretimi) deterministik
 fallback'lerine düşer; API bu sırada da çalışır.
@@ -365,16 +372,25 @@ ve script'ler değerleri oradan okur. Şablon: `.env.example` (`cp .env.example 
   özelleştirmeler aynen çalışmaya devam eder.
 - **Her anahtarın kod içinde bir varsayılanı vardır.** `.env` olmadan da
   uygulama ayağa kalkar; dosya yalnızca varsayılanı değiştirmek için gereklidir.
+- **Geriye dönük uyumluluk:** Eski `GEMMA_*` ve `CLIP_*` anahtarları `backend/config.py`
+  tarafından otomatik olarak yeni generic `LLM_*` ve `VISION_*` ayarlarına eşlenir.
 
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
 | `API_PORT` | 8000 | API'nin host portu (yalnızca compose) |
-| `GEMMA_API_URL` | `http://127.0.0.1:11434` | LLM uç noktası (compose içinde `ollama` servisi) |
-| `GEMMA_MODEL_NAME` | `gemma4:e4b` | Ollama model kimliği (HuggingFace adı `google/gemma-4-E4B-it` registry'de yok) |
+| `LLM_API_URL` (`GEMMA_API_URL`) | `http://127.0.0.1:11434` | LLM uç noktası (compose içinde `ollama` servisi) |
+| `LLM_MODEL_NAME` (`GEMMA_MODEL_NAME`) | `gemma4:e4b` | LLM model kimliği |
+| `LLM_THINK` | `false` | LLM düşünme modu |
+| `LLM_MAX_TOKENS` | 512 | Danışman açıklaması token tavanı |
+| `LLM_JUDGE_MAX_TOKENS` | 64 | Konu ve hakemlik sınıflandırması token tavanı |
+| `LLM_MODERATION_MAX_TOKENS` | 128 | Guardrail hakemliği token tavanı |
+| `LLM_TIMEOUT_SECONDS` | 15.0 | LLM çağrı zaman aşımı (saniye) |
+| `LLM_RETRY_COUNT` | 2 | Aralıklı 500 hatalarında yeniden deneme sayısı |
+| `VISION_MODEL_NAME` (`CLIP_MODEL_NAME`) | `openai/clip-vit-base-patch32` | Medya analizi modeli |
+| `MEDIA_ANALYZER_BACKEND` | `clip` | Medya analiz motoru: `clip`, `vlm`, `llm` |
 | `QDRANT_HOST` | otomatik keşif | Boşsa localhost → podman VM adresi denenir |
 | `QDRANT_PORT` | 6333 | Qdrant REST portu |
 | `LOG_LEVEL` | INFO | Uygulama log seviyesi |
-| `CLIP_MODEL_NAME` | `openai/clip-vit-base-patch32` | Medya analizi modeli |
 | `MEDIA_CACHE_DIR` | `<repo>/models/hf` | Ağırlık önbelleği (bind-mount edilir) |
 | `MEDIA_DEVICE` | `cpu` | `cpu` \| `auto` \| `cuda` \| `directml` |
 | `MAX_IMAGE_MB` / `MAX_VIDEO_MB` | 10 / 50 | Yükleme boyut sınırları |
@@ -382,15 +398,15 @@ ve script'ler değerleri oradan okur. Şablon: `.env.example` (`cp .env.example 
 | `VIDEO_FRAME_COUNT` | 8 | Video başına örneklenen kare |
 | `MEDIA_ANALYSIS_TTL_SECONDS` | 1800 | Medya analizi önbellek ömrü |
 | `MEDIA_TOP_TAGS` | 3 | Gönderi başına etiket sayısı |
-| `MEDIA_MIN_PROB` / `MEDIA_MIN_MARGIN` / `MEDIA_TAG_MIN_PROB` | 0.35 / 0.10 / 0.10 | CLIP güven eşikleri |
+| `MEDIA_MIN_PROB` / `MEDIA_MIN_MARGIN` / `MEDIA_TAG_MIN_PROB` | 0.35 / 0.10 / 0.10 | Güven eşikleri |
 | `HF_HUB_OFFLINE` | `0` | Çevrimdışı demo için `1` |
 | `SMPD_MEDIA_ROOT` | `data/raw/media` | `media_available` doğrulamasının kök dizini |
 | `WEBDAV_URL` / `WEBDAV_USER` / `WEBDAV_PASSWORD` | — | Veri kümesi + ağırlık senkronu |
 | `NSOSYAL_API_BASE_URL` / `NSOSYAL_API_TOKEN` / `NSOSYAL_PSEUDONYM_SALT` | — | Gerçek NSosyal ingest'i (yoksa adaptör hata verir) |
 
 `docker compose` yalnızca container'a anlamlı olan anahtarları geçirir
-(`GEMMA_MODEL_NAME`, `LOG_LEVEL`, `HF_HUB_OFFLINE`, `API_PORT`) ve ağ adreslerini
-(`QDRANT_HOST=qdrant`, `GEMMA_API_URL=http://ollama:11434`) kendisi sabitler —
+(`LLM_MODEL_NAME`, `LOG_LEVEL`, `HF_HUB_OFFLINE`, `API_PORT`) ve ağ adreslerini
+(`QDRANT_HOST=qdrant`, `LLM_API_URL=http://ollama:11434`) kendisi sabitler —
 host'a göre yazılmış `.env` değerleri container içine sızmaz.
 
 **Notlar**
@@ -426,6 +442,40 @@ python scripts/train_guardrail_model.py   # guardrail modelini yeniden eğit
 
 Her eğitim çıktısı veri hash'ini, git commit'ini, eğitim zamanını, satır
 sayısını, split sınırlarını ve config'i taşır.
+
+## Proje yapısı (Python 3.12 standardı)
+
+Proje, Python 3.12 standart paket yerleşimine ve temiz kök dizin prensibine uygundur:
+
+```
+npusula/
+├── backend/                # FastAPI backend paketi (PEP 517/518/621)
+│   ├── adapters/           # Veri adaptörleri ve repo katmanı
+│   ├── schemas/            # Pydantic v2 veri sözleşmeleri
+│   ├── services/           # İş mantığı servisleri (LightGBM, LLM advisor, time-lift, guardrail)
+│   │   ├── recommendation.py   # Katman A LightGBM taban potansiyeli & pencere orkestrasyonu
+│   │   ├── llm_advisor.py      # Generic LLM strateji danışmanı motoru
+│   │   ├── gemma_advisor.py    # Geriye dönük uyumluluk modülü (alias köprüsü)
+│   │   ├── time_lift.py        # Katman B gözlemsel zaman lift tablosu
+│   │   ├── moderation.py       # İçerik güvenlik guardrail'i
+│   │   └── media_analysis.py   # CLIP / LLM Vision medya analiz servisi
+│   ├── app.py              # FastAPI rota ve yaşam döngüsü
+│   ├── config.py           # Generic Pydantic Settings ve alias desteği
+│   └── prompts.py          # Merkezi prompt şablonları
+├── frontend/               # React + Vite web arayüzü (Stitch UI)
+├── scripts/                # Eğitim, doğrulama, çalıştırma ve veri hazırlama scriptleri
+│   ├── run_server.ps1      # Sunucu başlatma betiği
+│   └── verify_acceptance.py# Kabul kriterleri doğrulama aracı
+├── tests/                  # Pytest test paketi (233 test)
+│   └── fixtures/           # Test şemaları ve test verileri
+├── artifacts/              # Eğitilmiş modeller ve değerlendirme çıktıları
+│   ├── base_potential_lgbm.txt   # Katman A LightGBM booster'ı
+│   ├── time_lift_table.json      # Katman B gözlemsel lift tablosu
+│   └── legacy/                   # Emekliye ayrılmış eski modeller
+├── data/                   # İşlenmiş veri kümesi ve durum dosyaları
+├── pyproject.toml          # Proje bağımlılıkları ve paketleme konfigürasyonu
+└── docker-compose.yml      # Konteyner orkestrasyonu
+```
 
 ## Üçüncü taraf veriler
 
