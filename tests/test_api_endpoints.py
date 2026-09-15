@@ -9,6 +9,7 @@ import pytest
 
 from backend.app import app
 from backend.config import settings
+from backend.services.advisor import HISTORY_DEPTH_NAMES, history_depth_name
 
 TR_WEEKDAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
 
@@ -44,6 +45,48 @@ def test_demo_users_endpoint(client):
     response = client.get("/api/demo-users")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_sample_users_endpoint_lists_the_curated_accounts(client):
+    """The picker's roster comes from artifacts/sample_users.json."""
+    response = client.get("/api/sample-users")
+    assert response.status_code == 200
+    users = response.json()["users"]
+    curated = settings.SAMPLE_USERS_PATH.read_text(encoding="utf-8")
+    assert users, "the curated roster must not be empty"
+    for user in users:
+        assert user["user_id"] in curated
+        assert user["post_count"] > 0
+        assert user["history_depth"] in set(HISTORY_DEPTH_NAMES.values())
+
+
+def test_sample_users_depth_comes_from_the_full_corpus(client):
+    """Depth must not be the 30-post evidence window ProfileService exposes.
+
+    `evidence_post_count` reads `user_posts.tail(30)`, so it caps at 30 and
+    every account with real history would report `medium_history` — the picker
+    would offer six identical options. Counting corpus rows keeps
+    `high_history` reachable.
+    """
+    users = client.get("/api/sample-users").json()["users"]
+    by_id = {user["user_id"]: user for user in users}
+
+    richest = by_id["31253@N15"]
+    assert richest["post_count"] > 100
+    assert richest["history_depth"] == "high_history"
+
+    # Same account through the profile endpoint, which caps at 30.
+    evidence = client.get("/api/profile/31253@N15").json()["evidence_post_count"]
+    assert evidence == 30
+    assert history_depth_name(evidence) == "medium_history"
+
+    assert by_id["36367@N78"]["history_depth"] == "very_low_history"
+
+
+def test_sample_users_depth_matches_the_count(client):
+    """The label is derived from the count, not stored alongside it."""
+    for user in client.get("/api/sample-users").json()["users"]:
+        assert user["history_depth"] == history_depth_name(user["post_count"])
 
 
 def test_profile_diffuse_user_no_drift(client):

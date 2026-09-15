@@ -148,6 +148,34 @@ def strip_phrase_exceptions(text: str) -> str:
         text = text.replace(phrase, "")
     return text
 
+
+# Discourse frames that mark an unsafe term as the *subject* of the text rather
+# than its content: a news item about gambling addiction, an awareness campaign
+# against self-harm. A lexicon hit inside one of these is deferred to the LLM
+# instead of being hard-blocked.
+#
+# Deliberately NOT a phrase-strip list. Deleting "kumar bağımlılığı" from the
+# text would let an attacker hide harmful content behind a benign prefix, and
+# would remove the term from the reviewer's view. Deferring keeps the whole
+# text in front of the LLM and gives an attacker nothing to hide behind.
+#
+# Narrow on purpose: generic connectives ("ile ilgili", "hakkında") would push
+# a large share of all lexicon hits into the LLM. These are harm-discourse
+# frames -- a promotional post has little reason to carry one. Both Turkish
+# spellings are listed because users commonly type without diacritics.
+DISCUSSION_FRAMES: tuple[str, ...] = (
+    "bağımlılığ", "bagimlilig",
+    "farkındalık", "farkindalik",
+    "mücadele", "mucadele",
+    "önleme", "onleme",
+    "zararları", "zararlari",
+    "tedavi", "tedavisi",
+    "haberi", "haberler", "haber ",
+    "eğitimi", "egitimi",
+    "hakkında", "hakkinda",
+    "üzerine", "uzerine",
+)
+
 # Hand-written balanced fallback corpus: standard, leetspeak, and edge examples.
 # Used only when the trained artifact is missing; the production model is
 # trained by scripts/train_guardrail_model.py on real datasets.
