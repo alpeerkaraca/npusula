@@ -31,6 +31,27 @@ function initialInterests() {
 const newId = () =>
   globalThis.crypto?.randomUUID?.() ||
   `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+function initialCreatedUsers() {
+  try {
+    const raw = localStorage.getItem("npusula-created-users");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCreatedUserToStorage(user) {
+  try {
+    const raw = localStorage.getItem("npusula-created-users");
+    const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+    if (!list.some((u) => u.userId === user.userId)) {
+      list.unshift(user);
+      localStorage.setItem("npusula-created-users", JSON.stringify(list.slice(0, 20)));
+    }
+  } catch {}
+}
+
 export function PusulaProvider({
   children,
   navigate,
@@ -39,6 +60,7 @@ export function PusulaProvider({
   activePage,
   api = pusulaApi,
 }) {
+  const [createdUsers, setCreatedUsers] = useState(initialCreatedUsers);
   const [interests, setInterests] = useState(initialInterests);
   const [format, setFormatState] = useState("video");
   function setFormat(nextFormat) {
@@ -83,6 +105,9 @@ export function PusulaProvider({
     const timer = setTimeout(() => setNotice(""), 5000);
     return () => clearTimeout(timer);
   }, [notice]);
+  useEffect(() => {
+    analysis.reset();
+  }, [draft, format, media, analysis.reset]);
   // Keep the last submitted analysis while the user edits the next idea.
   // Only an explicit analyze action replaces it; account/page changes reset it.
   useEffect(() => {
@@ -123,7 +148,47 @@ export function PusulaProvider({
     setNotice(`Hesap değiştirildi: ${nextUserId}`);
   }
   function chooseNewUser() {
-    chooseUser(mintUserId());
+    const nextUserId = mintUserId();
+    const newRecord = {
+      userId: nextUserId,
+      postCount: 0,
+      historyDepth: "cold_start",
+    };
+    saveCreatedUserToStorage(newRecord);
+    setCreatedUsers((prev) => [
+      newRecord,
+      ...prev.filter((u) => u.userId !== nextUserId),
+    ]);
+    chooseUser(nextUserId);
+    const defaultInterests = ["teknoloji", "yazilim", "yapayzekâ"];
+    setInterests(defaultInterests);
+    try {
+      localStorage.setItem("npusula-interests", JSON.stringify(defaultInterests));
+    } catch {}
+    api.saveProfile({ interests: defaultInterests }).catch(() => {});
+    navigate("setup");
+    setNotice(`Yeni hesap oluşturuldu: ${nextUserId}. Kurulum ekranındasınız.`);
+  }
+  async function saveProfile(customInterests = interests) {
+    if (customInterests.length < 2) {
+      setNotice("En az 2 odak alanı seçin.");
+      return false;
+    }
+    const result = await mutation.run(async (signal) => {
+      await api.saveProfile({ interests: customInterests }, { signal });
+      try {
+        localStorage.setItem(
+          "npusula-interests",
+          JSON.stringify(customInterests),
+        );
+      } catch {}
+      return { interests: customInterests };
+    });
+    if (result) {
+      setNotice("Hesap kurulumu ve tercihler kaydedildi.");
+      return true;
+    }
+    return false;
   }
   function toggleInterest(value) {
     if (!interests.includes(value) && interests.length >= 5)
@@ -145,6 +210,9 @@ export function PusulaProvider({
         if (current?.status === "failed") prepareKey.current = null;
         setJob({ id: "prep-init", status: "running", progress: 15, message: "Kategori sinyalleri işleniyor..." });
         await api.saveProfile({ interests }, { signal });
+        try {
+          localStorage.setItem("npusula-interests", JSON.stringify(interests));
+        } catch {}
         prepareKey.current ||= newId();
         current = await api.startPreparation(
           { interests },
@@ -257,6 +325,17 @@ export function PusulaProvider({
     [recommendations, api],
   );
 
+  const combinedUsers = useMemo(() => {
+    const base = sampleUsers.data || [];
+    const created = createdUsers || [];
+    const map = new Map();
+    for (const u of created) map.set(u.userId, u);
+    for (const u of base) {
+      if (!map.has(u.userId)) map.set(u.userId, u);
+    }
+    return Array.from(map.values());
+  }, [sampleUsers.data, createdUsers]);
+
   const ui = useMemo(
     () => ({
       reloadRecommendations,
@@ -264,8 +343,7 @@ export function PusulaProvider({
       userId,
       chooseUser,
       chooseNewUser,
-      // Empty until the backend answers; the picker still offers "new account".
-      sampleUsers: sampleUsers.data || [],
+      sampleUsers: combinedUsers,
       interests,
       toggleInterest,
       format,
@@ -284,6 +362,7 @@ export function PusulaProvider({
       mutation,
       plans,
       prepare,
+      saveProfile,
       analyze,
       plan,
       openDraft,
@@ -297,7 +376,7 @@ export function PusulaProvider({
       userId,
       chooseUser,
       chooseNewUser,
-      sampleUsers.data,
+      combinedUsers,
       interests,
       toggleInterest,
       format,
@@ -315,6 +394,7 @@ export function PusulaProvider({
       mutation,
       plans,
       prepare,
+      saveProfile,
       analyze,
       plan,
       openDraft,

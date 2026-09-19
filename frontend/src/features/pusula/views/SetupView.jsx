@@ -156,16 +156,34 @@ export default function SetupView() {
 
             <div className="mt-space-xl pt-space-md flex flex-col-reverse sm:flex-row items-center justify-between gap-space-md">
               <button
-                className="px-space-md py-space-sm text-on-surface-variant hover:text-on-surface font-title-sm text-title-sm transition-colors flex items-center gap-space-xs rounded-xl hover:bg-surface-container-high"
+                className="px-space-md py-space-sm text-on-surface-variant hover:text-on-surface font-title-sm text-title-sm transition-colors flex items-center gap-space-xs rounded-xl hover:bg-surface-container-high cursor-pointer"
                 type="button"
-                onClick={() => ui.navigate("assistant")}
+                onClick={async () => {
+                  if (ui.interests.length >= 2) {
+                    await ui.saveProfile?.();
+                  }
+                  ui.navigate("assistant");
+                }}
                 aria-label="Şimdilik Atla"
               >
                 <span>{"Şimdilik Atla"}</span>
               </button>
               <div className="flex items-center gap-space-md w-full sm:w-auto">
                 <button
-                  className="w-full sm:w-auto px-space-xl py-space-sm rounded-full bg-gradient-to-r from-primary-container to-secondary-container text-on-primary-container font-title-sm text-title-sm font-bold shadow-[0_4px_20px_rgba(0,163,255,0.4)] hover:shadow-[0_6px_28px_rgba(0,210,255,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-space-sm"
+                  className="w-full sm:w-auto px-space-lg py-space-sm rounded-xl border border-primary/40 text-primary hover:bg-primary/10 font-title-sm text-title-sm font-semibold transition-all flex items-center justify-center gap-space-xs cursor-pointer"
+                  type="button"
+                  onClick={() => ui.saveProfile?.()}
+                  disabled={
+                    ui.interests.length < 2 ||
+                    ui.mutation.status === "loading"
+                  }
+                  aria-label="Kaydet"
+                >
+                  <DesignIcon name="check" className="text-[18px]" />
+                  <span>{ui.mutation.status === "loading" ? "Kaydediliyor…" : "Kaydet"}</span>
+                </button>
+                <button
+                  className="w-full sm:w-auto px-space-xl py-space-sm rounded-full bg-gradient-to-r from-primary-container to-secondary-container text-on-primary-container font-title-sm text-title-sm font-bold shadow-[0_4px_20px_rgba(0,163,255,0.4)] hover:shadow-[0_6px_28px_rgba(0,210,255,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-space-sm cursor-pointer"
                   id="submit-btn"
                   type="button"
                   onClick={ui.prepare}
