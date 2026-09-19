@@ -120,7 +120,7 @@ export function PusulaProvider({
     if (activePage !== "assistant") return;
     recommendations.run((signal) => api.getRecommendations({ signal }));
     return recommendations.cancel;
-  }, [activePage, api, recommendations.run, recommendations.cancel]);
+  }, [activePage, userId, api, recommendations.run, recommendations.cancel]);
   useEffect(() => {
     if (activePage !== "preparing") preparation.reset();
   }, [activePage, preparation.reset]);
@@ -146,6 +146,9 @@ export function PusulaProvider({
     setPlans([]);
     setJob(null);
     setNotice(`Hesap değiştirildi: ${nextUserId}`);
+    if (activePage === "assistant") {
+      recommendations.run((signal) => api.getRecommendations({ signal }));
+    }
   }
   function chooseNewUser() {
     const nextUserId = mintUserId();
