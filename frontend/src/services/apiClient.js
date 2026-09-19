@@ -47,13 +47,45 @@ export function createApiClient({
           : {}),
       });
       if (!response.ok) {
+        let serverMessage = "";
+        try {
+          const raw = await response.text();
+          if (raw) {
+            try {
+              const data = JSON.parse(raw);
+              if (typeof data === "string") {
+                serverMessage = data;
+              } else if (typeof data?.detail === "string") {
+                serverMessage = data.detail;
+              } else if (Array.isArray(data?.detail) && data.detail.length > 0) {
+                serverMessage = data.detail
+                  .map((item) =>
+                    typeof item === "string"
+                      ? item
+                      : item.msg || JSON.stringify(item),
+                  )
+                  .join(", ");
+              } else if (typeof data?.message === "string") {
+                serverMessage = data.message;
+              } else if (typeof data?.error === "string") {
+                serverMessage = data.error;
+              }
+            } catch {
+              if (!raw.startsWith("<")) {
+                serverMessage = raw.slice(0, 300);
+              }
+            }
+          }
+        } catch {}
+
         const messages = {
           401: "Oturumunuz sona erdi. Yeniden giriş yapın.",
           403: "Bu işlem için yetkiniz yok.",
           429: "Çok fazla istek gönderildi. Biraz sonra tekrar deneyin.",
         };
         throw new ApiError(
-          messages[response.status] ||
+          serverMessage ||
+            messages[response.status] ||
             "Servis isteği tamamlanamadı. Tekrar deneyin.",
           { status: response.status, code: `HTTP_${response.status}` },
         );

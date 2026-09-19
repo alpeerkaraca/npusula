@@ -58,6 +58,27 @@ test("HTTP errors never become demo results", async () => {
     );
   }
 });
+test("Guardrail error details from server response are preserved in ApiError", async () => {
+  const guardrailMessage =
+    "İçerik Güvenlik İhlali (Nefret Söylemi): Ayrımcılık veya nefret barındıran içerikler platformumuzda desteklenmemektedir.";
+  const client = createApiClient({
+    baseUrl: "/api",
+    fetchImpl: async () =>
+      new Response(JSON.stringify({ detail: guardrailMessage }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }),
+  });
+
+  await assert.rejects(
+    () => client("/recommend/advisor", { method: "POST" }),
+    (error) => {
+      assert.equal(error.status, 400);
+      assert.equal(error.message, guardrailMessage);
+      return true;
+    },
+  );
+});
 test("Malformed model data is rejected; empty recommendations are valid", async () => {
   const api = createHttpPusulaApi({
     fetchImpl: async () => Response.json({ ...analysis, confidence: 999 }),
